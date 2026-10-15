@@ -81,7 +81,10 @@ mugar123.github.io/
 │       ├── index.astro              §0–§4
 │       ├── work/[slug].astro
 │       ├── writing/index.astro, writing/[slug].astro
-│       ├── about.astro, 404.astro, rss.xml.ts
+│       ├── about.astro, cv.astro, 404.astro, rss.xml.ts
+│   ├── data/cv.ts                   typed CV data (single source for /cv)
+│   ├── components/CvEntry.astro, LiveBackground.astro, Cursor.astro
+│   ├── styles/print.css             print stylesheet for /cv
 └── tests/
     ├── unit/*.test.ts               Vitest
     └── e2e/*.spec.ts                Playwright (+ axe)
@@ -2482,6 +2485,379 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ---
 
+### Task 12b: Native CV page, live background and custom cursor
+
+**Files:**
+- Create: `src/data/cv.ts`, `src/pages/cv.astro`, `src/components/CvEntry.astro`, `src/components/LiveBackground.astro`, `src/components/Cursor.astro`, `src/styles/print.css`, `tests/unit/cv.test.ts`
+- Modify: `src/layouts/Base.astro` (mount `<Cursor />`, import print.css), `src/components/Nav.astro` (add `CV`)
+
+**Interfaces:**
+- Consumes: `Base`, `Hud` (Task 5); tokens and `.mono` utilities (Task 4).
+- Produces: `cv` data object (typed, see below); `/cv` route; `<LiveBackground />` (CSS-only animated grid + rotating orbit rings, used by `/cv`); `<Cursor />` mounted once in `Base.astro`.
+
+Design intent (spec §5.2): the CV is a *mission dossier* — big serif name, mono contact row, `§`-numbered sections, entries as rows with a mono date column and a leader line that lights up in the accent on hover. No phone, no grant, no a private application. Print gives a clean black-on-white A4.
+
+```ts
+// src/data/cv.ts shape
+export interface CvEntry { title: string; subtitle?: string; period: string; where?: string; bullets?: string[]; href?: string }
+export interface CvSection { id: string; label: string; entries: CvEntry[] }
+export interface CvSkillGroup { label: string; items: string[] }
+export const cv: { name: string; degree: string; faculty: string; location: string;
+  contacts: { label: string; value: string; href: string }[]; sections: CvSection[]; skills: CvSkillGroup[] };
+```
+
+- [ ] **Step 1: Write the failing data tests**
+
+`tests/unit/cv.test.ts` — the data file is the single source of truth for the CV, so its invariants are tested:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { cv } from '@/data/cv';
+
+const everything = JSON.stringify(cv).toLowerCase();
+
+describe('cv data', () => {
+  it('has the owner facts and nothing excluded', () => {
+    expect(cv.name).toBe('Nicolás Muñoz García');
+    expect(cv.contacts.map((c) => c.value)).toEqual(['nicomg60@gmail.com', 'github.com/mugar123', 'papertok.app']);
+    expect(everything).not.toMatch(/\+34|623 ?409 ?632/);
+    expect(everything).not.toContain('a-private-grant');
+    expect(everything).not.toContain('application');
+  });
+  it('has the five sections in order, each non-empty', () => {
+    expect(cv.sections.map((s) => s.id)).toEqual(['education', 'projects', 'activities', 'achievements']);
+    for (const s of cv.sections) expect(s.entries.length).toBeGreaterThan(0);
+    expect(cv.skills.length).toBeGreaterThanOrEqual(5);
+  });
+  it('every entry has a period and a title', () => {
+    for (const s of cv.sections) for (const e of s.entries) { expect(e.title).toBeTruthy(); expect(e.period).toMatch(/\d{4}/); }
+  });
+});
+```
+
+(The "five" in the test name counts skills as the fifth block; the `sections` array holds four.)
+
+- [ ] **Step 2: Run to verify failure**
+
+```bash
+npm test -- cv
+```
+
+Expected: FAIL — cannot resolve `@/data/cv`.
+
+- [ ] **Step 3: Write the data**
+
+`src/data/cv.ts` (facts from the owner's CV, October 2026; the LaTeX lecture notes project became the pipeline, so it is described as such):
+
+```ts
+export interface CvEntry { title: string; subtitle?: string; period: string; where?: string; bullets?: string[]; href?: string }
+export interface CvSection { id: string; label: string; entries: CvEntry[] }
+export interface CvSkillGroup { label: string; items: string[] }
+
+export const cv = {
+  name: 'Nicolás Muñoz García',
+  degree: 'BSc in Physics (2025–2029)',
+  faculty: 'Faculty of Sciences, Universidad de Salamanca',
+  location: 'Salamanca, Spain',
+  contacts: [
+    { label: 'Email', value: 'nicomg60@gmail.com', href: 'mailto:nicomg60@gmail.com' },
+    { label: 'GitHub', value: 'github.com/mugar123', href: 'https://github.com/mugar123' },
+    { label: 'Building', value: 'papertok.app', href: 'https://papertok.app' },
+  ],
+  sections: [
+    {
+      id: 'education', label: 'Education',
+      entries: [
+        { title: 'Universidad de Salamanca (USAL)', subtitle: 'BSc in Physics — expected June 2029', period: '2025 – present', where: 'Salamanca, Spain' },
+        { title: 'Upper secondary education (Bachillerato), science and technology track', subtitle: 'University entrance examination (PAU): 12.501/14 · average 9.06/10', period: '2023 – 2025' },
+      ],
+    },
+    {
+      id: 'projects', label: 'Projects',
+      entries: [
+        {
+          title: 'PaperTok — papertok.app', subtitle: 'Founder and sole developer of a short-form discovery feed for arXiv papers', period: '2025 – present', href: 'https://github.com/mugar123/papertok',
+          bullets: [
+            'Built and shipped a full web application that reformats arXiv preprints into a swipeable, TikTok-style feed, so that students and researchers discover relevant literature outside their existing reading habits; around 100 users since launch.',
+            'React, Vite, Firebase (authentication, Firestore, hosting), KaTeX for in-browser mathematical notation, Transformers.js (Xenova) for client-side embeddings, and a Python proxy service for the arXiv API.',
+            'Designed and iterated on the recommendation engine, which builds a semantic profile from user interactions and ranks incoming preprints against it; refactored the recommendation hook and hardened the Firebase configuration after an internal security review.',
+          ],
+        },
+        {
+          title: 'Notes → LaTeX pipeline', subtitle: 'Handwritten lecture notes transcribed into compiled LaTeX, automatically', period: '2025 – present',
+          bullets: [
+            'Started as self-authored, typeset course notes shared with classmates: full documents on multivariable integration and on linear transformations and determinants, with original TikZ figures illustrating diffeomorphisms as deformations of a coordinate grid.',
+            'Grew into a Python pipeline that photographs a page, runs it through a mix of open-source and closed models, and emits LaTeX that compiles. Code private for now.',
+            'LaTeX (MacTeX, VS Code), TikZ, custom theorem environments and page styling.',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'activities', label: 'Extracurricular activities',
+      entries: [
+        { title: 'Member, Supernova', subtitle: 'Student association, Universidad de Salamanca', period: '2025 – present' },
+        { title: 'Participant, astronomy outreach activities organised by Supernova', period: '2025 – 2026' },
+      ],
+    },
+    {
+      id: 'achievements', label: 'Achievements',
+      entries: [
+        { title: 'PAU score of 12.501/14', subtitle: 'Spanish university entrance examination', period: '2025' },
+        { title: 'Participant, Spanish Physics Olympiad (Olimpiada de Física)', subtitle: 'Two consecutive editions', period: '2024, 2025' },
+      ],
+    },
+  ] satisfies CvSection[],
+  skills: [
+    { label: 'Programming languages', items: ['Python', 'MATLAB', 'JavaScript'] },
+    { label: 'Frameworks and libraries', items: ['React', 'Vite', 'Transformers.js', 'KaTeX'] },
+    { label: 'Cloud and databases', items: ['Firebase (Firestore, Authentication, Hosting)'] },
+    { label: 'Developer tools', items: ['Git', 'GitHub', 'VS Code', 'LaTeX (advanced)', 'TikZ', 'macOS', 'Claude Code', 'Codex', 'Cursor'] },
+    { label: 'Languages', items: ['Spanish (native)', 'English (B2, certified by the Escuela Oficial de Idiomas)'] },
+    { label: 'Coursework', items: ['Mathematical analysis (multivariable calculus, measure theory and Lebesgue integration, vector calculus)', 'Linear and multilinear algebra (Jordan canonical form, tensor products, bilinear and quadratic forms)', 'Electromagnetism'] },
+    { label: 'Areas of interest', items: ['Computational physics', 'Machine learning applied to scientific literature', 'Recommender systems', 'Astronomy'] },
+  ] satisfies CvSkillGroup[],
+};
+```
+
+Note: "Claude Code, Codex, Cursor" under developer tools is the one addition to the PDF's list; the owner stated this in conversation (Mission specs), so it is not invented.
+
+- [ ] **Step 4: Run to verify it passes**
+
+```bash
+npm test -- cv
+```
+
+Expected: 3 passed.
+
+- [ ] **Step 5: CvEntry and LiveBackground components**
+
+`src/components/CvEntry.astro`:
+
+```astro
+---
+import type { CvEntry } from '@/data/cv';
+interface Props { entry: CvEntry }
+const { entry } = Astro.props;
+---
+<li class="entry">
+  <span class="entry__period mono">{entry.period}</span>
+  <div class="entry__body">
+    <h3>{entry.href ? <a href={entry.href} rel="noopener">{entry.title}</a> : entry.title}</h3>
+    {entry.subtitle && <p class="entry__sub">{entry.subtitle}</p>}
+    {entry.where && <p class="entry__where mono">{entry.where}</p>}
+    {entry.bullets && <ul class="entry__bullets">{entry.bullets.map((b) => <li>{b}</li>)}</ul>}
+  </div>
+</li>
+<style>
+  .entry { display: grid; grid-template-columns: 9rem 1fr; gap: var(--space-4); padding: var(--space-3) 0; position: relative; }
+  .entry + .entry { border-top: 1px solid var(--grid); }
+  .entry__period { padding-top: 0.35em; position: relative; }
+  .entry__period::after { content: ''; position: absolute; top: 0.95em; right: -1.25rem; width: 1rem; border-top: 1px solid var(--grid); transition: border-color var(--dur) var(--ease), width var(--dur) var(--ease); }
+  .entry:hover .entry__period { color: var(--accent); }
+  .entry:hover .entry__period::after { border-color: var(--accent); width: 1.5rem; }
+  h3 { font-size: 1.25rem; margin: 0; }
+  h3 a { text-decoration: none; } h3 a:hover { text-decoration: underline; }
+  .entry__sub { margin: 0.15em 0 0; font-style: italic; }
+  .entry__where { margin: 0.25em 0 0; }
+  .entry__bullets { margin: var(--space-2) 0 0; padding-left: 1.1em; font-size: var(--text-small); display: grid; gap: var(--space-1); }
+  @media (max-width: 767px) { .entry { grid-template-columns: 1fr; gap: var(--space-1); } .entry__period::after { display: none; } }
+</style>
+```
+
+`src/components/LiveBackground.astro` — CSS only; sits behind the page, never intercepts pointer events:
+
+```astro
+---
+---
+<div class="live" aria-hidden="true">
+  <svg class="live__orbits" viewBox="0 0 800 800">
+    <ellipse cx="400" cy="400" rx="380" ry="150" />
+    <ellipse cx="400" cy="400" rx="260" ry="102" />
+    <ellipse cx="400" cy="400" rx="150" ry="59" />
+    <circle cx="400" cy="400" r="26" />
+  </svg>
+</div>
+<style>
+  .live { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: var(--grid-cell) var(--grid-cell);
+    animation: drift 90s linear infinite; }
+  .live__orbits { position: absolute; right: -12vw; top: 50%; width: min(70vw, 56rem); translate: 0 -50%; opacity: 0.22;
+    fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 4 6; animation: spin 180s linear infinite; }
+  .live__orbits circle { fill: var(--planet); stroke: none; opacity: 0.6; }
+  @keyframes drift { to { background-position: var(--grid-cell) var(--grid-cell); } }
+  @keyframes spin { to { rotate: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .live, .live__orbits { animation: none; } }
+  @media print { .live { display: none; } }
+</style>
+```
+
+- [ ] **Step 6: Custom cursor**
+
+`src/components/Cursor.astro` — mounted once in `Base.astro`. Fine pointers only; off under reduced motion; the native cursor stays on text inputs.
+
+```astro
+---
+---
+<div class="cursor" aria-hidden="true" hidden>
+  <span class="cursor__dot"></span>
+  <span class="cursor__ring"><span class="cursor__label mono">LAUNCH</span></span>
+</div>
+
+<script>
+  const fine = matchMedia('(pointer: fine)').matches;
+  const motion = matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  const root = document.querySelector<HTMLElement>('.cursor');
+  if (root && fine && motion) {
+    root.hidden = false;
+    document.documentElement.classList.add('has-cursor');
+    const dot = root.querySelector<HTMLElement>('.cursor__dot')!;
+    const ring = root.querySelector<HTMLElement>('.cursor__ring')!;
+    let x = innerWidth / 2, y = innerHeight / 2, rx = x, ry = y, raf = 0;
+    const move = (e: PointerEvent) => {
+      x = e.clientX; y = e.clientY;
+      dot.style.transform = `translate(${x}px, ${y}px)`;
+      const t = e.target as Element | null;
+      root.classList.toggle('is-link', Boolean(t?.closest('a, button, [role="button"]')));
+      root.classList.toggle('is-launch', Boolean(t?.closest('#orbit-scene')));
+      root.classList.toggle('is-text', Boolean(t?.closest('input, textarea, [contenteditable]')));
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    const tick = () => {
+      rx += (x - rx) * 0.18; ry += (y - ry) * 0.18;
+      ring.style.transform = `translate(${rx}px, ${ry}px)`;
+      raf = Math.abs(x - rx) + Math.abs(y - ry) > 0.2 ? requestAnimationFrame(tick) : 0;
+    };
+    addEventListener('pointermove', move, { passive: true });
+    addEventListener('pointerleave', () => root.classList.add('is-out'));
+    addEventListener('pointerenter', () => root.classList.remove('is-out'));
+  }
+</script>
+
+<style is:global>
+  html.has-cursor, html.has-cursor a, html.has-cursor button { cursor: none; }
+  html.has-cursor input, html.has-cursor textarea { cursor: auto; }
+  .cursor { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
+  .cursor[hidden] { display: none; }
+  .cursor__dot, .cursor__ring { position: absolute; top: 0; left: 0; border-radius: 50%; will-change: transform; }
+  .cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--accent); }
+  .cursor__ring { width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 1px solid var(--ink); display: grid; place-items: center;
+    transition: width var(--dur) var(--ease), height var(--dur) var(--ease), margin var(--dur) var(--ease), background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
+  .cursor__label { font-size: 9px; color: var(--accent); opacity: 0; transition: opacity var(--dur) var(--ease); }
+  .cursor.is-link .cursor__ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: rgba(226, 64, 28, 0.12); border-color: var(--accent); }
+  .cursor.is-launch .cursor__ring { width: 56px; height: 56px; margin: -28px 0 0 -28px; border-style: dashed; border-color: var(--accent); }
+  .cursor.is-launch .cursor__label { opacity: 1; }
+  .cursor.is-text .cursor__ring, .cursor.is-text .cursor__dot, .cursor.is-out .cursor__ring, .cursor.is-out .cursor__dot { opacity: 0; }
+  @media print { .cursor { display: none; } }
+</style>
+```
+
+In `src/layouts/Base.astro`: import `Cursor` and render `<Cursor />` as the last child of `<body>`; import `@/styles/print.css`.
+
+- [ ] **Step 7: Print stylesheet**
+
+`src/styles/print.css`:
+
+```css
+@media print {
+  @page { size: A4; margin: 16mm; }
+  body { background: #fff !important; color: #000; font-size: 11pt; line-height: 1.4; }
+  nav, footer, .skip, .cursor, .no-print { display: none !important; }
+  main { padding: 0; }
+  a { color: #000; text-decoration: none; }
+  a[href^='http']::after { content: ' (' attr(href) ')'; font-size: 0.85em; color: #444; }
+  .mono { color: #333; }
+  h1 { font-size: 22pt; } h2 { font-size: 14pt; margin-top: 10pt; } h3 { font-size: 11.5pt; }
+  .entry { break-inside: avoid; }
+}
+```
+
+- [ ] **Step 8: The page**
+
+`src/pages/cv.astro`:
+
+```astro
+---
+import Base from '@/layouts/Base.astro';
+import CvEntry from '@/components/CvEntry.astro';
+import LiveBackground from '@/components/LiveBackground.astro';
+import { cv } from '@/data/cv';
+---
+<Base title="CV — Nicolás Muñoz García" description="Physics student at the Universidad de Salamanca; founder of PaperTok.">
+  <LiveBackground />
+  <article class="cv container">
+    <header class="cv__head">
+      <p class="mono">Mission dossier · updated 2026-10</p>
+      <h1>{cv.name}</h1>
+      <p class="cv__degree">{cv.degree} · {cv.faculty}<br />{cv.location}</p>
+      <ul class="cv__contacts mono" aria-label="Contact">
+        {cv.contacts.map((c) => <li><span>{c.label}</span><a href={c.href} rel={c.href.startsWith('http') ? 'me noopener' : undefined}>{c.value}</a></li>)}
+      </ul>
+      <p class="no-print"><button class="btn" type="button" id="print">Print / save as PDF</button></p>
+    </header>
+
+    {cv.sections.map((s, i) => (
+      <section class="cv__section" aria-labelledby={`cv-${s.id}`}>
+        <p class="mono">§{i + 1} · {s.label}</p>
+        <h2 id={`cv-${s.id}`} class="visually-hidden">{s.label}</h2>
+        <ol class="cv__entries">{s.entries.map((e) => <CvEntry entry={e} />)}</ol>
+      </section>
+    ))}
+
+    <section class="cv__section" aria-labelledby="cv-skills">
+      <p class="mono">§{cv.sections.length + 1} · Technical skills and interests</p>
+      <h2 id="cv-skills" class="visually-hidden">Technical skills and interests</h2>
+      <dl class="cv__skills">
+        {cv.skills.map((g) => (<div><dt class="mono">{g.label}</dt><dd>{g.items.join(' · ')}</dd></div>))}
+      </dl>
+    </section>
+  </article>
+</Base>
+
+<script>
+  document.getElementById('print')?.addEventListener('click', () => window.print());
+</script>
+
+<style>
+  .cv { padding-block: var(--space-5) var(--space-7); max-width: 56rem; }
+  .cv__head { margin-bottom: var(--space-6); }
+  .cv__head h1 { font-size: var(--text-h1); margin: var(--space-2) 0 var(--space-3); }
+  .cv__degree { font-size: 1.125rem; }
+  .cv__contacts { list-style: none; margin: var(--space-3) 0 var(--space-4); padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+  .cv__contacts li { display: flex; gap: 0.6em; align-items: baseline; }
+  .cv__contacts a { text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .btn { font-family: var(--font-mono); font-size: var(--text-label); text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--ink); padding: 0.6em 1em; background: var(--surface); color: var(--ink); }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .cv__section { margin-top: var(--space-5); background: var(--surface); border: 1px solid var(--grid); padding: var(--space-4); }
+  .cv__section > .mono { margin: 0 0 var(--space-2); }
+  .cv__entries { list-style: none; margin: 0; padding: 0; }
+  .cv__skills { display: grid; gap: var(--space-3); margin: 0; }
+  .cv__skills div { display: grid; grid-template-columns: 9rem 1fr; gap: var(--space-4); }
+  dd { margin: 0; font-size: var(--text-small); }
+  @media (max-width: 767px) { .cv__skills div { grid-template-columns: 1fr; gap: var(--space-1); } }
+</style>
+```
+
+Add `{ href: '/cv', label: 'CV' }` to the `items` array in `src/components/Nav.astro`.
+
+- [ ] **Step 9: Verify**
+
+```bash
+npm test && npm run build && npm run check && ls dist/cv/index.html && grep -c 'nicomg60@gmail.com' dist/cv/index.html && ! grep -qi 'a-private-grant\|application\|[redacted]' dist/cv/index.html && echo "CV CLEAN"
+```
+
+Expected: tests pass, build and check clean, `CV CLEAN`. In `npm run dev` on a laptop: the grid drifts slowly and the rings rotate behind the content; the cursor ring lags the dot and grows over links; on `/`, hovering the scene shows `LAUNCH` in the ring; with `prefers-reduced-motion` emulated, the background is static and the native cursor is back; `Cmd+P` preview shows a clean black-on-white CV with no nav, footer or background and with URLs printed after links.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add src/data/cv.ts src/pages/cv.astro src/components/CvEntry.astro src/components/LiveBackground.astro src/components/Cursor.astro src/styles/print.css src/layouts/Base.astro src/components/Nav.astro tests/unit/cv.test.ts
+git commit -m "feat: native CV page with live background and custom cursor"
+```
+
+---
+
 ### Task 13: Open Graph image and asset ledger
 
 **Files:**
@@ -2735,7 +3111,7 @@ test('rss and sitemap exist', async ({ request }) => {
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-for (const path of ['/', '/work/papertok', '/about']) {
+for (const path of ['/', '/work/papertok', '/about', '/cv']) {
   test(`axe: ${path}`, async ({ page, javaScriptEnabled }) => {
     test.skip(!javaScriptEnabled, 'axe needs JS');
     await page.goto(path);

@@ -7,6 +7,20 @@ This repository is the personal website of Nicolás Muñoz García (`https://mug
 1. `docs/superpowers/specs/2026-10-15-personal-website-design.md` — the design spec. It is the binding authority.
 2. `docs/superpowers/plans/2026-10-15-personal-website.md` — the implementation plan: 16 tasks with exact code, tests and commands. The plan argues from the spec; where they disagree, the spec wins and the disagreement must be reported, not silently resolved.
 
+## Design references (the owner's taste — spec §7.1)
+
+Your sandbox has no network, so here is what each reference site does; design against these, not against generic portfolio patterns.
+
+- https://www.mikes.cv — you "swipe a boarding pass" to enter; the CV is a flight plan (each job is a flight `DEN>MAN 2024`), aeroplane window hero, warm white, small sober type.
+- https://www.shubhu.site — pixelated blue Mona Lisa hero over white, project grid with filters, hand-written greeting; playful detail on a calm page.
+- https://www.cindyly.design — graph-paper background, a 3D Tamagotchi with a fish as the hero object, "I craft for *emotion*." mixing sans and italic serif, macOS-style dock navigation.
+- https://www.tomjohn.design — split screen: plain text column (experience, projects, talks, writing) on the left, an isometric pixel-art town with his avatar on the right.
+- https://meliketurgut.com — "me · like" logo made of glossy 3D balloon objects, career told as 8 chapters (*The Premise* vs *The Reality*).
+- https://ysuriadesign.com — agency style: big headline, work carousel, "Talk to Yogi" card, tweets as social proof.
+- https://www.inspora.design (filters *3D* and *Web*) — ongoing feed: matte light-on-light 3D objects with one coloured detail, huge serif names as hero, mono HUD panels under 3D scenes.
+
+The shared pattern we are building to: a calm, readable base; **one** memorable interactive object (our planet and launch toy); a metaphor that tells the career story (escape velocity); mono "HUD" labels; everything else scannable. Bold means a crafted detail with personality, not visual noise.
+
 ## The product in one paragraph
 
 A static Astro site on GitHub Pages. Graph-paper background, LaTeX typography (Latin Modern + JetBrains Mono), one accent color. The home hero is an interactive Three.js scene: a matte planet (the classroom), dashed orbit rings, the owner's projects as satellites, and a drag-to-launch toy driven by real two-body physics (`src/lib/orbit.ts`, pure functions, unit-tested). Everything else is calm, server-rendered content from Markdown collections.
@@ -20,7 +34,8 @@ A static Astro site on GitHub Pages. Graph-paper background, LaTeX typography (L
 - Physics stays in `src/lib/orbit.ts` with no DOM or Three imports. The scene only draws what that module computes.
 - 3D assets: code-built primitives first. Any external model must be CC0/CC-BY, match the matte low-poly look, and be listed in `public/models/CREDITS.md`.
 - Tests: Vitest for pure modules (TDD: failing test first), Playwright for pages. Run the focused test while iterating and the full suite before committing.
-- Commit per task with a conventional message. Commits authored by Codex end with `Co-Authored-By: Codex <noreply@openai.com>`; commits authored by Claude end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+- Commit per task with a conventional message. Commits authored by Codex end with `Co-Authored-By: Codex <noreply@openai.com>`; commits authored by Claude end with the model actually used: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` for implementers, `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` for the orchestrator.
+- Owner facts that override older copy: PaperTok is a swipeable discovery feed for arXiv papers (papertok.app, github.com/mugar123/papertok); the notes→LaTeX pipeline is private; public email `nicomg60@gmail.com`; no phone number; never mention the a-private-grant grant or a private application; the CV is rendered natively at `/cv`, never as a PDF.
 - Never dispatch sub-agents or reviewers of your own; review is scheduled by the controller after each task.
 
 ## Working protocol

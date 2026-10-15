@@ -72,7 +72,7 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 ### 4.3 Components and motion
 
 - Cards are white, 1 px `--grid` border, square corners, sitting on the graph paper.
-- Motion is purposeful and sparse: hero text fades in (CSS only); section reveals on scroll with ~300 ms ease-out; the only continuous motion is the orbiting satellites. Everything stops under `prefers-reduced-motion`.
+- Motion is purposeful and sparse: hero text fades in (CSS only); section reveals on scroll with ~300 ms ease-out; continuous motion is limited to the orbiting satellites, the custom cursor's inertia, and the `/cv` live background. Everything stops under `prefers-reduced-motion`.
 - The 3D style is a **physics diagram**: matte/clay planet, dashed orbit lines, small polyhedral satellites, mono labels with leader lines, no textures, no bloom, no starfield.
 
 ## 5. Information architecture
@@ -95,7 +95,8 @@ Hero behaviour: text is server-rendered and visible immediately; the scene mount
 - `/work/<slug>` — one page per satellite: problem, what was built, stack, outcome, screenshots/links. Rendered from `work` Markdown.
 - `/writing` — all posts, newest first. `/writing/<slug>` — post page, same type rules, 65–70 ch measure.
 - `/about` — longer bio, the Salamanca/physics story, his working method in his own words, link to `/cv`.
-- `/cv` — the CV rendered natively, not a PDF: typed data in `src/data/cv.ts` (education, projects, skills, activities, achievements — without the grant), laid out in the site's visual language (mono date column, serif body, section labels), with a "Print / save as PDF" action that uses a print stylesheet (no nav, footer or grid; black on white). No phone number. The Ground control CV link points here.
+- `/cv` — the CV rendered natively, not a PDF, designed as a **mission dossier**: typed data in `src/data/cv.ts` (education, projects, skills, activities, achievements — without the grant); huge serif name, mono contact row, sections numbered `§1 EDUCATION`…, each entry a row with a mono date column and a leader line that lights up in the accent on hover. The page has a **live background**: the graph paper drifts slowly and three dashed orbit rings rotate behind the content at low opacity (CSS only, no JavaScript, frozen under reduced motion). A "Print / save as PDF" button uses a print stylesheet (no nav, footer, cursor or background; black on white, 11 pt). No phone number. The Ground control CV link points here.
+- **Custom cursor (site-wide):** on fine-pointer devices a small accent dot plus an ink ring that follows the pointer with inertia; the ring grows and fills over links and buttons and shows the mono word `LAUNCH` over the orbit scene. Off on touch devices and under reduced motion; the native cursor stays available for text inputs. Under 1.5 KB of JavaScript.
 - `/rss.xml`, `/sitemap-index.xml`, `robots.txt`, Open Graph image (static, graph paper + title).
 - `404` — a suborbital joke: "Trajectory decayed." with a link home.
 
