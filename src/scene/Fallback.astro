@@ -3,7 +3,7 @@ import type { SceneSatellite } from '@/lib/satellites';
 import { ORBIT_RADIUS, SCENE_LABEL, describeSatellites } from '@/lib/satellites';
 import { circularPosition } from '@/lib/orbit';
 import { PREVIEW_RADIUS } from '@/scene/modelConfig';
-import { SQUASH, VIEW_RADIUS } from '@/scene/projection';
+import { SQUASH, VIEW_RADIUS, satellitePreviewRotation } from '@/scene/projection';
 interface Props { satellites: SceneSatellite[] }
 const { satellites } = Astro.props;
 
@@ -23,7 +23,7 @@ const rings = (['high', 'mid', 'low'] as const).map((o) => {
 const placed = satellites.map((s) => {
   const sim = circularPosition(ORBIT_RADIUS[s.orbit], s.phase);
   const p = project(sim);
-  return { s, p, far: sim.y > 0, right: p.x / W < 0.62 };   // flip the label inward when it sits in the right 38 % of the frame
+  return { s, p, rotation: satellitePreviewRotation(sim), far: sim.y > 0, right: p.x / W < 0.62 };   // flip the label inward when it sits in the right 38 % of the frame
 });
 const satR = PREVIEW_RADIUS.satellite * U;
 const planetR = PREVIEW_RADIUS.planet * U;
@@ -34,10 +34,10 @@ const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
     <title id={`${uid}-title`}>{SCENE_LABEL}</title>
     {satellites.length > 0 && <desc id={`${uid}-desc`}>{describeSatellites(satellites)}</desc>}
     {rings.map((r) => <path d={r.far} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
-    {placed.filter((x) => x.far).map(({ p }) => <image data-model="satellite" href="/models/satellite-fallback.webp" x={p.x - satR} y={p.y - satR} width={satR * 2} height={satR * 2} />)}
+    {placed.filter((x) => x.far).map(({ p, rotation }) => <image data-model="satellite" href="/models/satellite-fallback.webp" transform={`rotate(${rotation} ${p.x} ${p.y})`} x={p.x - satR} y={p.y - satR} width={satR * 2} height={satR * 2} />)}
     <image data-model="planet" href="/models/planet-fallback.webp" x={cx - planetR} y={cy - planetR} width={planetR * 2} height={planetR * 2} />
     {rings.map((r) => <path d={r.near} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
-    {placed.filter((x) => !x.far).map(({ p }) => <image data-model="satellite" href="/models/satellite-fallback.webp" x={p.x - satR} y={p.y - satR} width={satR * 2} height={satR * 2} />)}
+    {placed.filter((x) => !x.far).map(({ p, rotation }) => <image data-model="satellite" href="/models/satellite-fallback.webp" transform={`rotate(${rotation} ${p.x} ${p.y})`} x={p.x - satR} y={p.y - satR} width={satR * 2} height={satR * 2} />)}
   </svg>
   {placed.map(({ s, p, right }) => (
     <span class:list={['fallback__label', 'mono', { 'fallback__label--left': !right }]} style={`left:${pct(p).left};top:${pct(p).top}`} aria-hidden="true"><span class="fallback__text">{s.name.toUpperCase()}</span></span>

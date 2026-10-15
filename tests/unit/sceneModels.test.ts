@@ -38,6 +38,8 @@ describe('scene model assets', () => {
     expect(satellites[0]!.children[0]).not.toBe(satellites[1]!.children[0]);
     expect(satellites[1]!.position.toArray()).toEqual([2, 0, 1]);
     expect(satellites[1]!.scale.x).toBe(2);
+    // The source dish points along +Z; a decorative rotation would break the host's planet tracking.
+    expect(new Vector3(0, 0, 1).applyQuaternion(satellites[0]!.children[0]!.quaternion).toArray()).toEqual([0, 0, 1]);
     expect(onSettled).toHaveBeenCalledWith('ready');
     cancel(); disposeObject(planet); satellites.forEach(disposeObject);
   });

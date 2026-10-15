@@ -4,6 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Object3D, Scene } from 'three';
+import { Vector3 } from 'three';
 import { DocumentStub, ElementStub, ObserverStub } from '../helpers/sceneDom';
 
 const gpu = vi.hoisted(() => ({
@@ -224,6 +225,19 @@ describe('guarded frame loop (fix round 1, finding 1)', () => {
 });
 
 describe('visibility', () => {
+  it('keeps each antenna (+Z) aimed at the planet throughout its orbit', () => {
+    mount({ satellites: [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].map((phase, i) => ({ ...PAPERTOK, id: `sat-${i}`, phase })) });
+    for (let step = 0; step < 60; step++) {
+      frame(100);
+      for (const satellite of gpu.scene!.children.filter((object) => object.name === 'satellite-active')) {
+        const antenna = new Vector3(0, 0, 1).applyQuaternion(satellite.quaternion);
+        const inward = satellite.position.clone().negate().normalize();
+        expect(antenna.dot(inward)).toBeCloseTo(1, 10);
+        expect(new Vector3(0, 1, 0).applyQuaternion(satellite.quaternion).y).toBeCloseTo(1, 10);
+      }
+    }
+  });
+
   it('pauses off-screen and resumes exactly one loop without a position jump', () => {
     mount(); frame(); frame();
     const satellite = gpu.scene!.getObjectByName('satellite-active')!;

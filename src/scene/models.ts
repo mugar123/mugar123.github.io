@@ -60,13 +60,12 @@ export function loadSceneModels(
 ): () => void {
   const controller = new AbortController();
   let cancelled = false;
-  const install = async (url: string, targets: Group[], diameter: number, satellite = false): Promise<boolean> => {
+  const install = async (url: string, targets: Group[], diameter: number): Promise<boolean> => {
     let source: Object3D | undefined;
     try {
       source = await load(url, controller.signal);
       if (cancelled) { disposeObject(source); return false; }
       const template = fitModel(source, diameter);
-      if (satellite) { template.rotation.y = -0.45; template.rotation.z = 0.08; }
       for (const target of targets) {
         // Each host starts with its own procedural placeholder; imported clones share GPU resources.
         disposeObject(target);
@@ -81,7 +80,7 @@ export function loadSceneModels(
     }
   };
   const requests = [install(MODEL_URLS.planet, [hosts.planet], 2)];
-  if (hosts.satellites.length) requests.push(install(MODEL_URLS.satellite, hosts.satellites, SATELLITE_RADIUS * 2, true));
+  if (hosts.satellites.length) requests.push(install(MODEL_URLS.satellite, hosts.satellites, SATELLITE_RADIUS * 2));
   void Promise.all(requests).then((loaded) => {
     if (!cancelled) hosts.onSettled(loaded.every(Boolean) ? 'ready' : loaded.some(Boolean) ? 'partial' : 'fallback');
   });

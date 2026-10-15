@@ -193,6 +193,8 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
         const pos = circularPosition(p.radius, p.s.phase + p.omega * AMBIENT_RATE * clock);
         toThree(pos, satWorld);
         p.mesh.position.copy(satWorld);
+        // The source antenna points along +Z. Track the origin without rolling the solar panels.
+        p.mesh.lookAt(0, 0, 0);
         toScreen(satWorld, p.item);
         p.label.style.transform = `translate(${p.item.x.toFixed(1)}px, ${p.item.y.toFixed(1)}px)`;
         const hidden = behindPlanet(satWorld, CAMERA_POSITION);
