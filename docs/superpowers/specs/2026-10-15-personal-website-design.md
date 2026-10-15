@@ -38,7 +38,7 @@ The site tells one story: **the student who is already leaving the classroom's g
 | `papertok` | PaperTok | high | active | A short-form, swipeable feed for discovering arXiv papers (papertok.app, github.com/mugar123/papertok; React, Vite, Firebase, KaTeX, Transformers.js, Python; ~100 users). |
 | `notes-to-latex` | Notes → LaTeX pipeline | mid | active | Handwritten lecture notes transcribed into compiled LaTeX automatically, mixing open-source and closed models. Grew out of hand-typeset course notes; code not public. |
 
-Facts that must never appear on the site: the a-private-grant mini-grant and the a private application application (owner's decision). No phone number anywhere.
+Facts that must never appear on the site: two facts the owner keeps private (owner's decision). No phone number anywhere.
 
 Visitor launches that reach orbit occupy the **low** orbit band and are visually smaller and lighter than real satellites.
 
@@ -95,7 +95,7 @@ Hero behaviour: text is server-rendered and visible immediately; the scene mount
 - `/work/<slug>` — one page per satellite: problem, what was built, stack, outcome, screenshots/links. Rendered from `work` Markdown.
 - `/writing` — all posts, newest first. `/writing/<slug>` — post page, same type rules, 65–70 ch measure.
 - `/about` — longer bio, the Salamanca/physics story, his working method in his own words, link to `/cv`.
-- `/cv` — the CV rendered natively, not a PDF, designed as a **mission dossier**: typed data in `src/data/cv.ts` (education, projects, skills, activities, achievements — without the grant); huge serif name, mono contact row, sections numbered `§1 EDUCATION`…, each entry a row with a mono date column and a leader line that lights up in the accent on hover. The page has a **live background**: the graph paper drifts slowly and three dashed orbit rings rotate behind the content at low opacity (CSS only, no JavaScript, frozen under reduced motion). A "Print / save as PDF" button uses a print stylesheet (no nav, footer, cursor or background; black on white, 11 pt). No phone number. The Ground control CV link points here.
+- `/cv` — the CV rendered natively, not a PDF, designed as a **mission dossier**: typed data in `src/data/cv.ts` (education, projects, skills, activities, achievements — without the two facts the owner keeps private); huge serif name, mono contact row, sections numbered `§1 EDUCATION`…, each entry a row with a mono date column and a leader line that lights up in the accent on hover. The page has a **live background**: the graph paper drifts slowly and three dashed orbit rings rotate behind the content at low opacity (CSS only, no JavaScript, frozen under reduced motion). A "Print / save as PDF" button uses a print stylesheet (no nav, footer, cursor or background; black on white, 11 pt). No phone number. The Ground control CV link points here.
 - **Custom cursor (site-wide):** on fine-pointer devices a small accent dot plus an ink ring that follows the pointer with inertia; the ring grows and fills over links and buttons and shows the mono word `LAUNCH` over the orbit scene. Off on touch devices and under reduced motion; the native cursor stays available for text inputs. Under 1.5 KB of JavaScript.
 - `/rss.xml`, `/sitemap-index.xml`, `robots.txt`, Open Graph image (static, graph paper + title).
 - `404` — a suborbital joke: "Trajectory decayed." with a link home.

@@ -24,7 +24,7 @@
 - No React, no Tailwind, no analytics, no backend in v1.
 - Every commit message ends with the implementing agent's attribution line (see `AGENTS.md`): `Co-Authored-By: Codex <noreply@openai.com>` for Codex, `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` or the Claude model actually used for Claude. The `git commit -m` lines in the tasks omit the trailer; add yours.
 - The launch pad sits at `LAUNCH_RADIUS = 1.05` planet radii; aims within 3° of the horizontal snap to tangential (spec §3).
-- Owner facts: public email `nicomg60@gmail.com`; GitHub `mugar123`; site `papertok.app`; no phone number anywhere; never mention the a-private-grant grant or a private application; PaperTok is a swipeable discovery feed for arXiv papers (not a study app); the notes→LaTeX pipeline is private (no links). The CV is rendered natively at `/cv`, never shipped as a PDF file.
+- Owner facts: public email `nicomg60@gmail.com`; GitHub `mugar123`; site `papertok.app`; no phone number anywhere; never mention the two facts the owner keeps private; PaperTok is a swipeable discovery feed for arXiv papers (not a study app); the notes→LaTeX pipeline is private (no links). The CV is rendered natively at `/cv`, never shipped as a PDF file.
 
 ## Review Focus
 
@@ -2545,7 +2545,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: `Base`, `Hud` (Task 5); tokens and `.mono` utilities (Task 4).
 - Produces: `cv` data object (typed, see below); `/cv` route; `<LiveBackground />` (CSS-only animated grid + rotating orbit rings, used by `/cv`); `<Cursor />` mounted once in `Base.astro`.
 
-Design intent (spec §5.2): the CV is a *mission dossier* — big serif name, mono contact row, `§`-numbered sections, entries as rows with a mono date column and a leader line that lights up in the accent on hover. No phone, no grant, no a private application. Print gives a clean black-on-white A4.
+Design intent (spec §5.2): the CV is a *mission dossier* — big serif name, mono contact row, `§`-numbered sections, entries as rows with a mono date column and a leader line that lights up in the accent on hover. No phone number, and neither of the two facts the owner keeps private. Print gives a clean black-on-white A4.
 
 ```ts
 // src/data/cv.ts shape
@@ -2570,9 +2570,8 @@ describe('cv data', () => {
   it('has the owner facts and nothing excluded', () => {
     expect(cv.name).toBe('Nicolás Muñoz García');
     expect(cv.contacts.map((c) => c.value)).toEqual(['nicomg60@gmail.com', 'github.com/mugar123', 'papertok.app']);
-    expect(everything).not.toMatch(/\+34|623 ?409 ?632/);
-    expect(everything).not.toContain('a-private-grant');
-    expect(everything).not.toContain('application');
+    expect(everything).not.toMatch(/\+34|\b[6-9]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b/); // no phone number
+    for (const word of privateExclusions()) expect(everything).not.toContain(word); // two facts the owner keeps private
   });
   it('has the five sections in order, each non-empty', () => {
     expect(cv.sections.map((s) => s.id)).toEqual(['education', 'projects', 'activities', 'achievements']);
@@ -2909,7 +2908,7 @@ Add `{ href: '/cv', label: 'CV' }` to the `items` array in `src/components/Nav.a
 - [ ] **Step 9: Verify**
 
 ```bash
-npm test && npm run build && npm run check && ls dist/cv/index.html && grep -c 'nicomg60@gmail.com' dist/cv/index.html && ! grep -qi 'a-private-grant\|application\|[redacted]' dist/cv/index.html && echo "CV CLEAN"
+npm test && npm run build && npm run check && ls dist/cv/index.html && grep -c 'nicomg60@gmail.com' dist/cv/index.html && ! grep -q '+34' dist/cv/index.html && echo "CV CLEAN"
 ```
 
 Expected: tests pass, build and check clean, `CV CLEAN`. In `npm run dev` on a laptop: the grid drifts slowly and the rings rotate behind the content; the cursor ring lags the dot and grows over links; on `/`, hovering the scene shows `LAUNCH` in the ring; with `prefers-reduced-motion` emulated, the background is static and the native cursor is back; `Cmd+P` preview shows a clean black-on-white CV with no nav, footer or background and with URLs printed after links.
@@ -3140,12 +3139,11 @@ for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/abou
   });
 }
 
-test('cv page: no phone number, no grant, print action present', async ({ page }) => {
+test('cv page: no phone number, no private facts, print action present', async ({ page }) => {
   await page.goto('/cv');
   const text = await page.locator('main').innerText();
-  expect(text).not.toMatch(/\+34|623 ?409 ?632/);
-  expect(text.toLowerCase()).not.toContain('a-private-grant');
-  expect(text.toLowerCase()).not.toContain('application');
+  expect(text).not.toMatch(/\+34|\b[6-9]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b/); // no phone number
+  for (const word of privateExclusions()) expect(text.toLowerCase()).not.toContain(word); // two facts the owner keeps private
   await expect(page.getByRole('button', { name: /print|save as pdf/i })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Nicolás Muñoz García');
 });

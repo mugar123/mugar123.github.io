@@ -35,7 +35,7 @@ A static Astro site on GitHub Pages. Graph-paper background, LaTeX typography (L
 - 3D assets: code-built primitives first. Any external model must be CC0/CC-BY, match the matte low-poly look, and be listed in `public/models/CREDITS.md`.
 - Tests: Vitest for pure modules (TDD: failing test first), Playwright for pages. Run the focused test while iterating and the full suite before committing.
 - Commit per task with a conventional message. Commits authored by Codex end with `Co-Authored-By: Codex <noreply@openai.com>`; commits authored by Claude end with the model actually used: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` for implementers, `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` for the orchestrator.
-- Owner facts that override older copy: PaperTok is a swipeable discovery feed for arXiv papers (papertok.app, github.com/mugar123/papertok); the notes→LaTeX pipeline is private; public email `nicomg60@gmail.com`; no phone number; never mention the a-private-grant grant or a private application; the CV is rendered natively at `/cv`, never as a PDF.
+- Owner facts that override older copy: PaperTok is a swipeable discovery feed for arXiv papers (papertok.app, github.com/mugar123/papertok); the notes→LaTeX pipeline is private; public email `nicomg60@gmail.com`; no phone number; never mention the two facts the owner keeps private (the tests read them from the untracked `.private-exclusions.json`, see `.private-exclusions.json.example`); the CV is rendered natively at `/cv`, never as a PDF.
 - Never dispatch sub-agents or reviewers of your own; review is scheduled by the controller after each task.
 
 ## Working protocol

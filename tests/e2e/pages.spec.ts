@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { PHONE_PATTERN, privateExclusions, NO_EXCLUSIONS_MESSAGE } from '../helpers/privacy';
 
 for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/about', '/cv']) {
   test(`${path} renders with a heading and ships no Three`, async ({ page }) => {
@@ -12,14 +13,22 @@ for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/abou
   });
 }
 
-test('cv page: no phone number, no grant, print action present', async ({ page }) => {
+test('cv page: no phone number, print action present', async ({ page }) => {
   await page.goto('/cv');
   const text = await page.locator('main').innerText();
-  expect(text).not.toMatch(/\+34|623 ?409 ?632/);
-  expect(text.toLowerCase()).not.toContain('a-private-grant');
-  expect(text.toLowerCase()).not.toContain('application');
+  expect(text).not.toMatch(PHONE_PATTERN);
   await expect(page.getByRole('button', { name: /print|save as pdf/i })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Nicolás Muñoz García');
+});
+
+test('no page mentions the facts the owner keeps private', async ({ page }) => {
+  const words = privateExclusions();
+  test.skip(words.length === 0, NO_EXCLUSIONS_MESSAGE);
+  for (const path of ['/', '/cv', '/about', '/work/papertok', '/work/notes-to-latex', '/writing']) {
+    await page.goto(path);
+    const html = (await page.content()).toLowerCase();
+    for (const word of words) expect(html, `${path} contains a private word`).not.toContain(word);
+  }
 });
 
 test('writing index shows the empty state while every post is a draft, and draft routes do not exist', async ({ page }) => {
