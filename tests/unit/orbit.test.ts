@@ -178,3 +178,46 @@ describe('simulate: properties the scene relies on', () => {
     expect(() => simulate({ angle: 0, speed: 1 }, { bound: 1 })).toThrow(RangeError);
   });
 });
+
+// Fix round 1: the conic, not the samples, decides grazing and truncated outcomes.
+describe('simulate: grazing and truncated outcomes follow the conic', () => {
+  it('a grazing bound launch whose samples straddle the dip is suborbital and ends on the surface', () => {
+    const p = { angle: 0.20604394405222665, speed: 1.3 }; // analytic periapsis 0.999999
+    expect(orbitalElements(p).rp).toBeLessThan(1);
+    expect(simulate(p, { maxSteps: 6000 }).outcome).toBe('suborbital');
+    const s = simulate(p);
+    expect(s.outcome).toBe('suborbital');
+    expect(s.truncated).toBe(false);
+    expect(r(s.points.at(-1)!)).toBeLessThanOrEqual(1.001);
+    expect(r(s.points.at(-1)!)).toBeCloseTo(1, 12);
+  });
+  it('a grazing inward escape whose samples straddle the dip is suborbital and ends on the surface', () => {
+    const p = { angle: -0.22297098334254384, speed: 1.4 }; // unbound, analytic periapsis 0.99999956
+    expect(orbitalElements(p).energy).toBeGreaterThanOrEqual(0);
+    expect(orbitalElements(p).rp).toBeLessThan(1);
+    const s = simulate(p);
+    expect(s.outcome).toBe('suborbital');
+    expect(r(s.points.at(-1)!)).toBeCloseTo(1, 12);
+    expect(maxR(s.points)).toBeLessThan(R0 + 1e-9);
+  });
+  it('a truncated inward unbound launch with periapsis below the surface is suborbital', () => {
+    expect(simulate({ angle: -1.2, speed: 1.7 }, { maxSteps: 1 })).toMatchObject({ truncated: true, outcome: 'suborbital' });
+  });
+  it('a truncated outward unbound launch is already past periapsis and escapes', () => {
+    expect(orbitalElements({ angle: 0.6, speed: 1.5 }).rp).toBeLessThan(1);
+    expect(simulate({ angle: 0.6, speed: 1.5 }, { maxSteps: 1 })).toMatchObject({ truncated: true, outcome: 'escape' });
+  });
+  it('a periapsis exactly on the surface counts as clearing it', () => {
+    expect(simulate({ angle: 0.14743138583910761, speed: 1.1 }, { maxSteps: 0 })).toMatchObject({ truncated: true, outcome: 'orbit' });
+  });
+});
+
+describe('orbitalElements: eccentricity vector', () => {
+  it('resolves the circular pad orbit to rounding', () => {
+    expect(orbitalElements({ angle: 0, speed: circularSpeed(LAUNCH_RADIUS) }).e).toBeLessThan(1e-12);
+  });
+  it('resolves a tiny flight-path angle on the circular orbit (e ≈ angle)', () => {
+    const e = orbitalElements({ angle: 1e-10, speed: circularSpeed(LAUNCH_RADIUS) }).e;
+    expect(Math.abs(e - 1e-10) / 1e-10).toBeLessThan(1e-6);
+  });
+});
