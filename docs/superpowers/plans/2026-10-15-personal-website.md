@@ -2383,7 +2383,7 @@ const { title, orbit, status, launched, oneLiner, stack, links } = entry.data;
     <h1>{title}</h1>
     <p class="lede">{oneLiner}</p>
     <p class="mono">Stack · {stack.join(' · ')}</p>
-    {links && <p class="mono">{links.map((l) => <a href={l.url} rel="noopener">{l.label}</a>)}</p>}
+    {links && <p class="mono links">{links.map((l, i) => <>{i > 0 && ' · '}<a href={l.url}>{l.label}</a></>)}</p>}
     <Content />
     <p><a class="mono mono--ink" href="/#in-orbit">← Back to orbit</a></p>
   </article>
@@ -2469,10 +2469,14 @@ import MissionSpecs from '@/components/MissionSpecs.astro';
     <p>If it is real, and I don't like the alternatives out there, I start the project and give it my time. I begin by looking for UI inspiration, then I build. I spend hours programming, but just as many testing and checking that the result is really what I wanted. Then I work with Claude Code and Codex in parallel.</p>
     <h2>Mission specs</h2>
     <MissionSpecs />
-    <p class="mono"><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a> · <a href="https://github.com/mugar123">GitHub</a> · <a href="/cv">CV</a></p>
+    <p class="mono contact"><a class="links__primary" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a> · <a href="https://github.com/mugar123">GitHub</a> · <a href="/cv">CV</a></p>
   </article>
 </Base>
-<style>.prose { padding-block: var(--space-5) var(--space-6); } .prose h2 { margin-top: var(--space-5); }</style>
+<style>
+  .prose { padding-block: var(--space-5) var(--space-6); } .prose h2 { margin-top: var(--space-5); }
+  .contact a { text-transform: none; letter-spacing: 0; }
+  .links__primary { color: var(--ink); text-decoration-color: var(--accent); text-decoration-thickness: 2px; } /* accent as underline only (AA) */
+</style>
 ```
 
 `src/pages/404.astro`:
