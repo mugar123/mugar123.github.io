@@ -2570,6 +2570,8 @@ export const cv = {
       id: 'education', label: 'Education',
       entries: [
         { title: 'Universidad de Salamanca (USAL)', subtitle: 'BSc in Physics — expected June 2029', period: '2025 – present', where: 'Salamanca, Spain' },
+        // REVIEW: owner to confirm the year and provide the course link (href) if he wants it linked.
+        { title: 'Course on neural networks', subtitle: 'Universidad de Salamanca', period: '2026' },
         { title: 'Upper secondary education (Bachillerato), science and technology track', subtitle: 'University entrance examination (PAU): 12.501/14 · average 9.06/10', period: '2023 – 2025' },
       ],
     },
