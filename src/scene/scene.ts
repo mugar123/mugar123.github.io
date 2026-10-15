@@ -1,6 +1,5 @@
 import {
-  Color, DirectionalLight, HemisphereLight, OrthographicCamera, Scene, Vector3, WebGLRenderer,
-  type BufferGeometry, type Material, type Mesh, type Object3D,
+  ACESFilmicToneMapping, Color, DirectionalLight, HemisphereLight, OrthographicCamera, Scene, Vector3, WebGLRenderer,
 } from 'three';
 import { angularSpeed, circularPosition } from '@/lib/orbit';
 import { ORBIT_RADIUS, SCENE_LABEL, describeSatellites, type SceneSatellite } from '@/lib/satellites';
@@ -8,6 +7,8 @@ import { CAMERA_POSITION, VIEW_RADIUS } from './projection';
 import { createPlanet } from './planet';
 import { createRing, toThree } from './rings';
 import { createSatelliteMesh, SATELLITE_SIZE } from './satelliteMesh';
+import { disposeObject, loadSceneModels } from './models';
+import { MIN_SATELLITE_PX } from './modelConfig';
 import { placeLabels, behindPlanet, type LabelItem } from './labels';
 
 export interface MountOptions {
@@ -22,23 +23,12 @@ export interface MountOptions {
 
 /** Simulation time units per second: the pace at which the satellites go round. */
 const AMBIENT_RATE = 0.15;
-/** On-screen radius floor (CSS px) so satellites stay legible when the scene is phone-sized. */
-const MIN_SATELLITE_PX = 4;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, attrs: Record<string, string> = {}): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   node.className = cls;
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   return node;
-}
-
-function disposeTree(root: Object3D): void {
-  root.traverse((o) => {
-    const m = o as Partial<Mesh<BufferGeometry, Material | Material[]>>;
-    m.geometry?.dispose();
-    const mat = m.material;
-    if (Array.isArray(mat)) mat.forEach((x) => x.dispose()); else mat?.dispose();
-  });
 }
 
 /**
@@ -85,6 +75,8 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
     const renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
     cleanups.push(() => { renderer.dispose(); if (!contextLost) renderer.forceContextLoss(); });
     renderer.setClearColor(new Color('#000000'), 0);
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     const canvas = renderer.domElement;
     canvas.className = 'orbit-canvas';
 
@@ -106,22 +98,23 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       container.setAttribute('aria-describedby', descId);
     }
     cleanups.push(() => {
-      for (const a of ['role', 'aria-label', 'aria-describedby', 'data-ready']) container.removeAttribute(a);
+      for (const a of ['role', 'aria-label', 'aria-describedby', 'data-ready', 'data-models']) container.removeAttribute(a);
     });
 
     // ── Scene ────────────────────────────────────────────────────────────────────────────────
     const scene = new Scene();
-    cleanups.push(() => disposeTree(scene));
+    cleanups.push(() => disposeObject(scene));
     const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     camera.position.set(...CAMERA_POSITION);
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld();
 
-    scene.add(new HemisphereLight('#ffffff', '#d8dbd5', 2.4));
-    const sun = new DirectionalLight('#ffffff', 1.9);
-    sun.position.set(-3, 5, 2);
+    scene.add(new HemisphereLight('#ffffff', '#7c8791', 2.2));
+    const sun = new DirectionalLight('#fff4e8', 2.8);
+    sun.position.set(-3, 5, 5);
     scene.add(sun);
-    scene.add(createPlanet());
+    const planet = createPlanet();
+    scene.add(planet);
     for (const r of Object.values(ORBIT_RADIUS)) scene.add(createRing(r).line);
 
     const tmp = new Vector3();
@@ -253,6 +246,12 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
     io.observe(container);
     cleanups.push(() => io.disconnect());
     setRunning(true);
+    container.setAttribute('data-models', 'loading');
+    cleanups.push(loadSceneModels({
+      planet,
+      satellites: projects.map((p) => p.mesh),
+      onSettled: guard((state) => { container.setAttribute('data-models', state); }),
+    }));
   } catch (err) {
     destroy();
     throw err;

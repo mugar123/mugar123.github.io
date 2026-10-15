@@ -4,6 +4,7 @@ const { buildDate } = Astro.props;
 ---
 <footer class="container">
   <span class="mono">Salamanca · 40.96° N, 5.67° W · CET</span>
+  {Astro.url.pathname === '/' && <a class="mono" href="/models/CREDITS.md">3D credits</a>}
   <span class="mono">Last updated {buildDate}</span>
 </footer>
 <style>

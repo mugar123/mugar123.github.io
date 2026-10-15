@@ -1,12 +1,14 @@
-import { Color, IcosahedronGeometry, Mesh, MeshLambertMaterial } from 'three';
+import { Color, Group, IcosahedronGeometry, Mesh, MeshLambertMaterial } from 'three';
 
-export const PLANET_COLOR = '#5E6B7A';
+export const PLANET_COLOR = '#B88746';
 
-/** The classroom: a matte, faceted unit sphere (detail 2 keeps the facets readable at hero size). */
-export function createPlanet(): Mesh {
-  const geo = new IcosahedronGeometry(1, 2);
-  const mat = new MeshLambertMaterial({ color: new Color(PLANET_COLOR), flatShading: true });
-  const mesh = new Mesh(geo, mat);
-  mesh.name = 'planet';
-  return mesh;
+/** Warm matte placeholder, retained if the selected planet cannot be downloaded. */
+export function createPlanet(): Group {
+  const group = new Group();
+  group.name = 'planet';
+  group.add(new Mesh(
+    new IcosahedronGeometry(1, 2),
+    new MeshLambertMaterial({ color: new Color(PLANET_COLOR), flatShading: true }),
+  ));
+  return group;
 }
