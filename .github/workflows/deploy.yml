@@ -8,21 +8,44 @@ on:
 concurrency: { group: pages, cancel-in-progress: false }
 permissions:
   contents: read
-  pages: write
-  id-token: write
 jobs:
   build:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    outputs:
+      stale: ${{ steps.freshness.outputs.stale }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      # A CI run that finishes after a newer push to main must not overwrite the newer site: that push has
+      # its own CI run and deploy. Manual runs build the checked-out ref and are never stale.
+      - id: freshness
+        name: Skip if main has moved past this CI run
+        if: github.event_name == 'workflow_run'
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          tip=$(git ls-remote "https://github.com/${REPO}" refs/heads/main | cut -f1)
+          if [ -z "$tip" ]; then echo "::error::could not read the main tip"; exit 1; fi
+          if [ "$tip" != "$HEAD_SHA" ]; then
+            echo "::notice::main is at $tip but this CI run built $HEAD_SHA; skipping the stale deploy"
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: withastro/action@v6
+        if: steps.freshness.outputs.stale != 'true'
         with: { node-version: 24 }
   deploy:
     needs: build
+    if: needs.build.outputs.stale != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
