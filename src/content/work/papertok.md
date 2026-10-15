@@ -3,21 +3,28 @@ title: PaperTok
 orbit: high
 status: active
 launched: 2025-06-01
-oneLiner: A study app born from the way I study myself.
-stack: [Product, Swift, Design]
+oneLiner: A short-form, swipeable feed for discovering arXiv papers.
+stack: [React, Vite, Firebase, KaTeX, Transformers.js, Python]
+links:
+  - label: papertok.app
+    url: https://papertok.app
+  - label: GitHub
+    url: https://github.com/mugar123/papertok
 order: 1
 ---
 
-<!-- REVIEW: Nicolás to replace with the real story, dates and links. -->
+<!-- REVIEW: confirm launch month -->
 
 ## Problem
 
-Studying from long notes is slow. I wanted the parts of my notes that matter, in a format I would actually open.
+Students and researchers rarely discover literature outside their existing reading habits.
 
 ## What I built
 
-PaperTok turns study material into short, visual cards. I designed the product, built the app and shipped it.
+A full web application that reformats arXiv preprints into a swipeable, TikTok-style feed. A recommendation engine builds a semantic profile from each user's interactions and ranks incoming preprints against it.
+
+KaTeX renders the maths in the browser, Transformers.js (Xenova) computes embeddings on the client, and a Python proxy talks to the arXiv API. Firebase handles auth, Firestore and hosting, hardened after an internal security review.
 
 ## Outcome
 
-Live, with real users. Dates, numbers and store link to be added.
+Live at [papertok.app](https://papertok.app), with around 100 users since launch.
