@@ -1,0 +1,29 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import Hud from '@/components/Hud.astro';
+
+export async function getStaticPaths() {
+  const work = await getCollection('work');
+  return work.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, orbit, status, launched, oneLiner, stack, links } = entry.data;
+---
+<Base title={`${title} — Nicolás Muñoz`} description={oneLiner}>
+  <article class="container prose">
+    <p class="mono">Satellite · {orbit} orbit · <Hud accent={status === 'active'}>{status}</Hud> · launched {launched.toISOString().slice(0, 10)}</p>
+    <h1>{title}</h1>
+    <p class="lede">{oneLiner}</p>
+    <p class="mono">Stack · {stack.join(' · ')}</p>
+    {links && <p class="mono">{links.map((l) => <a href={l.url} rel="noopener">{l.label}</a>)}</p>}
+    <Content />
+    <p><a class="mono mono--ink" href="/#in-orbit">← Back to orbit</a></p>
+  </article>
+</Base>
+<style>
+  .prose { padding-block: var(--space-5) var(--space-6); }
+  .prose :global(h2) { margin-top: var(--space-5); }
+  .lede { font-size: 1.375rem; }
+</style>

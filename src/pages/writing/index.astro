@@ -1,0 +1,15 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '@/layouts/Base.astro';
+import PostList from '@/components/PostList.astro';
+import { publishedPosts } from '@/lib/posts';
+const posts = publishedPosts(await getCollection('writing'));
+---
+<Base title="Logbook — Nicolás Muñoz" description="Notes on building things while studying physics.">
+  <div class="container page">
+    <p class="mono">Logbook</p>
+    <h1>Entries.</h1>
+    {posts.length > 0 ? <PostList posts={posts} /> : <p>No entries yet. The first one is being written.</p>}
+  </div>
+</Base>
+<style>.page { padding-block: var(--space-5) var(--space-6); }</style>

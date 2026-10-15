@@ -1,0 +1,19 @@
+---
+import Base from '@/layouts/Base.astro';
+import MissionSpecs from '@/components/MissionSpecs.astro';
+---
+<Base title="About — Nicolás Muñoz" description="Physics student at the Universidad de Salamanca, founder of PaperTok.">
+  <article class="container prose">
+    <p class="mono">About</p>
+    <h1>Nicolás Muñoz García.</h1>
+    <!-- REVIEW: Nicolás to edit the bio. Facts below come from his CV; the method paragraphs are his own words, translated. -->
+    <p>I am a second-year physics student at the Universidad de Salamanca (BSc, 2025–2029). I build software around needs I run into myself: PaperTok, a swipeable feed for discovering arXiv papers that about a hundred people use, and a pipeline that turns my handwritten lecture notes into compiled LaTeX.</p>
+    <h2>How I work</h2>
+    <p>My way of working is simple. First I look for a need: while I work on other projects or on my degree, I run into plenty of needs nobody is covering. I write them down and ask who else has them. I rank the list from most to least pressing and look hard at the top three: do other people really have this need? Is it really uncovered, or is it covered and I just didn't know?</p>
+    <p>If it is real, and I don't like the alternatives out there, I start the project and give it my time. I begin by looking for UI inspiration, then I build. I spend hours programming, but just as many testing and checking that the result is really what I wanted. Then I work with Claude Code and Codex in parallel.</p>
+    <h2>Mission specs</h2>
+    <MissionSpecs />
+    <p class="mono"><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a> · <a href="https://github.com/mugar123">GitHub</a> · <a href="/cv">CV</a></p>
+  </article>
+</Base>
+<style>.prose { padding-block: var(--space-5) var(--space-6); } .prose h2 { margin-top: var(--space-5); }</style>
