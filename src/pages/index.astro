@@ -49,7 +49,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 
   <Section num={posts.length > 0 ? '4' : '3'} id="ground-control" label="Ground control" title="Open to internships and junior roles.">
     <ul class="links mono" aria-label="Contact and social">
-      <li><span>Email</span><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
+      <li><span>Email</span><a class="links__primary" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
       <li><span>GitHub</span><a href="https://github.com/mugar123" rel="me">github.com/mugar123</a></li>
       <li><span>Building</span><a href="https://papertok.app" rel="me">papertok.app</a></li>
       <li><span>CV</span><a href="/cv">Read it on this site →</a></li>
@@ -58,23 +58,28 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 </Base>
 
 <style>
-  .hero { position: relative; min-height: 80vh; display: grid; align-items: end; }
+  .hero { position: relative; min-height: clamp(34rem, 78vh, 54rem); display: grid; align-items: end; }
   .hero__scene { position: absolute; inset: 0; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
-  .hero__scene :global(.orbit-scene) { width: min(68vw, 60rem); pointer-events: auto; }
-  .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: 40rem; margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
+  .hero__scene :global(.orbit-scene) { width: min(62vw, 60rem); pointer-events: auto; }
+  /* The copy never runs under the scene: on mid-size desktops it is capped by viewport width. */
+  .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: min(40rem, 56vw); margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
   .hero__copy h1 em { font-style: italic; }
   .hero__lede { font-size: var(--text-body); }
   .hero__cta { display: flex; gap: var(--space-3); flex-wrap: wrap; }
   .btn { font-family: var(--font-mono); font-size: var(--text-label); text-transform: uppercase; letter-spacing: 0.04em; text-decoration: none; border: 1px solid var(--ink); padding: 0.6em 1em; background: var(--surface); }
-  .btn--accent { border-color: var(--accent); color: var(--accent); }
+  /* Accent never carries 12px text (4.2:1 on white fails AA): it marks the border, text stays ink. */
+  .btn--accent { border-color: var(--accent); border-width: 2px; color: var(--ink); }
   .btn:hover { background: var(--ink); color: var(--paper); }
-  .btn--accent:hover { background: var(--accent); color: var(--paper); }
+  .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
-  .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+  /* Below 1240px the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); §2 repeats them in full anyway. */
+  @media (max-width: 1239px) { .hero__specs { display: none; } }
+  .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
   .specs__note { margin-top: var(--space-4); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
   .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
+  .links__primary { color: var(--ink); text-decoration-color: var(--accent); text-decoration-thickness: 2px; } /* accent as underline, text stays ink (AA) */
   @media (max-width: 767px) {
     .hero { min-height: 0; display: block; }
     .hero__scene { position: static; display: block; }

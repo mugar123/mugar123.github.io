@@ -14,7 +14,10 @@ const specs = [
   {specs.map((s) => (<div><dt class="mono">{s.k}</dt><dd>{s.v}</dd></div>))}
 </dl>
 <style>
-  .specs { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin: 0; }
+  /* Six items read as 3 × 2, not 4 + 2. */
+  .specs { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+  @media (max-width: 899px) { .specs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 599px) { .specs { grid-template-columns: 1fr; } }
   .specs div { background: var(--surface); border: 1px solid var(--grid); padding: var(--space-3); }
   dt { margin: 0 0 var(--space-1); } dd { margin: 0; font-size: var(--text-small); }
   .specs--compact { gap: var(--space-1); grid-template-columns: 1fr; }
