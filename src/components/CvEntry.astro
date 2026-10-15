@@ -1,0 +1,28 @@
+---
+import type { CvEntry } from '@/data/cv';
+interface Props { entry: CvEntry }
+const { entry } = Astro.props;
+---
+<li class="entry">
+  <span class="entry__period mono">{entry.period}</span>
+  <div class="entry__body">
+    <h3>{entry.href ? <a href={entry.href} rel="noopener">{entry.title}</a> : entry.title}</h3>
+    {entry.subtitle && <p class="entry__sub">{entry.subtitle}</p>}
+    {entry.where && <p class="entry__where mono">{entry.where}</p>}
+    {entry.bullets && <ul class="entry__bullets">{entry.bullets.map((b) => <li>{b}</li>)}</ul>}
+  </div>
+</li>
+<style>
+  .entry { display: grid; grid-template-columns: 9rem 1fr; gap: var(--space-4); padding: var(--space-3) 0; position: relative; }
+  .entry + .entry { border-top: 1px solid var(--grid); }
+  .entry__period { padding-top: 0.35em; position: relative; }
+  .entry__period::after { content: ''; position: absolute; top: 0.95em; right: -1.25rem; width: 1rem; border-top: 1px solid var(--grid); transition: border-color var(--dur) var(--ease), width var(--dur) var(--ease); }
+  .entry:hover .entry__period { color: var(--accent); }
+  .entry:hover .entry__period::after { border-color: var(--accent); width: 1.5rem; }
+  h3 { font-size: 1.25rem; margin: 0; }
+  h3 a { text-decoration: none; } h3 a:hover { text-decoration: underline; }
+  .entry__sub { margin: 0.15em 0 0; font-style: italic; }
+  .entry__where { margin: 0.25em 0 0; }
+  .entry__bullets { margin: var(--space-2) 0 0; padding-left: 1.1em; font-size: var(--text-small); display: grid; gap: var(--space-1); }
+  @media (max-width: 767px) { .entry { grid-template-columns: 1fr; gap: var(--space-1); } .entry__period::after { display: none; } }
+</style>

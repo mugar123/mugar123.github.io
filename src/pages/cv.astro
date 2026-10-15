@@ -1,0 +1,59 @@
+---
+import Base from '@/layouts/Base.astro';
+import CvEntry from '@/components/CvEntry.astro';
+import LiveBackground from '@/components/LiveBackground.astro';
+import { cv } from '@/data/cv';
+---
+<Base title="CV — Nicolás Muñoz García" description="Physics student at the Universidad de Salamanca; founder of PaperTok.">
+  <LiveBackground />
+  <article class="cv container">
+    <header class="cv__head">
+      <p class="mono">Mission dossier · updated 2026-10</p>
+      <h1>{cv.name}</h1>
+      <p class="cv__degree">{cv.degree} · {cv.faculty}<br />{cv.location}</p>
+      <ul class="cv__contacts mono" aria-label="Contact">
+        {cv.contacts.map((c) => <li><span>{c.label}</span><a href={c.href} rel={c.href.startsWith('http') ? 'me noopener' : undefined}>{c.value}</a></li>)}
+      </ul>
+      <p class="no-print"><button class="btn" type="button" id="print">Print / save as PDF</button></p>
+    </header>
+
+    {cv.sections.map((s, i) => (
+      <section class="cv__section" aria-labelledby={`cv-${s.id}`}>
+        <p class="mono">§{i + 1} · {s.label}</p>
+        <h2 id={`cv-${s.id}`} class="visually-hidden">{s.label}</h2>
+        <ol class="cv__entries">{s.entries.map((e) => <CvEntry entry={e} />)}</ol>
+      </section>
+    ))}
+
+    <section class="cv__section" aria-labelledby="cv-skills">
+      <p class="mono">§{cv.sections.length + 1} · Technical skills and interests</p>
+      <h2 id="cv-skills" class="visually-hidden">Technical skills and interests</h2>
+      <dl class="cv__skills">
+        {cv.skills.map((g) => (<div><dt class="mono">{g.label}</dt><dd>{g.items.join(' · ')}</dd></div>))}
+      </dl>
+    </section>
+  </article>
+</Base>
+
+<script>
+  document.getElementById('print')?.addEventListener('click', () => window.print());
+</script>
+
+<style>
+  .cv { padding-block: var(--space-5) var(--space-7); max-width: 56rem; }
+  .cv__head { margin-bottom: var(--space-6); }
+  .cv__head h1 { font-size: var(--text-h1); margin: var(--space-2) 0 var(--space-3); }
+  .cv__degree { font-size: 1.125rem; }
+  .cv__contacts { list-style: none; margin: var(--space-3) 0 var(--space-4); padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+  .cv__contacts li { display: flex; gap: 0.6em; align-items: baseline; }
+  .cv__contacts a { text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .btn { font-family: var(--font-mono); font-size: var(--text-label); text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--ink); padding: 0.6em 1em; background: var(--surface); color: var(--ink); }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .cv__section { margin-top: var(--space-5); background: var(--surface); border: 1px solid var(--grid); padding: var(--space-4); }
+  .cv__section > .mono { margin: 0 0 var(--space-2); }
+  .cv__entries { list-style: none; margin: 0; padding: 0; }
+  .cv__skills { display: grid; gap: var(--space-3); margin: 0; }
+  .cv__skills div { display: grid; grid-template-columns: 9rem 1fr; gap: var(--space-4); }
+  dd { margin: 0; font-size: var(--text-small); }
+  @media (max-width: 767px) { .cv__skills div { grid-template-columns: 1fr; gap: var(--space-1); } }
+</style>

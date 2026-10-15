@@ -1,0 +1,27 @@
+---
+---
+<div class="live" aria-hidden="true">
+  <svg class="live__orbits" viewBox="0 0 800 800">
+    <ellipse cx="400" cy="400" rx="380" ry="150" />
+    <ellipse cx="400" cy="400" rx="260" ry="102" />
+    <ellipse cx="400" cy="400" rx="150" ry="59" />
+    <circle cx="400" cy="400" r="26" />
+  </svg>
+</div>
+<style>
+  /* Paper-coloured so it covers the body's static grid; the drifting grid lives on ::before. */
+  .live { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background-color: var(--paper); }
+  /* Oversized by one cell and moved with transform (compositor only) rather than animating
+     background-position, which would repaint the whole viewport every frame. One cell per loop = seamless. */
+  .live::before { content: ''; position: absolute; inset: calc(-1 * var(--grid-cell)) 0 0 calc(-1 * var(--grid-cell));
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: var(--grid-cell) var(--grid-cell);
+    animation: drift 90s linear infinite; }
+  .live__orbits { position: absolute; right: -12vw; top: 50%; width: min(70vw, 56rem); translate: 0 -50%; opacity: 0.22;
+    fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 4 6; animation: spin 180s linear infinite; }
+  .live__orbits circle { fill: var(--planet); stroke: none; opacity: 0.6; }
+  @keyframes drift { to { transform: translate(var(--grid-cell), var(--grid-cell)); } }
+  @keyframes spin { to { rotate: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .live::before, .live__orbits { animation: none; } }
+  @media print { .live { display: none; } }
+</style>

@@ -1,7 +1,9 @@
 ---
 import '@/styles/global.css';
+import '@/styles/print.css';
 import Nav from '@/components/Nav.astro';
 import Footer from '@/components/Footer.astro';
+import Cursor from '@/components/Cursor.astro';
 
 interface Props { title: string; description?: string; ogImage?: string }
 const { title, description = 'Physics student at Salamanca who already ships products.', ogImage = '/og.png' } = Astro.props;
@@ -34,6 +36,7 @@ const buildDate = new Date().toISOString().slice(0, 10);
       <slot />
     </main>
     <Footer buildDate={buildDate} />
+    <Cursor />
   </body>
 </html>
 <style>
