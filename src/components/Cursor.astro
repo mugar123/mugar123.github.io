@@ -72,7 +72,7 @@
   .cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--accent); }
   .cursor__ring { width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 1px solid var(--ink); display: grid; place-items: center;
     transition: width var(--dur) var(--ease), height var(--dur) var(--ease), margin var(--dur) var(--ease), background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
-  .cursor .cursor__label { font-size: 12px; color: var(--ink); opacity: 0; transition: opacity var(--dur) var(--ease); }
+  .cursor .cursor__label { font-size: 12px; color: var(--ink); background: var(--paper); padding: 0 0.3em; border-radius: 2px; opacity: 0; transition: opacity var(--dur) var(--ease); }
   .cursor.is-link .cursor__ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: rgba(226, 64, 28, 0.12); border-color: var(--accent); }
   .cursor.is-launch .cursor__ring { width: 56px; height: 56px; margin: -28px 0 0 -28px; border-style: dashed; border-color: var(--accent); }
   .cursor.is-launch .cursor__label { opacity: 1; }

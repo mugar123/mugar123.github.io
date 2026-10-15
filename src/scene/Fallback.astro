@@ -55,4 +55,8 @@ const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
   .fallback__label::before { content: ''; position: absolute; left: -12px; top: 50%; width: 10px; border-top: 1px solid var(--ink-2); }
   .fallback__label--left { transform: translate(calc(-100% - 14px), -50%); }
   .fallback__label--left::before { left: auto; right: -12px; }
+  /* Same rule as the live scene's .orbit-label (OrbitScene.astro): below 480 px of .orbit-scene width the names go. */
+  @container (max-width: 479px) {
+    .fallback__label { display: none; }
+  }
 </style>

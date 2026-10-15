@@ -17,7 +17,7 @@ const { title, orbit, status, launched, oneLiner, stack, links } = entry.data;
     <h1>{title}</h1>
     <p class="lede">{oneLiner}</p>
     <p class="mono">Stack · {stack.join(' · ')}</p>
-    {links && <p class="mono links">{links.map((l, i) => <>{i > 0 && ' · '}<a href={l.url}>{l.label}</a></>)}</p>}
+    {links && <p class="mono">{links.map((l, i) => <>{i > 0 && ' · '}<a href={l.url}>{l.label}</a></>)}</p>}
     <Content />
     <p><a class="mono mono--ink" href="/#in-orbit">← Back to orbit</a></p>
   </article>

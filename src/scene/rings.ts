@@ -5,7 +5,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { circularPosition, type Point } from '@/lib/orbit';
 
 export const INK = '#121412';
-export const INK_2 = '#6E736D';
+export const INK_2 = '#6A6F69';
 export const ACCENT = '#E2401C';
 
 /** Simulation plane (x, y) → Three (x, 0, −y). */

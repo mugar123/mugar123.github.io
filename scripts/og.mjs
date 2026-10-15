@@ -12,7 +12,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <text x="80" y="300" font-family="serif" font-size="64" fill="#121412">Nicolás Muñoz</text>
   <text x="80" y="360" font-family="serif" font-size="34" fill="#121412">Physics student at Salamanca.</text>
   <text x="80" y="404" font-family="serif" font-style="italic" font-size="34" fill="#121412">Already in orbit.</text>
-  <text x="80" y="560" font-family="monospace" font-size="18" fill="#6E736D" letter-spacing="2">MUGAR123.GITHUB.IO · §0 ABSTRACT</text>
+  <text x="80" y="560" font-family="monospace" font-size="18" fill="#6A6F69" letter-spacing="2">MUGAR123.GITHUB.IO · §0 ABSTRACT</text>
 </svg>`;
 await writeFile('public/og.png', await sharp(Buffer.from(svg)).png().toBuffer());
 console.log('wrote public/og.png');
