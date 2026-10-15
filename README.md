@@ -1,21 +1,11 @@
-# Nicolás Muñoz García — personal website
+# mugar123.github.io
 
-Static Astro website for <https://mugar123.github.io>.
+Personal site of Nicolás Muñoz García. Astro + Three.js, deployed to GitHub Pages.
 
-## Development
+- `npm run dev` — local dev
+- `npm run check` / `npm test` / `npm run e2e` / `npm run lhci` — quality gates (CI runs all four)
+- `npm run fonts` — regenerate `public/fonts` (needs `pyftsubset` for WOFF2)
+- `npm run og` — regenerate `public/og.png`
 
-```sh
-npm install
-npm run dev
-```
-
-## Verification
-
-```sh
-npm run build
-npm run check
-```
-
-The build writes the static site to `dist/`. Use `npm run preview` to preview it locally.
-
-Project requirements live in `AGENTS.md` and `docs/superpowers/specs/2026-10-15-personal-website-design.md`.
+Content lives in `src/content/work` (satellites) and `src/content/writing` (logbook). Adding a project = adding a Markdown file.
+Design spec: `docs/superpowers/specs/2026-10-15-personal-website-design.md`.
