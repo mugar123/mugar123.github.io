@@ -2107,10 +2107,10 @@ const satellites = toSceneSatellites(await getCollection('work'));
 </Base>
 ```
 
-Run `npm run dev`. Checklist (hand verification): rings dashed, planet faceted matte, PaperTok red on the outer ring, pipeline black on the mid ring, names in mono with a short leader line; a small circle marks the pad just outside the planet; dragging from the pad shows a live dashed preview and the `v · OUTCOME` label, dragging from anywhere else does nothing; release at ≈0.95–1.25 v₀ near tangential yields `ORBIT ACHIEVED` and a small grey satellite that persists on reload; Tab to the scene, press ArrowUp twice and Enter → an outcome; `DevTools → Rendering → Emulate prefers-reduced-motion` + reload shows the SVG fallback; in the console run `document.querySelector('#orbit-scene canvas').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()` and confirm the SVG fallback reappears with `data-state="fallback"`. Then check the home JS budget over **all** chunks the page loads:
+Run `npm run dev`. Checklist (hand verification): rings dashed, planet faceted matte, both active projects in the accent on their rings (accent = active status), names in mono with a short leader line; a small circle marks the pad just outside the planet; dragging from the pad shows a live dashed preview and the `v · OUTCOME` label, dragging from anywhere else does nothing; release at ≈0.95–1.25 v₀ near tangential yields `ORBIT ACHIEVED` and a small grey satellite that persists on reload; Tab to the scene, press ArrowUp twice and Enter → an outcome; `DevTools → Rendering → Emulate prefers-reduced-motion` + reload shows the SVG fallback; in the console run `document.querySelector('#orbit-scene canvas').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()` and confirm the SVG fallback reappears with `data-state="fallback"`. Then check the home JS budget over **all** chunks the page loads:
 
 ```bash
-npm run build && for f in $(grep -o '/_astro/[^"]*\.js' dist/index.html | sort -u); do gzip -c "dist$f" | wc -c; done | awk '{s+=$1} END {print s " bytes gzip total"}'
+npm run build && find dist/_astro -name '*.js' | while read f; do gzip -c "$f" | wc -c; done | awk '{s+=$1} END {print s " bytes gzip total (all chunks: the Three chunk is a dynamic import and never appears in index.html)"}'
 ```
 
 Expected: ≤ 204800. If over budget, check that only named imports from `three` are used (no `import * as THREE`).
