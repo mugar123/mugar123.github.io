@@ -168,12 +168,23 @@ Notes taken from Inspora for implementation, not changing any decision:
 - A huge serif name as the opening line of §0 (paper-title scale, above the scene) is a composition option to try alongside the approved headline.
 - HUD-style mono panels (1 px border, small, no color except the accent) are the shape for *Mission specs* and the launch outcome labels.
 
-## 8. Open items for the implementation plan
+## 8. Open items after implementation (2026-10-15)
 
-- Final headline and one-liner copy (owner reviews).
-- PaperTok screenshots (optional); launch months for both projects (placeholders marked REVIEW).
-- Done: CV content supplied (rendered at `/cv`), contact email, social links (GitHub, papertok.app), working-method text.
-- Whether the visitor ship comes from a repository or code (decided during implementation per §6.4).
+- Owner to review the copy marked `<!-- REVIEW -->` in `src/content/work/*.md` and `src/pages/about.astro`, and the launch months (`launched:` in both work entries are placeholders).
+- PaperTok screenshots (optional); the `work` schema has no `cover` field yet — add it with the first image.
+- Done: CV content rendered at `/cv` from `src/data/cv.ts`; contact email, GitHub and papertok.app; working-method text in the owner's words; neural-networks course (BISITE/USAL) in the CV.
+- Visitor ship: code-built octahedron; no external 3D model is used (`public/models/CREDITS.md` is empty by design).
+- Deployment: workflows committed; the GitHub repository `mugar123/mugar123.github.io` and the first push are the owner's call; after the first deploy, set Pages → Source to GitHub Actions.
+- Custom domain: later — `site` in `astro.config.mjs` plus a `CNAME` file.
+
+## 8.1 Implementation outcomes that refined this spec
+
+- Astro 7.x (not 5); TypeScript 5.x (`@astrojs/check` peer); Latin Modern from the DTP package (the web package lacks typographic punctuation).
+- Launch pad at r = 1.05 and tangent snapping (§3); conic-based outcome rules in `orbit.ts` (grazing orbits and truncated paths are classified analytically).
+- `--ink-2` darkened to `#6A6F69` for AA at 12 px; the accent never carries small text (borders, dots, underlines and fills only).
+- The scene container is always 16:9; satellite labels are hidden in scenes narrower than 480 px; the SVG fallback uses HTML labels at a real 12 px.
+- Rings start at staggered base phases so satellites on different rings never line up.
+- Scroll reveals animate transform only (no opacity), after a CSS-minifier bug was found folding `animation-timeline` into an invalid shorthand.
 
 ## 9. Decisions log
 
