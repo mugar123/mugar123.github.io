@@ -2,32 +2,43 @@
 import type { SceneSatellite } from '@/lib/satellites';
 import { ORBIT_RADIUS } from '@/lib/satellites';
 import { LAUNCH_RADIUS, circularPosition } from '@/lib/orbit';
-import { SQUASH } from '@/scene/projection';
+import { SQUASH, VIEW_RADIUS } from '@/scene/projection';
 interface Props { satellites: SceneSatellite[] }
 const { satellites } = Astro.props;
-const U = 34; const W = 320; const H = 300; const cx = W / 2; const cy = H / 2;
+
+const H = 304; const W = (H * 16) / 9;           // 16:9, like the scene container on desktop
+const U = H / (2 * VIEW_RADIUS);                 // px per scene unit — identical framing to the Three camera
+const cx = W / 2; const cy = H / 2;
+const FONT = 12; const CHAR = FONT * 0.62;       // JetBrains Mono advance ≈ 0.62 em
+const GAP = 11; const LEADER = 8;
 const rings = (['high', 'mid', 'low'] as const).map((o) => ORBIT_RADIUS[o] * U);
 const project = (p: { x: number; y: number }) => ({ x: cx + p.x * U, y: cy - p.y * U * SQUASH });
 const pad = project({ x: LAUNCH_RADIUS, y: 0 });
+const placed = satellites.map((s) => {
+  const p = project(circularPosition(ORBIT_RADIUS[s.orbit], s.phase));
+  const text = s.name.toUpperCase();
+  const width = text.length * CHAR;
+  const outerRight = p.x >= cx;
+  const fitsRight = p.x + GAP + width <= W - 4;
+  const fitsLeft = p.x - GAP - width >= 4;
+  const right = outerRight ? fitsRight : !fitsLeft;  // prefer the outer side; flip only when it would clip
+  return { s, p, text, right };
+});
 ---
 <svg class="fallback" data-fallback viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="fb-title fb-desc">
   <title id="fb-title">Planet with project satellites in orbit</title>
   <desc id="fb-desc">{satellites.map((s) => `${s.name} in ${s.orbit} orbit`).join('; ')}.</desc>
   {rings.map((r) => <ellipse cx={cx} cy={cy} rx={r} ry={r * SQUASH} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
   <circle cx={cx} cy={cy} r={U} fill="var(--planet)" />
-  <circle cx={cx - 9} cy={cy - 11} r={U * 0.8} fill="var(--planet-hi)" opacity="0.45" />
+  <circle cx={cx - U * 0.25} cy={cy - U * 0.3} r={U * 0.8} fill="var(--planet-hi)" opacity="0.45" />
   <circle cx={pad.x} cy={pad.y} r="2.5" fill="none" stroke="var(--ink)" />
-  {satellites.map((s) => {
-    const p = project(circularPosition(ORBIT_RADIUS[s.orbit], s.phase));
-    const right = p.x >= cx;
-    return (
-      <g>
-        <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={s.status === 'active' ? 'var(--accent)' : 'var(--ink)'} />
-        <line x1={p.x} y1={p.y} x2={right ? p.x + 8 : p.x - 8} y2={p.y} stroke="var(--ink-2)" stroke-width="1" />
-        <text x={right ? p.x + 11 : p.x - 11} y={p.y + 3.5} text-anchor={right ? 'start' : 'end'} font-family="var(--font-mono)" font-size="10" fill="var(--ink-2)">{s.name.toUpperCase()}</text>
-      </g>
-    );
-  })}
+  {placed.map(({ s, p, text, right }) => (
+    <g>
+      <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={s.status === 'active' ? 'var(--accent)' : 'var(--ink)'} />
+      <line x1={p.x} y1={p.y} x2={right ? p.x + LEADER : p.x - LEADER} y2={p.y} stroke="var(--ink-2)" stroke-width="1" />
+      <text x={right ? p.x + GAP : p.x - GAP} y={p.y + FONT * 0.35} text-anchor={right ? 'start' : 'end'} font-family="var(--font-mono)" font-size={FONT} fill="var(--ink-2)">{text}</text>
+    </g>
+  ))}
 </svg>
 <style>
   .fallback { width: 100%; height: 100%; display: block; }
