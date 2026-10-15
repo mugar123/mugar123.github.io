@@ -88,7 +88,7 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 | 4 | **Ground control** | Contact and social: "Open to internships and junior roles." Email `nicomg60@gmail.com` (accent), GitHub `mugar123`, `papertok.app`, and a link to the native CV page `/cv`. Only networks the owner actually lists; no LinkedIn until he has one. |
 | — | footer | `SALAMANCA · 40.96° N, 5.67° W · CET` · `LAST UPDATED <build date>` |
 
-Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a shorter top band (≈ 45 vh) and text stacks below: the headline is within the first viewport and both CTAs within the first 1.5 viewports; the launch interaction works with touch. The toy is also keyboard-operable (focus the scene: arrow keys aim and set speed, Enter launches) and announces outcomes through a `role="status"` label.
+Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a full-width 16:9 band on top (the scene container is 16:9 on every viewport so the SVG fallback and its labels share one frame) and text stacks below: the headline is within the first viewport and both CTAs within the first 1.5 viewports; the launch interaction works with touch. The toy is also keyboard-operable (focus the scene: arrow keys aim and set speed, Enter launches) and announces outcomes through a `role="status"` label.
 
 ### 5.2 Other pages
 

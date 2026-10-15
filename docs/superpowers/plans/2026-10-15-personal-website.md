@@ -1598,7 +1598,7 @@ Expected: 7 passed.
 
 - [ ] **Step 5: SVG fallback component**
 
-`src/scene/Fallback.astro` — same framing as the 3D scene: the SVG holds only geometry (rings, planet, pad, satellite dots, leader lines) in a 16:9 viewBox whose half-height is exactly `VIEW_RADIUS` scene units (`U = H / (2 · VIEW_RADIUS)` px per unit) and uses `preserveAspectRatio="xMidYMid slice"` so a non-16:9 container crops the sides exactly like the fixed-height orthographic camera. Labels are **HTML**, absolutely positioned in percentages over the drawing, so they render at a real 12 px in every viewport (the spec's minimum) and match the scene's CSS2D labels. Depth is modelled: the far half of each ring (sim y > 0, which the camera sees beyond the planet) and far-side satellites are drawn before the planet, the near half after it.
+`src/scene/Fallback.astro` — same framing as the 3D scene: the SVG holds only geometry (rings, planet, pad, satellite dots) in a 16:9 viewBox whose half-height is exactly `VIEW_RADIUS` scene units (`U = H / (2 · VIEW_RADIUS)` px per unit). The scene container (`.orbit-scene`, Task 10) is **always 16:9, on every viewport**, so the SVG fills it exactly (`xMidYMid meet`) and HTML labels positioned in percentages of the same box land precisely on their satellites. Labels are **HTML**, at a real 12 px in every viewport (the spec's minimum), matching the scene's CSS2D labels; the ellipsis lives on an inner span so the leader line drawn by `::before` is never clipped. Depth is modelled: the far half of each ring (sim y > 0, which the camera sees beyond the planet) and far-side satellites are drawn before the planet, the near half after it.
 
 ```astro
 ---
@@ -1609,7 +1609,7 @@ import { SQUASH, VIEW_RADIUS } from '@/scene/projection';
 interface Props { satellites: SceneSatellite[] }
 const { satellites } = Astro.props;
 
-const H = 304; const W = (H * 16) / 9;          // 16:9 drawing; `slice` crops the sides in other aspects, like the camera
+const H = 304; const W = (H * 16) / 9;          // 16:9 drawing — the .orbit-scene container is always 16:9 too
 const U = H / (2 * VIEW_RADIUS);                // px per scene unit — identical framing to the Three camera
 const cx = W / 2; const cy = H / 2;
 const project = (p: { x: number; y: number }) => ({ x: cx + p.x * U, y: cy - p.y * U * SQUASH });
@@ -1632,7 +1632,7 @@ const dot = (s: SceneSatellite) => (s.status === 'active' ? 'var(--accent)' : 'v
 const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
 ---
 <div class="fallback" data-fallback>
-  <svg class="fallback__svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby={`${uid}-title`} aria-describedby={satellites.length ? `${uid}-desc` : undefined}>
+  <svg class="fallback__svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby={`${uid}-title`} aria-describedby={satellites.length ? `${uid}-desc` : undefined}>
     <title id={`${uid}-title`}>Planet with project satellites in orbit</title>
     {satellites.length > 0 && <desc id={`${uid}-desc`}>{satellites.map((s) => `${s.name} in ${s.orbit} orbit`).join('; ')}.</desc>}
     {rings.map((r) => <path d={r.far} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
@@ -1644,17 +1644,17 @@ const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
     {placed.filter((x) => !x.far).map(({ s, p }) => <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={dot(s)} />)}
   </svg>
   {placed.map(({ s, p, right }) => (
-    <span class:list={['fallback__label', 'mono', { 'fallback__label--left': !right }]} style={`left:${pct(p).left};top:${pct(p).top}`} aria-hidden="true">{s.name.toUpperCase()}</span>
+    <span class:list={['fallback__label', 'mono', { 'fallback__label--left': !right }]} style={`left:${pct(p).left};top:${pct(p).top}`} aria-hidden="true"><span class="fallback__text">{s.name.toUpperCase()}</span></span>
   ))}
 </div>
 <style>
-  .fallback { position: relative; width: 100%; height: 100%; overflow: hidden; }
+  .fallback { position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
   .fallback__svg { width: 100%; height: 100%; display: block; }
   .fallback__label {
-    position: absolute; transform: translate(14px, -50%); white-space: nowrap; max-width: 40%;
-    overflow: hidden; text-overflow: ellipsis; font-size: 12px; letter-spacing: 0.04em;
+    position: absolute; transform: translate(14px, -50%); max-width: 40%; font-size: 12px; letter-spacing: 0.04em;
     color: var(--ink-2); background: var(--paper); padding: 0 0.3em;
   }
+  .fallback__text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fallback__label::before { content: ''; position: absolute; left: -12px; top: 50%; width: 10px; border-top: 1px solid var(--ink-2); }
   .fallback__label--left { transform: translate(calc(-100% - 14px), -50%); }
   .fallback__label--left::before { left: auto; right: -12px; }
@@ -2077,7 +2077,7 @@ const { satellites } = Astro.props;
   .scene-label--hint::before { display: none; }
   .scene-label--accent { border-color: var(--accent); color: var(--accent); }
   .scene-pad { width: 22px; height: 22px; border: 1px solid var(--ink); border-radius: 50%; background: transparent; }
-  @media (max-width: 767px) { .orbit-scene { aspect-ratio: 4 / 3; } }
+  /* The scene stays 16:9 on every viewport: the SVG fallback and its HTML labels share this exact frame. */
 </style>
 ```
 
