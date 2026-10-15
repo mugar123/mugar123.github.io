@@ -16,6 +16,14 @@ describe('loadVisitorSatellites', () => {
     const s = memoryStorage({ [STORAGE_KEY]: JSON.stringify([sat(1), { angle: 'x' }, null]) });
     expect(loadVisitorSatellites(s)).toEqual([sat(1)]);
   });
+  it('rebuilds each entry with exactly angle, speed and launchedAt (extra keys from tampered storage are dropped)', () => {
+    const s = memoryStorage({ [STORAGE_KEY]: JSON.stringify([{ ...sat(1), evil: '<script>' }]) });
+    const [loaded] = loadVisitorSatellites(s);
+    expect(loaded).toStrictEqual(sat(1));
+    expect(Object.keys(loaded!)).toEqual(['angle', 'speed', 'launchedAt']);
+    saveVisitorSatellite(s, sat(2));
+    expect(s.dump()[STORAGE_KEY]).not.toContain('evil');
+  });
 });
 
 describe('saveVisitorSatellite', () => {

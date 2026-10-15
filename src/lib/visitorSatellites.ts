@@ -16,7 +16,10 @@ export function loadVisitorSatellites(storage: StorageLike | null | undefined): 
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isSat).slice(0, MAX_VISITOR_SATELLITES) : [];
+    if (!Array.isArray(parsed)) return [];
+    // Rebuild each entry from its three fields so extra keys in tampered storage are never kept or re-saved.
+    return parsed.filter(isSat).slice(0, MAX_VISITOR_SATELLITES)
+      .map(({ angle, speed, launchedAt }) => ({ angle, speed, launchedAt }));
   } catch {
     return [];
   }
