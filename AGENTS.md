@@ -1,6 +1,6 @@
 # AGENTS.md — project context for coding agents
 
-This repository is the personal website of Nicolás Muñoz García (`https://mugar123.github.io`). Two agents work on it as a pair: **Codex (gpt-6-astra)** implements most tasks and reviews the design-led ones; **Claude (Fable)** owns design and taste tasks and reviews Codex's work. The human owner decides anything the documents below leave open.
+This repository is the personal website of Nicolás Muñoz García (`https://mugar123.github.io`). Three agents work on it: **Claude Fable 5.1** orchestrates (it wrote the spec and plan, owns design taste, and decides between competing implementations); **Codex (gpt-6-astra)** and **Claude Opus 5.5** implement. For tasks with design or engineering room, both implement the same brief independently in separate worktrees, Fable picks the better one and integrates it, and the other agent reviews the integrated result. For mechanical tasks (scaffolding, CI, docs) Codex implements and Opus reviews. The human owner decides anything the documents below leave open.
 
 ## Read these first
 

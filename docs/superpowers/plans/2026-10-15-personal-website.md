@@ -22,7 +22,8 @@
 - All motion stops under `prefers-reduced-motion: reduce`; scene falls back to static SVG when WebGL is unavailable.
 - 3D assets: code-built primitives first; any external model must be CC0/CC-BY, match the matte low-poly diagram look, be glTF ≤ 150 KB, and be listed in `public/models/CREDITS.md`.
 - No React, no Tailwind, no analytics, no backend in v1.
-- Every commit message ends with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+- Every commit message ends with the implementing agent's attribution line (see `AGENTS.md`): `Co-Authored-By: Codex <noreply@openai.com>` for Codex, `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` or the Claude model actually used for Claude. The `git commit -m` lines in the tasks omit the trailer; add yours.
+- The launch pad sits at `LAUNCH_RADIUS = 1.05` planet radii; aims within 3° of the horizontal snap to tangential (spec §3).
 
 ## Review Focus
 
@@ -30,7 +31,8 @@
 2. **`localStorage` that throws** (Safari private mode, blocked storage) must leave the scene fully working and simply not persist launches — pinned in Task 8 (throwing storage fake).
 3. **WebGL unavailable** (`getContext` returns `null`, headless or old GPU) must keep the SVG fallback visible and log nothing louder than `console.info` — pinned in Task 9 (`canRenderScene` with a fake canvas).
 4. **Draft posts** must never appear on the home Logbook or `/writing`, and the Logbook section must disappear entirely when there are zero published posts — pinned in Task 3 (unit tests on `publishedPosts`) and Task 14 (e2e asserts no `#logbook` and `§3` on Ground control with the shipped draft-only content).
-5. **Narrow viewports (< 768 px)** must keep the hero headline and both CTAs visible above the fold and clickable, with the scene band above them — pinned in Task 14 (Playwright mobile project).
+5. **Narrow viewports (< 768 px)** must keep the hero headline within the first viewport and both CTAs within the first 1.5 viewports, clickable, with the scene band above them — pinned in Task 14 (Playwright mobile project).
+6. **A visitor who cannot use a pointer** must still be able to launch: the scene is focusable and arrow keys + Enter drive it, with the outcome announced through `role="status"` — pinned in Task 10 (DOM hooks) and Task 14 (keyboard test).
 
 ---
 
@@ -51,7 +53,8 @@ mugar123.github.io/
 │   ├── models/CREDITS.md            external 3D asset ledger (empty by default)
 │   ├── og.png, favicon.svg, robots.txt
 ├── src/
-│   ├── content.config.ts            `work` and `writing` collections (Zod)
+│   ├── content.config.ts            registers the `work` and `writing` collections
+│   ├── content/schemas.ts           Zod schemas (plain module so Vitest can test them)
 │   ├── content/work/*.md            one file per satellite
 │   ├── content/writing/*.md         posts
 │   ├── styles/tokens.css            color/type/space custom properties
@@ -63,6 +66,7 @@ mugar123.github.io/
 │   ├── lib/satellites.ts            pure: work entries → scene satellites, ring radii
 │   ├── lib/posts.ts                 pure: published-post filter + sort
 │   ├── scene/capabilities.ts        canRenderScene(window-like) → boolean
+│   ├── scene/projection.ts          camera position, view radius, squash — shared by scene and SVG
 │   ├── scene/scene.ts               mountOrbitScene(container, opts) — Three composition
 │   ├── scene/planet.ts              createPlanet()
 │   ├── scene/rings.ts               createRing(radius)
@@ -273,7 +277,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 3: Content collections and seed content
 
 **Files:**
-- Create: `src/content.config.ts`, `src/content/work/papertok.md`, `src/content/work/notes-to-latex.md`, `src/content/writing/first-entry.md`, `src/lib/posts.ts`, `tests/unit/posts.test.ts`
+- Create: `src/content.config.ts`, `src/content/schemas.ts`, `src/content/work/papertok.md`, `src/content/work/notes-to-latex.md`, `src/content/writing/first-entry.md`, `src/lib/posts.ts`, `tests/unit/posts.test.ts`, `tests/unit/schemas.test.ts`
 
 **Interfaces:**
 - Produces: collections `work` and `writing` with these schemas; `publishedPosts(entries, now)` → sorted published posts.
@@ -344,41 +348,76 @@ npm test -- posts
 
 Expected: 3 passed.
 
-- [ ] **Step 5: Define the collections**
+- [ ] **Step 5: Define the schemas in a testable module and register the collections**
+
+`src/content/schemas.ts` (plain Zod, importable from Vitest — `astro:content` is not):
+
+```ts
+import { z } from 'astro/zod';
+
+export const workSchema = z.object({
+  title: z.string().min(1),
+  orbit: z.enum(['high', 'mid', 'low']),
+  status: z.enum(['active', 'paused', 'retired']),
+  launched: z.coerce.date(),
+  oneLiner: z.string().min(1).max(140),
+  stack: z.array(z.string().min(1)).min(1),
+  links: z.array(z.object({ label: z.string(), url: z.string().url() })).optional(),
+  order: z.number().int(),
+});
+
+export const writingSchema = z.object({
+  title: z.string().min(1),
+  date: z.coerce.date(),
+  summary: z.string().min(1).max(200),
+  tags: z.array(z.string()).optional(),
+  draft: z.boolean().default(false),
+});
+```
 
 `src/content.config.ts`:
 
 ```ts
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
-import { z } from 'astro/zod';
+import { workSchema, writingSchema } from './content/schemas';
 
-const work = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/work' }),
-  schema: z.object({
-    title: z.string().min(1),
-    orbit: z.enum(['high', 'mid', 'low']),
-    status: z.enum(['active', 'paused', 'retired']),
-    launched: z.coerce.date(),
-    oneLiner: z.string().min(1).max(140),
-    stack: z.array(z.string().min(1)).min(1),
-    links: z.array(z.object({ label: z.string(), url: z.string().url() })).optional(),
-    order: z.number().int(),
-  }),
-});
-
-const writing = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/writing' }),
-  schema: z.object({
-    title: z.string().min(1),
-    date: z.coerce.date(),
-    summary: z.string().min(1).max(200),
-    tags: z.array(z.string()).optional(),
-    draft: z.boolean().default(false),
-  }),
-});
+const work = defineCollection({ loader: glob({ pattern: '**/*.md', base: './src/content/work' }), schema: workSchema });
+const writing = defineCollection({ loader: glob({ pattern: '**/*.md', base: './src/content/writing' }), schema: writingSchema });
 
 export const collections = { work, writing };
+```
+
+Schema unit test, `tests/unit/schemas.test.ts` (write it before the schemas; run `npm test -- schemas`, see it fail, then pass):
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { workSchema, writingSchema } from '@/content/schemas';
+
+const work = { title: 'PaperTok', orbit: 'high', status: 'active', launched: '2025-06-01', oneLiner: 'A study app.', stack: ['Swift'], order: 1 };
+
+describe('workSchema', () => {
+  it('accepts a valid entry and coerces the date', () => {
+    const r = workSchema.parse(work);
+    expect(r.launched).toBeInstanceOf(Date);
+  });
+  it('rejects an unknown orbit', () => {
+    expect(workSchema.safeParse({ ...work, orbit: 'geostationary' }).success).toBe(false);
+  });
+  it('rejects a missing title and an empty stack', () => {
+    expect(workSchema.safeParse({ ...work, title: '' }).success).toBe(false);
+    expect(workSchema.safeParse({ ...work, stack: [] }).success).toBe(false);
+  });
+});
+
+describe('writingSchema', () => {
+  it('defaults draft to false', () => {
+    expect(writingSchema.parse({ title: 'T', date: '2026-10-15', summary: 'S' }).draft).toBe(false);
+  });
+  it('rejects an over-long summary', () => {
+    expect(writingSchema.safeParse({ title: 'T', date: '2026-10-15', summary: 'x'.repeat(201) }).success).toBe(false);
+  });
+});
 ```
 
 - [ ] **Step 6: Seed content (copy marked for Nicolás's review)**
@@ -455,18 +494,18 @@ draft: true
 Draft.
 ```
 
-- [ ] **Step 7: Verify the schemas validate at build**
+- [ ] **Step 7: Verify the build validates the seed content**
 
 ```bash
-npm run build
+npm test && npm run build
 ```
 
-Expected: build succeeds. Then break it on purpose: change `orbit: high` to `orbit: geostationary` in `papertok.md`, run `npm run build`, expect a Zod error naming `orbit`; revert.
+Expected: all unit tests pass and the build succeeds (the schema tests already prove invalid frontmatter is rejected; no need to break the build by hand).
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/content.config.ts src/content src/lib/posts.ts tests/unit/posts.test.ts
+git add src/content.config.ts src/content src/lib/posts.ts tests/unit/posts.test.ts tests/unit/schemas.test.ts
 git commit -m "feat: content collections for work and writing
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
@@ -509,10 +548,11 @@ cp node_modules/@fontsource/jetbrains-mono/LICENSE "$OUT/LICENSE-jetbrains-mono.
 cp "$JB/jetbrains-mono-latin-400-normal.woff2" "$OUT/jetbrains-mono-400.woff2"
 
 UNICODES="U+0020-007E,U+00A0-00FF,U+00A7,U+2013-2014,U+2018-201D,U+2026,U+2192,U+221A,U+2080-2089"
-declare -A MAP=( [Regular]=lmroman-400 [Italic]=lmroman-400-italic [Bold]=lmroman-700 )
-for style in "${!MAP[@]}"; do
+# Portable loop (macOS ships bash 3.2, which has no associative arrays).
+for pair in Regular:lmroman-400 Italic:lmroman-400-italic Bold:lmroman-700; do
+  style="${pair%%:*}"
   src="$LM/TypoPRO-LatinModernRoman-$style.woff"
-  dst="$OUT/${MAP[$style]}"
+  dst="$OUT/${pair#*:}"
   if command -v pyftsubset >/dev/null 2>&1; then
     pyftsubset "$src" --flavor=woff2 --unicodes="$UNICODES" --layout-features='*' --output-file="$dst.woff2"
   else
@@ -546,7 +586,8 @@ Expected: `public/fonts/` contains `lmroman-400.woff2`, `lmroman-400-italic.woff
   --planet-hi: #7B8898;
   --surface: #FFFFFF;
 
-  --font-serif: 'Latin Modern', 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
+  /* The size-adjusted fallback must come right after the web font, before any generic family, or it is never used. */
+  --font-serif: 'Latin Modern', 'Latin Modern Fallback', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-body: 1.1875rem;      /* 19px */
@@ -604,7 +645,7 @@ body {
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: var(--grid-cell) var(--grid-cell);
-  font-family: var(--font-serif), 'Latin Modern Fallback';
+  font-family: var(--font-serif);
   font-size: var(--text-body);
   line-height: var(--leading-body);
 }
@@ -844,17 +885,25 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ```ts
 export type Outcome = 'suborbital' | 'orbit' | 'escape';
-export interface LaunchParams { angle: number; speed: number } // angle (rad) from local horizontal at launch point (1,0); 0 = prograde tangential; speed in units of circular speed at r = 1
+export interface LaunchParams { angle: number; speed: number } // angle (rad) from local horizontal at the launch pad; 0 = prograde tangential; speed in units of circular speed at r = 1
 export interface Point { x: number; y: number }
-export interface Simulation { points: Point[]; outcome: Outcome; energy: number; periapsis: number; apoapsis: number | null; period: number | null }
-export const ESCAPE_SPEED: number; // Math.SQRT2
+export interface Simulation {
+  points: Point[]; outcome: Outcome; energy: number; periapsis: number;
+  apoapsis: number | null; period: number | null; truncated: boolean;
+}
+export const LAUNCH_RADIUS: number;   // 1.05 — the pad sits just above the surface
+export const ESCAPE_SPEED: number;    // Math.SQRT2 (at r = 1)
 export function circularSpeed(r: number): number;
 export function escapeSpeed(r: number): number;
-export function orbitalElements(p: LaunchParams): { energy: number; a: number | null; e: number; rp: number; ra: number | null };
+export function angularSpeed(r: number): number;            // Kepler: r^-1.5
+export function circularPosition(r: number, phase: number): Point;
+export function orbitalElements(p: LaunchParams): { energy: number; a: number | null; e: number; rp: number; ra: number | null; period: number | null };
 export function simulate(p: LaunchParams, opts?: { dt?: number; maxSteps?: number; bound?: number }): Simulation;
 ```
 
-Units: planet radius R = 1, GM = 1. Launch point is (1, 0); local horizontal is +y (counter-clockwise prograde), radial is +x.
+Units: planet radius R = 1, GM = 1. The launch pad is at `(LAUNCH_RADIUS, 0)`; local horizontal is +y (counter-clockwise prograde), radial is +x. **Why a pad and not the surface:** a launch from exactly r = 1 with any outward radial component has periapsis < 1 and falls back, so only a perfectly tangential launch could ever orbit. From r = 1.05 there is a cone of angles whose periapsis stays above the surface, which is what makes the toy winnable.
+
+Outcome rules: `suborbital` when the path reaches r ≤ 1; `escape` when energy ≥ 0 and r reaches `bound`; `orbit` when energy < 0 and the swept angle reaches 2π without touching the surface. If `maxSteps` runs out first, the outcome is inferred from the energy sign and `truncated` is `true` — never pretend a truncated path is a measured orbit. `period` is analytic (2π·a^1.5) for bound orbits and `null` otherwise.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -862,48 +911,71 @@ Units: planet radius R = 1, GM = 1. Launch point is (1, 0); local horizontal is 
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { simulate, orbitalElements, circularSpeed, escapeSpeed, ESCAPE_SPEED } from '@/lib/orbit';
+import {
+  simulate, orbitalElements, circularSpeed, escapeSpeed, angularSpeed, circularPosition,
+  ESCAPE_SPEED, LAUNCH_RADIUS, type Point,
+} from '@/lib/orbit';
 
-const maxR = (pts: { x: number; y: number }[]) => Math.max(...pts.map((p) => Math.hypot(p.x, p.y)));
-const minR = (pts: { x: number; y: number }[]) => Math.min(...pts.map((p) => Math.hypot(p.x, p.y)));
+const R0 = LAUNCH_RADIUS;
+const r = (p: Point) => Math.hypot(p.x, p.y);
+const maxR = (pts: Point[]) => Math.max(...pts.map(r));
+const minR = (pts: Point[]) => Math.min(...pts.map(r));
 
-describe('speeds', () => {
+describe('speeds and positions', () => {
   it('circular speed at r=1 is 1 and escape is sqrt(2)', () => {
     expect(circularSpeed(1)).toBeCloseTo(1, 12);
     expect(escapeSpeed(1)).toBeCloseTo(Math.SQRT2, 12);
     expect(ESCAPE_SPEED).toBeCloseTo(Math.SQRT2, 12);
     expect(circularSpeed(4)).toBeCloseTo(0.5, 12);
   });
+  it('angular speed follows Kepler and circularPosition is on the ring', () => {
+    expect(angularSpeed(4)).toBeCloseTo(0.125, 12);
+    const p = circularPosition(2, Math.PI / 2);
+    expect(p.x).toBeCloseTo(0, 12);
+    expect(p.y).toBeCloseTo(2, 12);
+  });
+  it('the pad is just above the surface', () => {
+    expect(LAUNCH_RADIUS).toBeGreaterThan(1);
+    expect(LAUNCH_RADIUS).toBeLessThan(1.1);
+  });
 });
 
 describe('orbitalElements', () => {
-  it('tangential launch at v=1.2 gives rp=1 and ra=2a-1', () => {
+  it('tangential launch at v=1.2 has periapsis at the pad and ra = 2a - rp', () => {
     const el = orbitalElements({ angle: 0, speed: 1.2 });
-    expect(el.energy).toBeCloseTo(0.72 - 1, 12);
-    expect(el.a).toBeCloseTo(1 / (2 * 0.28), 6);
-    expect(el.rp).toBeCloseTo(1, 6);
-    expect(el.ra).toBeCloseTo(2 * (1 / (2 * 0.28)) - 1, 6);
+    const energy = 0.72 - 1 / R0;
+    const a = -1 / (2 * energy);
+    expect(el.energy).toBeCloseTo(energy, 12);
+    expect(el.a).toBeCloseTo(a, 6);
+    expect(el.rp).toBeCloseTo(R0, 6);
+    expect(el.ra).toBeCloseTo(2 * a - R0, 6);
+    expect(el.period).toBeCloseTo(2 * Math.PI * Math.pow(a, 1.5), 6);
   });
-  it('escape has non-negative energy and null a/ra', () => {
+  it('escape has non-negative energy and null a/ra/period', () => {
     const el = orbitalElements({ angle: 0, speed: 1.5 });
     expect(el.energy).toBeGreaterThanOrEqual(0);
     expect(el.a).toBeNull();
     expect(el.ra).toBeNull();
+    expect(el.period).toBeNull();
+  });
+  it('a steep outward launch from the pad has periapsis below the surface', () => {
+    expect(orbitalElements({ angle: 0.6, speed: 1.2 }).rp).toBeLessThan(1);
   });
 });
 
 describe('simulate', () => {
-  it('circular speed produces a closed orbit at r≈1', () => {
-    const s = simulate({ angle: 0, speed: 1 });
+  it('circular speed at the pad produces a closed orbit at r≈R0', () => {
+    const s = simulate({ angle: 0, speed: circularSpeed(R0) });
     expect(s.outcome).toBe('orbit');
-    expect(maxR(s.points)).toBeLessThan(1.01);
-    expect(minR(s.points)).toBeGreaterThan(0.99);
-    expect(s.period).toBeCloseTo(2 * Math.PI, 1);
+    expect(s.truncated).toBe(false);
+    expect(maxR(s.points)).toBeLessThan(R0 + 0.01);
+    expect(minR(s.points)).toBeGreaterThan(R0 - 0.01);
+    expect(s.period).toBeCloseTo(2 * Math.PI * Math.pow(R0, 1.5), 6);
   });
   it('too slow falls back to the surface', () => {
     const s = simulate({ angle: 0, speed: 0.5 });
     expect(s.outcome).toBe('suborbital');
-    expect(Math.hypot(s.points.at(-1)!.x, s.points.at(-1)!.y)).toBeLessThanOrEqual(1.001);
+    expect(r(s.points.at(-1)!)).toBeLessThanOrEqual(1.001);
   });
   it('above escape speed leaves the bound', () => {
     const s = simulate({ angle: 0, speed: 1.5 }, { bound: 8 });
@@ -912,23 +984,38 @@ describe('simulate', () => {
   });
   it('elliptical orbit reaches the analytic apoapsis', () => {
     const s = simulate({ angle: 0, speed: 1.2 });
+    const el = orbitalElements({ angle: 0, speed: 1.2 });
     expect(s.outcome).toBe('orbit');
-    expect(maxR(s.points)).toBeCloseTo(2 * (1 / (2 * 0.28)) - 1, 1);
-    expect(s.apoapsis).toBeCloseTo(maxR(s.points), 2);
+    expect(maxR(s.points)).toBeCloseTo(el.ra!, 1);
+    expect(s.apoapsis).toBeCloseTo(el.ra!, 6);
+  });
+  it('a slightly outward launch still orbits from the pad', () => {
+    const s = simulate({ angle: 0.1, speed: 1.2 });
+    expect(s.outcome).toBe('orbit');
+    expect(minR(s.points)).toBeGreaterThan(1);
+  });
+  it('a steeper outward launch dips below the surface and is suborbital', () => {
+    expect(simulate({ angle: 0.6, speed: 1.2 }).outcome).toBe('suborbital');
   });
   it('radial launch straight up falls back', () => {
-    const s = simulate({ angle: Math.PI / 2, speed: 1 });
+    expect(simulate({ angle: Math.PI / 2, speed: 1 }).outcome).toBe('suborbital');
+  });
+  it('an inward launch above escape speed still hits the surface, with finite points', () => {
+    const s = simulate({ angle: -1.2, speed: 1.7 });
     expect(s.outcome).toBe('suborbital');
+    expect(s.points.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
   });
   it('conserves energy to 1e-6 over one orbit', () => {
-    const s = simulate({ angle: 0.3, speed: 1.1 });
+    const p = { angle: 0.1, speed: 1.2 };
+    const s = simulate(p);
     expect(s.outcome).toBe('orbit');
-    // energy is computed from the integrator's final state inside simulate
-    expect(Math.abs(s.energy - orbitalElements({ angle: 0.3, speed: 1.1 }).energy)).toBeLessThan(1e-6);
+    expect(Math.abs(s.energy - orbitalElements(p).energy)).toBeLessThan(1e-6);
   });
-  it('never returns NaN points', () => {
-    const s = simulate({ angle: -1.2, speed: 1.7 });
-    expect(s.points.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+  it('reports truncation instead of inventing a closed orbit', () => {
+    const s = simulate({ angle: 0, speed: 1.2 }, { maxSteps: 10 });
+    expect(s.truncated).toBe(true);
+    expect(s.outcome).toBe('orbit');
+    expect(s.points).toHaveLength(11);
   });
 });
 ```
@@ -948,7 +1035,7 @@ Expected: FAIL — cannot resolve `@/lib/orbit`.
 ```ts
 /**
  * Two-body motion around a planet of radius 1 with GM = 1.
- * Launch point is (1, 0). Local horizontal is +y (prograde), radial is +x.
+ * The launch pad is at (LAUNCH_RADIUS, 0). Local horizontal is +y (prograde), radial is +x.
  * Pure functions only — no DOM, no Three.
  */
 export type Outcome = 'suborbital' | 'orbit' | 'escape';
@@ -961,24 +1048,30 @@ export interface Simulation {
   periapsis: number;
   apoapsis: number | null;
   period: number | null;
+  truncated: boolean;
 }
 
+export const LAUNCH_RADIUS = 1.05;
 export const ESCAPE_SPEED = Math.SQRT2;
 export const circularSpeed = (r: number): number => 1 / Math.sqrt(r);
 export const escapeSpeed = (r: number): number => Math.sqrt(2 / r);
+export const angularSpeed = (r: number): number => Math.pow(r, -1.5);
+export const circularPosition = (r: number, phase: number): Point => ({ x: r * Math.cos(phase), y: r * Math.sin(phase) });
 
 interface State { x: number; y: number; vx: number; vy: number }
 
 function initialState({ angle, speed }: LaunchParams): State {
-  return { x: 1, y: 0, vx: speed * Math.sin(angle), vy: speed * Math.cos(angle) };
+  return { x: LAUNCH_RADIUS, y: 0, vx: speed * Math.sin(angle), vy: speed * Math.cos(angle) };
 }
 
-function accel(x: number, y: number): [number, number] {
-  const r2 = x * x + y * y;
+function deriv(s: State): State {
+  const r2 = s.x * s.x + s.y * s.y;
   const r3 = r2 * Math.sqrt(r2);
-  return [-x / r3, -y / r3];
+  return { x: s.vx, y: s.vy, vx: -s.x / r3, vy: -s.y / r3 };
 }
-
+function add(s: State, d: State, h: number): State {
+  return { x: s.x + d.x * h, y: s.y + d.y * h, vx: s.vx + d.vx * h, vy: s.vy + d.vy * h };
+}
 /** One RK4 step of the equations of motion. */
 function rk4(s: State, dt: number): State {
   const k1 = deriv(s);
@@ -992,15 +1085,8 @@ function rk4(s: State, dt: number): State {
     vy: s.vy + (dt / 6) * (k1.vy + 2 * k2.vy + 2 * k3.vy + k4.vy),
   };
 }
-function deriv(s: State): State {
-  const [ax, ay] = accel(s.x, s.y);
-  return { x: s.vx, y: s.vy, vx: ax, vy: ay };
-}
-function add(s: State, d: State, h: number): State {
-  return { x: s.x + d.x * h, y: s.y + d.y * h, vx: s.vx + d.vx * h, vy: s.vy + d.vy * h };
-}
 
-export function specificEnergy(s: State): number {
+function specificEnergy(s: State): number {
   return (s.vx * s.vx + s.vy * s.vy) / 2 - 1 / Math.hypot(s.x, s.y);
 }
 
@@ -1010,9 +1096,9 @@ export function orbitalElements(p: LaunchParams) {
   const h = s.x * s.vy - s.y * s.vx; // specific angular momentum (z)
   const e = Math.sqrt(Math.max(0, 1 + 2 * energy * h * h));
   const rp = (h * h) / (1 + e);
-  if (energy >= 0) return { energy, a: null, e, rp, ra: null };
+  if (energy >= 0) return { energy, a: null, e, rp, ra: null, period: null };
   const a = -1 / (2 * energy);
-  return { energy, a, e, rp, ra: a * (1 + e) };
+  return { energy, a, e, rp, ra: a * (1 + e), period: 2 * Math.PI * Math.pow(a, 1.5) };
 }
 
 export function simulate(
@@ -1020,21 +1106,21 @@ export function simulate(
   { dt = 0.005, maxSteps = 40000, bound = 8 }: { dt?: number; maxSteps?: number; bound?: number } = {},
 ): Simulation {
   let s = initialState(p);
+  const el = orbitalElements(p);
   const points: Point[] = [{ x: s.x, y: s.y }];
-  const energy = specificEnergy(s);
   let swept = 0;
   let prevTheta = Math.atan2(s.y, s.x);
-  let rMin = 1;
-  let rMax = 1;
+  let rMin = LAUNCH_RADIUS;
+  let rMax = LAUNCH_RADIUS;
   let outcome: Outcome | null = null;
   let steps = 0;
 
   while (outcome === null && steps < maxSteps) {
     s = rk4(s, dt);
     steps++;
-    const r = Math.hypot(s.x, s.y);
-    rMin = Math.min(rMin, r);
-    rMax = Math.max(rMax, r);
+    const rr = Math.hypot(s.x, s.y);
+    rMin = Math.min(rMin, rr);
+    rMax = Math.max(rMax, rr);
     const theta = Math.atan2(s.y, s.x);
     let d = theta - prevTheta;
     if (d > Math.PI) d -= 2 * Math.PI;
@@ -1042,26 +1128,27 @@ export function simulate(
     swept += d;
     prevTheta = theta;
 
-    if (r <= 1) {
+    if (rr <= 1) {
       // Clamp the last point onto the surface so the drawn path ends on the planet.
-      points.push({ x: s.x / r, y: s.y / r });
+      points.push({ x: s.x / rr, y: s.y / rr });
       outcome = 'suborbital';
       break;
     }
     points.push({ x: s.x, y: s.y });
-    if (energy >= 0 && r >= bound) outcome = 'escape';
-    else if (energy < 0 && Math.abs(swept) >= 2 * Math.PI) outcome = 'orbit';
+    if (el.energy >= 0 && rr >= bound) outcome = 'escape';
+    else if (el.energy < 0 && Math.abs(swept) >= 2 * Math.PI) outcome = 'orbit';
   }
 
-  if (outcome === null) outcome = energy >= 0 ? 'escape' : 'orbit';
-  const period = outcome === 'orbit' ? steps * dt : null;
+  const truncated = outcome === null;
+  if (outcome === null) outcome = el.energy >= 0 ? 'escape' : 'orbit';
   return {
     points,
     outcome,
     energy: specificEnergy(s),
     periapsis: rMin,
-    apoapsis: outcome === 'orbit' ? rMax : null,
-    period,
+    apoapsis: outcome === 'orbit' ? (el.ra ?? rMax) : null,
+    period: outcome === 'orbit' ? el.period : null,
+    truncated,
   };
 }
 ```
@@ -1078,9 +1165,7 @@ Expected: all `orbit.test.ts` tests pass. If the energy test fails by more than 
 
 ```bash
 git add src/lib/orbit.ts tests/unit/orbit.test.ts
-git commit -m "feat(orbit): pure two-body simulation with outcome detection
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git commit -m "feat(orbit): pure two-body simulation with launch pad and outcome detection"
 ```
 
 ---
@@ -1092,7 +1177,9 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: `LaunchParams` from Task 6.
-- Produces: `dragToLaunch(d: {tangential: number; radial: number}, opts?): LaunchParams | null`, constants `MIN_SPEED = 0.3`, `MAX_SPEED = 1.8`, `DEAD_ZONE = 0.08` (scene units), `formatSpeed(speed): string` → e.g. `"1.21 v₀"`.
+- Produces: `dragToLaunch(d: {tangential: number; radial: number}, opts?: {scale?: number}): LaunchParams | null`, constants `MIN_SPEED = 0.3`, `MAX_SPEED = 1.8`, `DEAD_ZONE = 0.08` (scene units), `SNAP_ANGLE = 3° in radians`, `formatSpeed(speed): string` → e.g. `"1.21 v₀"`.
+
+Aiming within `SNAP_ANGLE` of the horizontal snaps to exactly prograde (`0`) or retrograde (`Math.PI`): a small visible aiming assist, because near-tangential launches are where orbits live and a pointer cannot hold 0.00 rad.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1100,7 +1187,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { dragToLaunch, formatSpeed, MIN_SPEED, MAX_SPEED, DEAD_ZONE } from '@/lib/launch';
+import { dragToLaunch, formatSpeed, MIN_SPEED, MAX_SPEED, DEAD_ZONE, SNAP_ANGLE } from '@/lib/launch';
 
 describe('dragToLaunch', () => {
   it('returns null inside the dead zone (a click is not a launch)', () => {
@@ -1109,18 +1196,28 @@ describe('dragToLaunch', () => {
   });
   it('maps a unit tangential drag to angle 0, speed 1', () => {
     const p = dragToLaunch({ tangential: 1, radial: 0 })!;
-    expect(p.angle).toBeCloseTo(0, 12);
+    expect(p.angle).toBe(0);
     expect(p.speed).toBeCloseTo(1, 12);
   });
   it('maps a radial drag to angle π/2', () => {
     expect(dragToLaunch({ tangential: 0, radial: 1 })!.angle).toBeCloseTo(Math.PI / 2, 12);
   });
-  it('allows retrograde launches (angle beyond ±π/2)', () => {
-    expect(Math.abs(dragToLaunch({ tangential: -1, radial: 0 })!.angle)).toBeCloseTo(Math.PI, 12);
+  it('allows retrograde launches (angle π)', () => {
+    expect(Math.abs(dragToLaunch({ tangential: -1, radial: 0 })!.angle)).toBe(Math.PI);
+  });
+  it('snaps aims within SNAP_ANGLE of the horizontal, and leaves others alone', () => {
+    expect(SNAP_ANGLE).toBeCloseTo((3 * Math.PI) / 180, 12);
+    expect(dragToLaunch({ tangential: 1, radial: Math.tan(0.02) })!.angle).toBe(0);
+    expect(Math.abs(dragToLaunch({ tangential: -1, radial: 0.02 })!.angle)).toBe(Math.PI);
+    expect(dragToLaunch({ tangential: 1, radial: Math.tan(0.1) })!.angle).toBeCloseTo(0.1, 12);
   });
   it('clamps speed to [MIN_SPEED, MAX_SPEED]', () => {
     expect(dragToLaunch({ tangential: 0.1, radial: 0 })!.speed).toBe(MIN_SPEED);
     expect(dragToLaunch({ tangential: 5, radial: 0 })!.speed).toBe(MAX_SPEED);
+  });
+  it('rejects a non-finite or non-positive scale', () => {
+    expect(dragToLaunch({ tangential: 1, radial: 0 }, { scale: 0 })).toBeNull();
+    expect(dragToLaunch({ tangential: 1, radial: 0 }, { scale: Number.NaN })).toBeNull();
   });
   it('never yields NaN', () => {
     const p = dragToLaunch({ tangential: 1e-9, radial: 1e-9 });
@@ -1154,15 +1251,19 @@ import type { LaunchParams } from './orbit';
 export const MIN_SPEED = 0.3;
 export const MAX_SPEED = 1.8;
 export const DEAD_ZONE = 0.08;
+export const SNAP_ANGLE = (3 * Math.PI) / 180;
 
 export interface DragVector { tangential: number; radial: number }
 
 /** Maps a drag vector in the orbital plane (scene units) to launch parameters. One scene unit of drag = one unit of speed. */
 export function dragToLaunch(d: DragVector, { scale = 1 }: { scale?: number } = {}): LaunchParams | null {
+  if (!Number.isFinite(scale) || scale <= 0) return null;
   const len = Math.hypot(d.tangential, d.radial);
   if (!Number.isFinite(len) || len < DEAD_ZONE) return null;
   const speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, len * scale));
-  const angle = Math.atan2(d.radial, d.tangential);
+  let angle = Math.atan2(d.radial, d.tangential);
+  if (Math.abs(angle) <= SNAP_ANGLE) angle = 0;
+  else if (Math.PI - Math.abs(angle) <= SNAP_ANGLE) angle = Math.PI;
   return { angle, speed };
 }
 
@@ -1177,15 +1278,13 @@ export function formatSpeed(speed: number): string {
 npm test -- launch
 ```
 
-Expected: 7 passed.
+Expected: 9 passed.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/lib/launch.ts tests/unit/launch.test.ts
-git commit -m "feat(launch): map drag vectors to launch parameters
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git commit -m "feat(launch): map drag vectors to launch parameters with tangent snapping"
 ```
 
 ---
@@ -1375,14 +1474,14 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ---
 
-### Task 9: Scene capabilities check and SVG fallback
+### Task 9: Scene capabilities check, shared projection constants and SVG fallback
 
 **Files:**
-- Create: `src/scene/capabilities.ts`, `tests/unit/capabilities.test.ts`, `src/scene/Fallback.astro`
+- Create: `src/scene/capabilities.ts`, `tests/unit/capabilities.test.ts`, `src/scene/projection.ts`, `src/scene/Fallback.astro`
 
 **Interfaces:**
-- Consumes: `SceneSatellite`, `ORBIT_RADIUS` (Task 8).
-- Produces: `canRenderScene(env: EnvLike): boolean`; `<Fallback satellites={SceneSatellite[]} />` renders an inline `<svg>` with `data-fallback`.
+- Consumes: `SceneSatellite`, `ORBIT_RADIUS` (Task 8); `LAUNCH_RADIUS`, `circularPosition` (Task 6).
+- Produces: `canRenderScene(env: EnvLike): boolean`, `browserEnv(w?): EnvLike`; `CAMERA_POSITION`, `VIEW_RADIUS`, `SQUASH` from `projection.ts` (plain numbers, no Three import — shared by the Three scene and the SVG so both frame the orbits the same way); `<Fallback satellites={SceneSatellite[]} />` renders an inline `<svg data-fallback>`.
 
 ```ts
 export interface EnvLike {
@@ -1399,6 +1498,7 @@ export interface EnvLike {
 ```ts
 import { describe, it, expect } from 'vitest';
 import { canRenderScene } from '@/scene/capabilities';
+import { CAMERA_POSITION, SQUASH } from '@/scene/projection';
 
 const canvas = (ok: boolean) => () => ({ getContext: () => (ok ? {} : null) });
 const mm = (reduce: boolean) => (q: string) => ({ matches: q.includes('reduce') ? reduce : false });
@@ -1424,6 +1524,13 @@ describe('canRenderScene', () => {
     expect(canRenderScene({ createCanvas: canvas(true) })).toBe(true);
   });
 });
+
+describe('projection constants', () => {
+  it('SQUASH matches the camera elevation so the SVG and the scene agree', () => {
+    const [, y, z] = CAMERA_POSITION;
+    expect(SQUASH).toBeCloseTo(Math.sin(Math.atan2(y, z)), 2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify failure**
@@ -1432,9 +1539,9 @@ describe('canRenderScene', () => {
 npm test -- capabilities
 ```
 
-Expected: FAIL — module not found.
+Expected: FAIL — modules not found.
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 3: Implement capabilities and projection**
 
 `src/scene/capabilities.ts`:
 
@@ -1467,43 +1574,58 @@ export function browserEnv(w: Window = window): EnvLike {
 }
 ```
 
+`src/scene/projection.ts`:
+
+```ts
+/** Framing shared by the Three.js scene and the SVG fallback. Plain numbers: no Three import. */
+export const CAMERA_POSITION = [0, 4, 8] as const; // orthographic camera looking at the origin; elevation ≈ 26.6°
+export const VIEW_RADIUS = 3.8;                     // half-height of the orthographic frustum, scene units
+export const SQUASH = 0.45;                         // ≈ sin(elevation): foreshortening of the orbital plane
+```
+
 - [ ] **Step 4: Run to verify it passes**
 
 ```bash
 npm test -- capabilities
 ```
 
-Expected: 6 passed.
+Expected: 7 passed.
 
 - [ ] **Step 5: SVG fallback component**
 
-`src/scene/Fallback.astro` — same geometry as the 3D scene, projected: rings are ellipses with `ry = rx * 0.38`, planet radius 1, scene units × 40 px.
+`src/scene/Fallback.astro` — same geometry as the 3D scene: rings are ellipses with `ry = rx * SQUASH`, planet radius 1, `U` px per scene unit, labels placed on the outer side of each satellite so they never clip.
 
 ```astro
 ---
 import type { SceneSatellite } from '@/lib/satellites';
 import { ORBIT_RADIUS } from '@/lib/satellites';
+import { LAUNCH_RADIUS, circularPosition } from '@/lib/orbit';
+import { SQUASH } from '@/scene/projection';
 interface Props { satellites: SceneSatellite[] }
 const { satellites } = Astro.props;
-const U = 40; const cx = 160; const cy = 150; const squash = 0.38;
-const rings = (['high', 'mid', 'low'] as const).map((o) => ({ o, r: ORBIT_RADIUS[o] * U }));
-const pos = (s: SceneSatellite) => {
-  const r = ORBIT_RADIUS[s.orbit] * U;
-  return { x: cx + r * Math.cos(s.phase), y: cy + r * squash * Math.sin(s.phase) };
-};
+const U = 34; const W = 320; const H = 300; const cx = W / 2; const cy = H / 2;
+const rings = (['high', 'mid', 'low'] as const).map((o) => ORBIT_RADIUS[o] * U);
+const project = (p: { x: number; y: number }) => ({ x: cx + p.x * U, y: cy - p.y * U * SQUASH });
+const pad = project({ x: LAUNCH_RADIUS, y: 0 });
 ---
-<svg class="fallback" data-fallback viewBox="0 0 320 300" role="img" aria-labelledby="fb-title fb-desc">
+<svg class="fallback" data-fallback viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="fb-title fb-desc">
   <title id="fb-title">Planet with project satellites in orbit</title>
   <desc id="fb-desc">{satellites.map((s) => `${s.name} in ${s.orbit} orbit`).join('; ')}.</desc>
-  {rings.map(({ r }) => <ellipse cx={cx} cy={cy} rx={r} ry={r * squash} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
+  {rings.map((r) => <ellipse cx={cx} cy={cy} rx={r} ry={r * SQUASH} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
   <circle cx={cx} cy={cy} r={U} fill="var(--planet)" />
-  <circle cx={cx - 10} cy={cy - 12} r={U * 0.8} fill="var(--planet-hi)" opacity="0.45" />
-  {satellites.map((s) => { const p = pos(s); return (
-    <g>
-      <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={s.status === 'active' ? 'var(--accent)' : 'var(--ink)'} />
-      <text x={p.x + 9} y={p.y + 4} font-family="var(--font-mono)" font-size="9" fill="var(--ink-2)">{s.name.toUpperCase()}</text>
-    </g>
-  ); })}
+  <circle cx={cx - 9} cy={cy - 11} r={U * 0.8} fill="var(--planet-hi)" opacity="0.45" />
+  <circle cx={pad.x} cy={pad.y} r="2.5" fill="none" stroke="var(--ink)" />
+  {satellites.map((s) => {
+    const p = project(circularPosition(ORBIT_RADIUS[s.orbit], s.phase));
+    const right = p.x >= cx;
+    return (
+      <g>
+        <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={s.status === 'active' ? 'var(--accent)' : 'var(--ink)'} />
+        <line x1={p.x} y1={p.y} x2={right ? p.x + 8 : p.x - 8} y2={p.y} stroke="var(--ink-2)" stroke-width="1" />
+        <text x={right ? p.x + 11 : p.x - 11} y={p.y + 3.5} text-anchor={right ? 'start' : 'end'} font-family="var(--font-mono)" font-size="10" fill="var(--ink-2)">{s.name.toUpperCase()}</text>
+      </g>
+    );
+  })}
 </svg>
 <style>
   .fallback { width: 100%; height: 100%; display: block; }
@@ -1513,10 +1635,8 @@ const pos = (s: SceneSatellite) => {
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/scene/capabilities.ts tests/unit/capabilities.test.ts src/scene/Fallback.astro
-git commit -m "feat(scene): capability check and static SVG fallback
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add src/scene/capabilities.ts src/scene/projection.ts tests/unit/capabilities.test.ts src/scene/Fallback.astro
+git commit -m "feat(scene): capability check, shared projection constants and static SVG fallback"
 ```
 
 ---
@@ -1528,10 +1648,12 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Modify: `package.json`
 
 **Interfaces:**
-- Consumes: `simulate`, `orbitalElements`, `ESCAPE_SPEED` (Task 6); `dragToLaunch`, `formatSpeed` (Task 7); `loadVisitorSatellites`, `saveVisitorSatellite`, `toSceneSatellites`, `ORBIT_RADIUS`, `SceneSatellite` (Task 8); `canRenderScene`, `browserEnv` (Task 9); `Fallback` (Task 9).
-- Produces: `mountOrbitScene(container: HTMLElement, opts: { satellites: SceneSatellite[]; storage: Storage | null; onOutcome?: (o: Outcome, speed: number) => void; onContextLost?: () => void }): { destroy(): void }`; `<OrbitScene satellites={SceneSatellite[]} />` Astro island. The island keeps the SVG fallback in the DOM (`hidden`) while WebGL runs and un-hides it on context loss.
+- Consumes: `simulate`, `angularSpeed`, `circularPosition`, `LAUNCH_RADIUS`, `Outcome`, `LaunchParams` (Task 6); `dragToLaunch`, `formatSpeed`, `MIN_SPEED`, `MAX_SPEED` (Task 7); `loadVisitorSatellites`, `saveVisitorSatellite`, `MAX_VISITOR_SATELLITES`, `toSceneSatellites`, `ORBIT_RADIUS`, `SceneSatellite` (Task 8); `canRenderScene`, `browserEnv`, `CAMERA_POSITION`, `VIEW_RADIUS`, `Fallback` (Task 9).
+- Produces: `mountOrbitScene(container: HTMLElement, opts: { satellites: SceneSatellite[]; storage: Storage | null; onOutcome?: (o: Outcome, speed: number) => void; onContextLost?: () => void }): { destroy(): void }`; `<OrbitScene satellites={SceneSatellite[]} />` Astro island. DOM hooks consumed by Task 14: the container `#orbit-scene` carries `data-state` (`fallback` | `pending` | `webgl`) and `data-ready="true"` after the first rendered frame; `[data-testid="launch-pad"]` marks the pad on screen; `[data-testid="launch-status"]` (`role="status"`) carries the hint and the outcome text.
 
-Coordinate mapping: simulation plane `(x, y)` → Three `(x, 0, -y)`; orthographic camera at `(0, 6, 7)` looking at the origin; one simulation unit = one Three unit; the `#orbit-scene` container has `aspect-ratio: 16 / 9` and the frustum is sized so radius 3.8 fits vertically.
+Coordinate mapping: simulation plane `(x, y)` → Three `(x, 0, -y)`; orthographic camera at `CAMERA_POSITION` looking at the origin; one simulation unit = one Three unit; the frustum is sized so `VIEW_RADIUS` fits vertically. The scene never computes motion itself: satellite positions come from `circularPosition`/`angularSpeed`, trajectories from `simulate`.
+
+Interaction contract: a drag starts only on `pointerdown` within `PAD_HIT_RADIUS` of the pad; the drag vector is measured from the pointer-down point on the orbital plane (so a click elsewhere can never launch); the preview is recomputed at most once per animation frame; `pointercancel` or lost capture cancels without launching. Keyboard: the container is focusable (`tabindex="0"`, `role="application"`), arrow keys aim (±5°) and set speed (±0.05 v₀), Enter launches, Escape clears. Live visitor satellites are capped at `MAX_VISITOR_SATELLITES` in memory as well as in storage; removed objects are disposed.
 
 - [ ] **Step 1: Install Three**
 
@@ -1559,6 +1681,9 @@ export function createPlanet(): Mesh {
 
 ```ts
 import { BufferGeometry, Line, LineDashedMaterial, Vector3, Color } from 'three';
+import type { Point } from '@/lib/orbit';
+
+export const toThree = (p: Point): Vector3 => new Vector3(p.x, 0, -p.y);
 
 export function ringPoints(radius: number, segments = 128): Vector3[] {
   return Array.from({ length: segments + 1 }, (_, i) => {
@@ -1576,9 +1701,9 @@ export function createRing(radius: number): Line {
   return line;
 }
 
-/** A dashed path from simulation points (x, y) → (x, 0, -y). */
-export function createPath(points: { x: number; y: number }[], color = '#121412'): Line {
-  const geo = new BufferGeometry().setFromPoints(points.map((p) => new Vector3(p.x, 0, -p.y)));
+/** A dashed path from simulation points. */
+export function createPath(points: Point[], color = '#121412'): Line {
+  const geo = new BufferGeometry().setFromPoints(points.map(toThree));
   const line = new Line(geo, new LineDashedMaterial({ color: new Color(color), dashSize: 0.08, gapSize: 0.06 }));
   line.computeLineDistances();
   return line;
@@ -1609,15 +1734,16 @@ export function createSatelliteMesh(kind: SatelliteKind): Mesh {
 ```ts
 import {
   Scene, OrthographicCamera, WebGLRenderer, HemisphereLight, DirectionalLight, Color,
-  Vector2, Vector3, Plane, Raycaster, Group, Object3D,
+  Vector2, Vector3, Plane, Raycaster, Group, Mesh, Line, type Object3D,
 } from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { simulate, type Outcome, type LaunchParams } from '@/lib/orbit';
-import { dragToLaunch, formatSpeed } from '@/lib/launch';
+import { simulate, angularSpeed, circularPosition, LAUNCH_RADIUS, type Outcome, type LaunchParams } from '@/lib/orbit';
+import { dragToLaunch, formatSpeed, MIN_SPEED, MAX_SPEED } from '@/lib/launch';
 import { ORBIT_RADIUS, type SceneSatellite } from '@/lib/satellites';
-import { loadVisitorSatellites, saveVisitorSatellite } from '@/lib/visitorSatellites';
+import { loadVisitorSatellites, saveVisitorSatellite, MAX_VISITOR_SATELLITES } from '@/lib/visitorSatellites';
+import { CAMERA_POSITION, VIEW_RADIUS } from './projection';
 import { createPlanet } from './planet';
-import { createRing, createPath } from './rings';
+import { createRing, createPath, toThree } from './rings';
 import { createSatelliteMesh } from './satelliteMesh';
 
 export interface MountOptions {
@@ -1627,34 +1753,36 @@ export interface MountOptions {
   onContextLost?: () => void;
 }
 
-const VIEW_RADIUS = 3.8;
-const LAUNCH_POINT = new Vector3(1, 0, 0);
+const LAUNCH_POINT = new Vector3(LAUNCH_RADIUS, 0, 0);
+const PAD_HIT_RADIUS = 0.6;
+const KEY_ANGLE_STEP = (5 * Math.PI) / 180;
+const KEY_SPEED_STEP = 0.05;
+const ORBIT_TIME_SCALE = 0.15;
+const HINT = 'DRAG TO LAUNCH ↗';
+const OUTCOME_TEXT: Record<Outcome, string> = { orbit: 'ORBIT ACHIEVED', escape: 'ESCAPE', suborbital: 'SUBORBITAL' };
 
-function label(text: string, cls = 'scene-label'): CSS2DObject {
+function label(text: string, cls: string, attrs: Record<string, string> = {}): CSS2DObject {
   const el = document.createElement('div');
   el.className = `mono ${cls}`;
   el.textContent = text;
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
   return new CSS2DObject(el);
 }
 
-function orbiter(radius: number, phase: number, mesh: Object3D, name?: string) {
-  const g = new Group();
-  g.add(mesh);
-  if (name) { const l = label(name.toUpperCase()); l.position.set(0.18, 0, 0); g.add(l); }
-  const omega = Math.pow(radius, -1.5); // Kepler: ω ∝ r^-3/2
-  return {
-    group: g,
-    update(t: number) {
-      const a = phase + omega * t * 0.15;
-      g.position.set(radius * Math.cos(a), 0, -radius * Math.sin(a));
-    },
-  };
+function disposeTree(obj: Object3D) {
+  obj.traverse((o) => {
+    if (o instanceof Mesh || o instanceof Line) {
+      o.geometry.dispose();
+      const m = o.material;
+      if (Array.isArray(m)) m.forEach((x) => x.dispose()); else m.dispose();
+    }
+  });
 }
 
 export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { destroy(): void } {
   const scene = new Scene();
   const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-  camera.position.set(0, 6, 7);
+  camera.position.set(...CAMERA_POSITION);
   camera.lookAt(0, 0, 0);
 
   const renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
@@ -1672,81 +1800,130 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
   scene.add(createPlanet());
   for (const r of Object.values(ORBIT_RADIUS)) scene.add(createRing(r));
 
+  // Project satellites: position comes from orbit.ts, the scene only places meshes.
   const orbiters = opts.satellites.map((s) => {
-    const o = orbiter(ORBIT_RADIUS[s.orbit], s.phase, createSatelliteMesh(s.status === 'active' ? 'active' : 'muted'), s.name);
-    scene.add(o.group);
-    return o;
+    const radius = ORBIT_RADIUS[s.orbit];
+    const g = new Group();
+    g.add(createSatelliteMesh(s.status === 'active' ? 'active' : 'muted'));
+    const l = label(s.name.toUpperCase(), 'scene-label'); l.position.set(0.18, 0, 0); g.add(l);
+    scene.add(g);
+    return { update(t: number) { const p = circularPosition(radius, s.phase + angularSpeed(radius) * t * ORBIT_TIME_SCALE); g.position.copy(toThree(p)); } };
   });
 
-  // Visitor satellites: recompute their paths deterministically from stored params.
-  const visitorGroup = new Group(); scene.add(visitorGroup);
-  const visitorUpdaters: ((t: number) => void)[] = [];
+  // Visitor satellites: recomputed deterministically from stored params; capped in memory too.
+  const visitors: { group: Group; update(t: number): void }[] = [];
   function addVisitor(p: LaunchParams) {
     const sim = simulate(p);
     if (sim.outcome !== 'orbit') return;
-    const path = createPath(sim.points, '#6E736D'); visitorGroup.add(path);
-    const mesh = createSatelliteMesh('visitor'); visitorGroup.add(mesh);
-    const n = sim.points.length;
-    visitorUpdaters.push((t) => { const i = Math.floor((t * 0.3 * n) / (sim.period ?? 6)) % n; const pt = sim.points[i]!; mesh.position.set(pt.x, 0, -pt.y); });
+    const g = new Group();
+    g.add(createPath(sim.points, '#6E736D'));
+    const mesh = createSatelliteMesh('visitor'); g.add(mesh);
+    scene.add(g);
+    const n = sim.points.length; const period = sim.period ?? 6;
+    visitors.push({ group: g, update(t) { const i = Math.floor(((t * 0.3) / period) * n) % n; mesh.position.copy(toThree(sim.points[i]!)); } });
+    while (visitors.length > MAX_VISITOR_SATELLITES) { const old = visitors.shift()!; scene.remove(old.group); disposeTree(old.group); }
   }
   for (const v of loadVisitorSatellites(opts.storage)) addVisitor({ angle: v.angle, speed: v.speed });
+
+  // Pad marker and status label (DOM, so tests and screen readers can see them).
+  const padMarker = label('', 'scene-pad', { 'data-testid': 'launch-pad', 'aria-hidden': 'true' });
+  padMarker.position.copy(LAUNCH_POINT); scene.add(padMarker);
+  const status = label(HINT, 'scene-label scene-label--hint', { role: 'status', 'data-testid': 'launch-status' });
+  status.position.set(LAUNCH_RADIUS + 0.25, 0, 0.45); scene.add(status);
+  const setStatus = (text: string, accent = false) => { status.element.textContent = text; status.element.classList.toggle('scene-label--accent', accent); };
 
   // Launch interaction.
   const plane = new Plane(new Vector3(0, 1, 0), 0);
   const ray = new Raycaster();
   const ndc = new Vector2();
-  const hit = new Vector3();
-  let dragging = false;
-  let preview: ReturnType<typeof createPath> | null = null;
-  const outcomeLabel = label('DRAG TO LAUNCH ↗', 'scene-label scene-label--hint');
-  outcomeLabel.position.set(1.25, 0, 0.4);
-  scene.add(outcomeLabel);
+  let dragOrigin: Vector3 | null = null;
+  let activePointer: number | null = null;
+  let pendingPreview: LaunchParams | null | undefined; // undefined = nothing pending
+  let preview: Line | null = null;
+  let flyTimer: ReturnType<typeof setTimeout> | null = null;
+  let aim: LaunchParams = { angle: 0, speed: 1 };
 
   function pointToPlane(ev: PointerEvent): Vector3 | null {
     const rect = renderer.domElement.getBoundingClientRect();
     ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    return ray.ray.intersectPlane(plane, hit) ? hit.clone() : null;
+    const hit = new Vector3();
+    return ray.ray.intersectPlane(plane, hit) ? hit : null;
   }
   function paramsFrom(ev: PointerEvent): LaunchParams | null {
     const p = pointToPlane(ev);
-    if (!p) return null;
-    const d = p.clone().sub(LAUNCH_POINT);
-    // tangential = +y in sim = -z in Three; radial = +x
-    return dragToLaunch({ tangential: -d.z, radial: d.x });
+    if (!p || !dragOrigin) return null;
+    const d = p.sub(dragOrigin);
+    return dragToLaunch({ tangential: -d.z, radial: d.x }); // sim +y is Three -z
   }
-  function clearPreview() { if (preview) { scene.remove(preview); preview.geometry.dispose(); preview = null; } }
-
-  const onDown = (ev: PointerEvent) => { dragging = true; renderer.domElement.setPointerCapture(ev.pointerId); };
-  const onMove = (ev: PointerEvent) => {
-    if (!dragging) return;
-    const p = paramsFrom(ev);
+  function clearPreview() { if (preview) { scene.remove(preview); disposeTree(preview); preview = null; } }
+  function showPreview(p: LaunchParams | null) {
     clearPreview();
-    if (!p) return;
+    if (!p) { setStatus(HINT); return; }
     const sim = simulate(p, { maxSteps: 6000 });
     preview = createPath(sim.points, sim.outcome === 'orbit' ? '#E2401C' : '#121412');
     scene.add(preview);
-    outcomeLabel.element.textContent = `${formatSpeed(p.speed)} · ${sim.outcome.toUpperCase()}`;
-  };
-  const onUp = (ev: PointerEvent) => {
-    if (!dragging) return;
-    dragging = false;
-    const p = paramsFrom(ev);
+    setStatus(`${formatSpeed(p.speed)} · ${OUTCOME_TEXT[sim.outcome]}`);
+  }
+  function launch(p: LaunchParams) {
     clearPreview();
-    if (!p) { outcomeLabel.element.textContent = 'DRAG TO LAUNCH ↗'; return; }
     const sim = simulate(p);
-    const text = sim.outcome === 'orbit' ? 'ORBIT ACHIEVED' : sim.outcome === 'escape' ? 'ESCAPE' : 'SUBORBITAL';
-    outcomeLabel.element.textContent = `${formatSpeed(p.speed)} · ${text}`;
-    outcomeLabel.element.classList.toggle('scene-label--accent', sim.outcome === 'orbit');
-    if (sim.outcome === 'orbit') { saveVisitorSatellite(opts.storage, { ...p, launchedAt: Date.now() }); addVisitor(p); }
-    else { const fly = createPath(sim.points, '#121412'); scene.add(fly); setTimeout(() => { scene.remove(fly); fly.geometry.dispose(); }, 1800); }
+    setStatus(`${formatSpeed(p.speed)} · ${OUTCOME_TEXT[sim.outcome]}`, sim.outcome === 'orbit');
+    if (sim.outcome === 'orbit') {
+      saveVisitorSatellite(opts.storage, { ...p, launchedAt: Date.now() });
+      addVisitor(p);
+    } else {
+      const fly = createPath(sim.points, '#121412'); scene.add(fly);
+      if (flyTimer) clearTimeout(flyTimer);
+      flyTimer = setTimeout(() => { scene.remove(fly); disposeTree(fly); flyTimer = null; }, 1800);
+    }
     opts.onOutcome?.(sim.outcome, p.speed);
+  }
+  function cancelDrag() { dragOrigin = null; activePointer = null; pendingPreview = undefined; clearPreview(); setStatus(HINT); }
+
+  const onDown = (ev: PointerEvent) => {
+    if (activePointer !== null) return;
+    const hit = pointToPlane(ev);
+    if (!hit || hit.distanceTo(LAUNCH_POINT) > PAD_HIT_RADIUS) return;
+    dragOrigin = hit; activePointer = ev.pointerId;
+    renderer.domElement.setPointerCapture(ev.pointerId);
   };
-  renderer.domElement.addEventListener('pointerdown', onDown);
-  renderer.domElement.addEventListener('pointermove', onMove);
-  renderer.domElement.addEventListener('pointerup', onUp);
-  renderer.domElement.addEventListener('pointercancel', onUp);
-  renderer.domElement.style.touchAction = 'none';
+  const onMove = (ev: PointerEvent) => { if (ev.pointerId === activePointer) pendingPreview = paramsFrom(ev); };
+  const onUp = (ev: PointerEvent) => {
+    if (ev.pointerId !== activePointer) return;
+    const p = paramsFrom(ev);
+    renderer.domElement.releasePointerCapture(ev.pointerId);
+    dragOrigin = null; activePointer = null; pendingPreview = undefined;
+    if (p) launch(p); else { clearPreview(); setStatus(HINT); }
+  };
+  const onCancel = (ev: PointerEvent) => { if (ev.pointerId === activePointer) cancelDrag(); };
+  const onKey = (ev: KeyboardEvent) => {
+    const step = (da: number, dv: number) => {
+      aim = { angle: aim.angle + da, speed: Math.min(MAX_SPEED, Math.max(MIN_SPEED, aim.speed + dv)) };
+      showPreview(aim);
+    };
+    switch (ev.key) {
+      case 'ArrowLeft': step(KEY_ANGLE_STEP, 0); break;
+      case 'ArrowRight': step(-KEY_ANGLE_STEP, 0); break;
+      case 'ArrowUp': step(0, KEY_SPEED_STEP); break;
+      case 'ArrowDown': step(0, -KEY_SPEED_STEP); break;
+      case 'Enter': launch(aim); break;
+      case 'Escape': clearPreview(); setStatus(HINT); break;
+      default: return;
+    }
+    ev.preventDefault();
+  };
+  const el = renderer.domElement;
+  el.addEventListener('pointerdown', onDown);
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onCancel);
+  el.addEventListener('lostpointercapture', onCancel);
+  el.style.touchAction = 'none';
+  container.tabIndex = 0;
+  container.setAttribute('role', 'application');
+  container.setAttribute('aria-label', 'Launch toy: arrow keys aim and set speed, Enter launches, Escape clears');
+  container.addEventListener('keydown', onKey);
 
   // Spec §6.5: on a lost WebGL context, degrade to the static fallback instead of a blank box.
   const onContextLost = (ev: Event) => {
@@ -1755,10 +1932,11 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
     handle.destroy();
     opts.onContextLost?.();
   };
-  renderer.domElement.addEventListener('webglcontextlost', onContextLost);
+  el.addEventListener('webglcontextlost', onContextLost);
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
+    if (!w || !h) return;
     const aspect = w / h;
     camera.left = -VIEW_RADIUS * aspect; camera.right = VIEW_RADIUS * aspect;
     camera.top = VIEW_RADIUS; camera.bottom = -VIEW_RADIUS;
@@ -1768,31 +1946,44 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
   }
   const ro = new ResizeObserver(resize); ro.observe(container); resize();
 
-  let raf = 0; let running = true; const t0 = performance.now();
-  const io = new IntersectionObserver(([e]) => { running = Boolean(e?.isIntersecting); if (running) loop(); }, { threshold: 0.05 });
-  io.observe(container);
+  // One resumable loop: visibility toggles `running`; `raf !== 0` guards against duplicate loops.
+  let raf = 0; let running = true; let destroyed = false; const t0 = performance.now();
   function loop() {
-    if (!running) return;
+    raf = 0;
+    if (!running || destroyed) return;
     const t = (performance.now() - t0) / 1000;
+    if (pendingPreview !== undefined) { showPreview(pendingPreview); pendingPreview = undefined; }
     for (const o of orbiters) o.update(t);
-    for (const u of visitorUpdaters) u(t);
+    for (const v of visitors) v.update(t);
     renderer.render(scene, camera);
     labels.render(scene, camera);
+    if (container.dataset.ready !== 'true') container.dataset.ready = 'true';
     raf = requestAnimationFrame(loop);
   }
-  loop();
+  function start() { if (raf === 0 && running && !destroyed) raf = requestAnimationFrame(loop); }
+  const io = new IntersectionObserver(([e]) => { running = Boolean(e?.isIntersecting); if (running) start(); }, { threshold: 0.05 });
+  io.observe(container);
+  start();
 
   const handle = {
     destroy() {
-      running = false; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect();
-      renderer.domElement.removeEventListener('pointerdown', onDown);
-      renderer.domElement.removeEventListener('pointermove', onMove);
-      renderer.domElement.removeEventListener('pointerup', onUp);
-      renderer.domElement.removeEventListener('pointercancel', onUp);
-      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
+      if (destroyed) return;
+      destroyed = true; running = false;
+      if (raf) cancelAnimationFrame(raf); raf = 0;
+      if (flyTimer) clearTimeout(flyTimer);
+      ro.disconnect(); io.disconnect();
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onCancel);
+      el.removeEventListener('lostpointercapture', onCancel);
+      el.removeEventListener('webglcontextlost', onContextLost);
+      container.removeEventListener('keydown', onKey);
+      disposeTree(scene);
       renderer.dispose();
-      renderer.domElement.remove();
+      el.remove();
       labels.domElement.remove();
+      delete container.dataset.ready;
     },
   };
   return handle;
@@ -1819,16 +2010,17 @@ const { satellites } = Astro.props;
 
   const el = document.getElementById('orbit-scene');
   if (el && canRenderScene(browserEnv())) {
+    el.dataset.state = 'pending';
+    const fallback = el.querySelector<SVGElement>('[data-fallback]');
+    const showFallback = () => { if (fallback) fallback.hidden = false; el.dataset.state = 'fallback'; };
     const start = async () => {
-      const { mountOrbitScene } = await import('@/scene/scene');
-      const satellites = JSON.parse(el.dataset.satellites ?? '[]');
-      let storage: Storage | null = null;
-      try { storage = window.localStorage; } catch { storage = null; }
-      const fallback = el.querySelector<SVGElement>('[data-fallback]');
-      const showFallback = () => { if (fallback) fallback.hidden = false; el.dataset.state = 'fallback'; };
-      if (fallback) fallback.hidden = true;
-      el.dataset.state = 'webgl';
       try {
+        const { mountOrbitScene } = await import('@/scene/scene');
+        const satellites = JSON.parse(el.dataset.satellites ?? '[]');
+        let storage: Storage | null = null;
+        try { storage = window.localStorage; } catch { storage = null; }
+        if (fallback) fallback.hidden = true;
+        el.dataset.state = 'webgl';
         mountOrbitScene(el, { satellites, storage, onContextLost: showFallback });
       } catch (err) {
         console.info('[orbit] scene failed to start; showing static fallback', err);
@@ -1843,13 +2035,17 @@ const { satellites } = Astro.props;
 
 <style is:global>
   .orbit-scene { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
+  .orbit-scene:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
   .orbit-scene canvas { display: block; width: 100% !important; height: 100% !important; cursor: grab; }
   .orbit-scene canvas:active { cursor: grabbing; }
-  .scene-labels { position: absolute; inset: 0; pointer-events: none; }
-  .scene-label { white-space: nowrap; color: var(--ink-2); background: var(--paper); padding: 0 0.3em; }
-  .scene-label--hint { border: 1px solid var(--ink); color: var(--ink); background: var(--surface); padding: 0.2em 0.6em; }
-  .scene-label--accent { border-color: var(--accent); color: var(--accent); }
   .orbit-scene [data-fallback][hidden] { display: none; }
+  .scene-labels { position: absolute; inset: 0; pointer-events: none; }
+  .scene-label { position: relative; white-space: nowrap; color: var(--ink-2); background: var(--paper); padding: 0 0.3em; }
+  .scene-label::before { content: ''; position: absolute; left: -12px; top: 50%; width: 10px; border-top: 1px solid var(--ink-2); }
+  .scene-label--hint { border: 1px solid var(--ink); color: var(--ink); background: var(--surface); padding: 0.2em 0.6em; }
+  .scene-label--hint::before { display: none; }
+  .scene-label--accent { border-color: var(--accent); color: var(--accent); }
+  .scene-pad { width: 22px; height: 22px; border: 1px solid var(--ink); border-radius: 50%; background: transparent; }
   @media (max-width: 767px) { .orbit-scene { aspect-ratio: 4 / 3; } }
 </style>
 ```
@@ -1871,21 +2067,19 @@ const satellites = toSceneSatellites(await getCollection('work'));
 </Base>
 ```
 
-Run `npm run dev`. Checklist (hand verification): rings dashed, planet faceted matte, PaperTok red on the outer ring, pipeline black on the mid ring, names in mono next to them; drag from the planet shows a live dashed preview and the `v · OUTCOME` label; release at ≈1.0–1.3 v₀ tangential yields `ORBIT ACHIEVED` and a small grey satellite that persists on reload; `DevTools → Rendering → Emulate prefers-reduced-motion` + reload shows the SVG fallback; in the console run `document.querySelector('#orbit-scene canvas').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()` and confirm the SVG fallback reappears with `data-state="fallback"`. Then:
+Run `npm run dev`. Checklist (hand verification): rings dashed, planet faceted matte, PaperTok red on the outer ring, pipeline black on the mid ring, names in mono with a short leader line; a small circle marks the pad just outside the planet; dragging from the pad shows a live dashed preview and the `v · OUTCOME` label, dragging from anywhere else does nothing; release at ≈0.95–1.25 v₀ near tangential yields `ORBIT ACHIEVED` and a small grey satellite that persists on reload; Tab to the scene, press ArrowUp twice and Enter → an outcome; `DevTools → Rendering → Emulate prefers-reduced-motion` + reload shows the SVG fallback; in the console run `document.querySelector('#orbit-scene canvas').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()` and confirm the SVG fallback reappears with `data-state="fallback"`. Then check the home JS budget over **all** chunks the page loads:
 
 ```bash
-npm run build && ls -la dist/_astro/*.js | sort -k5 -n | tail -3 && gzip -c $(ls -S dist/_astro/*.js | head -1) | wc -c
+npm run build && for f in $(grep -o '/_astro/[^"]*\.js' dist/index.html | sort -u); do gzip -c "dist$f" | wc -c; done | awk '{s+=$1} END {print s " bytes gzip total"}'
 ```
 
-Expected: largest chunk (Three) gzips to ≤ 170 KB; sum of home chunks ≤ 200 KB gzip. If over budget, check that only named imports from `three` are used (no `import * as THREE`).
+Expected: ≤ 204800. If over budget, check that only named imports from `three` are used (no `import * as THREE`).
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/scene src/pages/index.astro package.json package-lock.json
-git commit -m "feat(scene): Three.js orbit scene with drag-to-launch
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git commit -m "feat(scene): Three.js orbit scene with drag-to-launch and keyboard controls"
 ```
 
 ---
@@ -2381,20 +2575,30 @@ Add scripts: `"e2e": "playwright test"`, `"pretest:e2e": "npm run build"` is not
 `tests/e2e/home.spec.ts`:
 
 ```ts
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+/** Waits for the island to decide between WebGL and the fallback; returns the final state. */
+async function settledSceneState(page: Page) {
+  const scene = page.locator('#orbit-scene');
+  await expect(scene).toHaveAttribute('data-state', /^(webgl|fallback)$/, { timeout: 10_000 });
+  const state = await scene.getAttribute('data-state');
+  if (state === 'webgl') await expect(scene).toHaveAttribute('data-ready', 'true', { timeout: 10_000 });
+  return state;
+}
 
 test.describe('home', () => {
   test('hero text, CTAs and sections render', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Already in orbit');
-    await expect(page.getByRole('link', { name: /see what's in orbit/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^contact$/i }).first()).toBeVisible();
+    const hero = page.locator('#abstract');
+    await expect(hero.getByRole('link', { name: /see what's in orbit/i })).toBeVisible();
+    await expect(hero.getByRole('link', { name: /^contact$/i })).toBeVisible();
     await expect(page.locator('#in-orbit')).toBeVisible();
     await expect(page.locator('#mission-specs')).toBeVisible();
     await expect(page.locator('#ground-control')).toBeVisible();
   });
 
-  test('logbook is hidden while there are no published posts', async ({ page }) => {
+  test('logbook is hidden while there are no published posts, and numbering stays contiguous', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#logbook')).toHaveCount(0);
     await expect(page.locator('#ground-control .mono').first()).toContainText('§3');
@@ -2405,33 +2609,66 @@ test.describe('home', () => {
     const scene = page.locator('#orbit-scene');
     await expect(scene).toBeVisible();
     if (!javaScriptEnabled) { await expect(scene.locator('[data-fallback]')).toBeVisible(); return; }
-    await page.waitForTimeout(2500);
-    const state = await scene.getAttribute('data-state');
+    const state = await settledSceneState(page);
     if (state === 'webgl') await expect(scene.locator('canvas')).toBeVisible();
     else await expect(scene.locator('[data-fallback]')).toBeVisible();
   });
 
-  test('a drag on the canvas produces an outcome label', async ({ page, javaScriptEnabled, isMobile }) => {
+  test('a drag from the pad produces a trajectory outcome; a click does not', async ({ page, javaScriptEnabled }) => {
     test.skip(!javaScriptEnabled, 'needs JS');
     await page.goto('/');
-    await page.waitForTimeout(2500);
-    const canvas = page.locator('#orbit-scene canvas');
-    if ((await canvas.count()) === 0) test.skip(true, 'WebGL unavailable in this runner');
-    const box = (await canvas.boundingBox())!;
-    const sx = box.x + box.width * 0.62, sy = box.y + box.height * 0.5;
-    await page.mouse.move(sx, sy); await page.mouse.down();
-    await page.mouse.move(sx + (isMobile ? 40 : 90), sy - 20, { steps: 8 });
+    const state = await settledSceneState(page);
+    test.skip(state !== 'webgl', 'WebGL unavailable in this runner — run locally for the interaction test');
+    const pad = (await page.getByTestId('launch-pad').boundingBox())!;
+    const status = page.getByTestId('launch-status');
+    const cx = pad.x + pad.width / 2, cy = pad.y + pad.height / 2;
+    // A stationary click is not a launch.
+    await page.mouse.click(cx, cy);
+    await expect(status).toHaveText(/DRAG TO LAUNCH/);
+    // A drag is.
+    await page.mouse.move(cx, cy); await page.mouse.down();
+    await page.mouse.move(cx + 80, cy - 25, { steps: 8 });
     await page.mouse.up();
-    await expect(page.locator('.scene-label--hint')).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
+    await expect(status).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
   });
 
-  test('mobile: headline and both CTAs are within the first two viewports', async ({ page, isMobile }) => {
+  test('the toy is keyboard operable', async ({ page, javaScriptEnabled }) => {
+    test.skip(!javaScriptEnabled, 'needs JS');
+    await page.goto('/');
+    const state = await settledSceneState(page);
+    test.skip(state !== 'webgl', 'WebGL unavailable in this runner');
+    await page.locator('#orbit-scene').focus();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('launch-status')).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
+  });
+
+  test('losing the WebGL context restores the SVG fallback', async ({ page, javaScriptEnabled }) => {
+    test.skip(!javaScriptEnabled, 'needs JS');
+    await page.goto('/');
+    const state = await settledSceneState(page);
+    test.skip(state !== 'webgl', 'WebGL unavailable in this runner');
+    await page.evaluate(() => {
+      const c = document.querySelector<HTMLCanvasElement>('#orbit-scene canvas')!;
+      const gl = (c.getContext('webgl2') ?? c.getContext('webgl')) as WebGLRenderingContext;
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    });
+    const scene = page.locator('#orbit-scene');
+    await expect(scene).toHaveAttribute('data-state', 'fallback');
+    await expect(scene.locator('[data-fallback]')).toBeVisible();
+  });
+
+  test('mobile: headline in the first viewport, CTAs within 1.5 viewports', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'mobile only');
     await page.goto('/');
     const vh = page.viewportSize()!.height;
-    for (const loc of [page.getByRole('heading', { level: 1 }), page.getByRole('link', { name: /see what's in orbit/i }), page.getByRole('link', { name: /^contact$/i }).first()]) {
+    const h1 = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
+    expect(h1.y + h1.height).toBeLessThan(vh);
+    const hero = page.locator('#abstract');
+    for (const loc of [hero.getByRole('link', { name: /see what's in orbit/i }), hero.getByRole('link', { name: /^contact$/i })]) {
       const b = (await loc.boundingBox())!;
-      expect(b.y + b.height).toBeLessThan(vh * 2);
+      expect(b.y + b.height).toBeLessThan(vh * 1.5);
     }
   });
 });
@@ -2443,13 +2680,23 @@ test.describe('home', () => {
 import { test, expect } from '@playwright/test';
 
 for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/about']) {
-  test(`${path} renders with a heading`, async ({ page }) => {
+  test(`${path} renders with a heading and ships no Three`, async ({ page }) => {
+    const scripts: string[] = [];
+    page.on('request', (r) => { if (r.resourceType() === 'script') scripts.push(r.url()); });
     const res = await page.goto(path);
     expect(res?.status()).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    expect(scripts.filter((u) => /three|scene/i.test(u))).toEqual([]);
   });
 }
+
+test('writing index shows the empty state while every post is a draft, and draft routes do not exist', async ({ page }) => {
+  await page.goto('/writing');
+  await expect(page.getByText(/no entries yet/i)).toBeVisible();
+  const res = await page.goto('/writing/first-entry');
+  expect(res?.status()).toBe(404);
+});
 
 test('404 page', async ({ page }) => {
   // `astro preview` serves dist/404.html for unknown routes; GitHub Pages does the same in production.
@@ -2511,16 +2758,17 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 npm i -D @lhci/cli
 ```
 
-`lighthouserc.json`:
+`lighthouserc.json` — mobile emulation (Lighthouse's default, with 4G-class throttling) so the LCP budget is the spec's "4G" budget, three runs with the median:
 
 ```json
 {
   "ci": {
-    "collect": { "staticDistDir": "./dist", "url": ["http://localhost/index.html", "http://localhost/about/index.html"], "numberOfRuns": 2, "settings": { "preset": "desktop" } },
+    "collect": { "staticDistDir": "./dist", "url": ["http://localhost/index.html", "http://localhost/about/index.html"], "numberOfRuns": 3 },
     "assert": {
+      "aggregationMethod": "median",
       "assertions": {
         "cumulative-layout-shift": ["error", { "maxNumericValue": 0.01 }],
-        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
         "categories:accessibility": ["error", { "minScore": 0.95 }],
         "categories:best-practices": ["warn", { "minScore": 0.9 }],
         "categories:seo": ["error", { "minScore": 0.95 }]
@@ -2564,14 +2812,18 @@ jobs:
         with: { name: playwright-report, path: playwright-report }
 ```
 
-- [ ] **Step 3: Deploy workflow (from the official Astro docs)**
+- [ ] **Step 3: Deploy workflow (official Astro action, gated on CI)**
+
+Deployment runs only after the `CI` workflow succeeds on `main`, so a red build can never publish.
 
 `.github/workflows/deploy.yml`:
 
 ```yaml
 name: Deploy to GitHub Pages
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 permissions:
@@ -2580,9 +2832,11 @@ permissions:
   id-token: write
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with: { ref: main }
       - uses: withastro/action@v6
         with: { node-version: 24 }
   deploy:
@@ -2641,9 +2895,9 @@ Then in GitHub → Settings → Pages → Source: **GitHub Actions**. Wait for t
 **Files:**
 - Modify: `docs/superpowers/specs/2026-10-15-personal-website-design.md`
 
-- [ ] **Step 1: Record the version deviation**
+- [ ] **Step 1: Confirm the spec amendments made during pre-flight**
 
-In spec §6.1 change `**Astro 5**` to `**Astro 7.x** (spec originally said 5; the content-collections API used is unchanged)`. In spec §6.2 note that the optional `cover` image field was left out of the `work` schema in v1 (no cover images exist yet; add the field when the first one does).
+Spec §6.1 (Astro 7.x), §6.2 (no `slug` field, `cover` deferred), §3 (launch pad at 1.05, tangent snapping), §5.1 (contiguous numbering, mobile and keyboard behaviour) were amended before implementation started. Re-read them against the shipped code and fix any drift.
 
 - [ ] **Step 2: Mark the open items**
 

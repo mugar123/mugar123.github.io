@@ -28,7 +28,7 @@ The site tells one story: **the student who is already leaving the classroom's g
 
 - **The planet** is the classroom (Salamanca).
 - **Satellites in orbit** are things actually launched: projects. Higher orbit = bigger project.
-- **The toy:** the visitor drags to set launch angle and speed from the planet's surface. The trajectory is computed with real two-body physics. Too slow → falls back. Fast enough → stays in a low orbit as a small satellite of their own (persisted per visitor in `localStorage`). Faster than escape velocity → leaves the scene. The three outcomes are labelled in mono type (`SUBORBITAL` / `ORBIT ACHIEVED` / `ESCAPE`).
+- **The toy:** the visitor drags to set launch angle and speed from a launch pad just above the surface (r = 1.05 planet radii — from exactly the surface no non-tangential launch can orbit, so the pad is what makes the game winnable; aiming within 3° of the horizontal snaps to a tangential launch). The trajectory is computed with real two-body physics. Too slow → falls back. Fast enough → stays in a low orbit as a small satellite of their own (persisted per visitor in `localStorage`). Faster than escape velocity → leaves the scene. The three outcomes are labelled in mono type (`SUBORBITAL` / `ORBIT ACHIEVED` / `ESCAPE`).
 - **Skills are not satellites.** A satellite is something launched, not an ability. Skills live in a text panel called *Mission specs*.
 
 ### 3.1 Content in orbit (initial)
@@ -82,11 +82,11 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 | 0 | **Abstract / hero** — full-bleed | 3D scene fills the hero width, planet offset right. Bottom-left: headline *"Physics student at Salamanca. Already in orbit."* (final copy TBD in implementation, same shape), one sentence, two CTAs: `SEE WHAT'S IN ORBIT` (secondary) and `CONTACT` (accent). Bottom-right: compact Mission specs in mono. Hint label `drag to launch ↗` near the planet. |
 | 1 | **In orbit** | One card per satellite from the `work` collection: `SAT-0n · ORBIT · STATUS`, name, one-liner, stack tags in mono, link to its page. |
 | 2 | **Mission specs** | The five strengths as short items, plus one paragraph on how he works with AI coding agents. |
-| 3 | **Logbook** | Latest 3 posts from `writing`, link to `/writing`. Hidden automatically if there are no posts. |
+| 3 | **Logbook** | Latest 3 posts from `writing`, link to `/writing`. Hidden automatically if there are no posts; when hidden, Ground control becomes §3 so the numbering stays contiguous. |
 | 4 | **Ground control** | "Open to internships and junior roles." Email (accent), LinkedIn, GitHub, CV (PDF). |
 | — | footer | `SALAMANCA · 40.96° N, 5.67° W · CET` · `LAST UPDATED <build date>` |
 
-Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a shorter top band (≈ 45 vh) and text stacks below; the launch interaction works with touch.
+Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a shorter top band (≈ 45 vh) and text stacks below: the headline is within the first viewport and both CTAs within the first 1.5 viewports; the launch interaction works with touch. The toy is also keyboard-operable (focus the scene: arrow keys aim and set speed, Enter launches) and announces outcomes through a `role="status"` label.
 
 ### 5.2 Other pages
 
@@ -100,7 +100,7 @@ Hero behaviour: text is server-rendered and visible immediately; the scene mount
 
 ### 6.1 Stack
 
-- **Astro 5**, `output: 'static'`, `site: 'https://mugar123.github.io'`, no `base` (repo named `mugar123.github.io`).
+- **Astro 7.x** (current major at implementation time; the content-collections API used is unchanged since 5), `output: 'static'`, `site: 'https://mugar123.github.io'`, no `base` (repo named `mugar123.github.io`).
 - **Three.js** (no React Three Fiber) inside an Astro island `<OrbitScene />`, hydrated with `client:visible`. React is not required anywhere in v1.
 - **Plain CSS** with custom properties; no Tailwind. Global tokens in `src/styles/tokens.css`.
 - **TypeScript** everywhere, `strict`.
@@ -108,11 +108,12 @@ Hero behaviour: text is server-rendered and visible immediately; the scene mount
 ### 6.2 Content model (`src/content/`)
 
 ```ts
-// work
-{ title, slug, orbit: 'high' | 'mid' | 'low', status: 'active' | 'paused' | 'retired',
-  launched: Date, oneLiner, stack: string[], links?: {label, url}[], cover?: image, order: number }
+// work  (the entry id — derived from the file name — is the URL slug; no separate `slug` field)
+{ title, orbit: 'high' | 'mid' | 'low', status: 'active' | 'paused' | 'retired',
+  launched: Date, oneLiner, stack: string[], links?: {label, url}[], order: number }
 // writing
-{ title, slug, date: Date, summary, tags?: string[], draft?: boolean }
+{ title, date: Date, summary, tags?: string[], draft?: boolean }
+// `cover?: image` for work entries is deferred until the first cover image exists.
 ```
 
 Validated with Zod via content collections. Invalid frontmatter fails the build. The scene reads `work` at build time and receives satellites as serialized props, so adding a project is adding one Markdown file.
