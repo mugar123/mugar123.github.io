@@ -908,7 +908,7 @@ export function simulate(p: LaunchParams, opts?: { dt?: number; maxSteps?: numbe
 
 Units: planet radius R = 1, GM = 1. The launch pad is at `(LAUNCH_RADIUS, 0)`; local horizontal is +y (counter-clockwise prograde), radial is +x. **Why a pad and not the surface:** a launch from exactly r = 1 with any outward radial component has periapsis < 1 and falls back, so only a perfectly tangential launch could ever orbit. From r = 1.05 there is a cone of angles whose periapsis stays above the surface, which is what makes the toy winnable.
 
-Outcome rules: `suborbital` when the path reaches r ≤ 1; `escape` when energy ≥ 0 and r reaches `bound`; `orbit` when energy < 0 and the swept angle reaches 2π without touching the surface. If `maxSteps` runs out first, the outcome is inferred from the energy sign and `truncated` is `true` — never pretend a truncated path is a measured orbit. `period` is analytic (2π·a^1.5) for bound orbits and `null` otherwise.
+Outcome rules: `suborbital` when the path reaches r ≤ 1; `escape` when energy ≥ 0 and r reaches `bound`; `orbit` when energy < 0 and the swept angle reaches 2π without touching the surface. If `maxSteps` runs out first, `truncated` is `true` and the outcome is inferred analytically: energy ≥ 0 → `escape`; energy < 0 and the orbit's analytic periapsis ≥ 1 → `orbit`; energy < 0 and periapsis < 1 → `suborbital` (the path will hit the surface after the budget ran out — a slow lob straight up is the classic case). Never pretend a truncated path is a measured orbit. `period` is analytic (2π·a^1.5) for bound orbits and `null` otherwise. Consumers (Task 10) must not persist a truncated `orbit`.
 
 - [ ] **Step 1: Write the failing tests**
 
