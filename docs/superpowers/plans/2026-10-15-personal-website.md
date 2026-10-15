@@ -2186,7 +2186,10 @@ const specs = [
   {specs.map((s) => (<div><dt class="mono">{s.k}</dt><dd>{s.v}</dd></div>))}
 </dl>
 <style>
-  .specs { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin: 0; }
+  /* Six items read as 3 × 2, not 4 + 2. */
+  .specs { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+  @media (max-width: 899px) { .specs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 599px) { .specs { grid-template-columns: 1fr; } }
   .specs div { background: var(--surface); border: 1px solid var(--grid); padding: var(--space-3); }
   dt { margin: 0 0 var(--space-1); } dd { margin: 0; font-size: var(--text-small); }
   .specs--compact { gap: var(--space-1); grid-template-columns: 1fr; }
@@ -2289,10 +2292,11 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 </Base>
 
 <style>
-  .hero { position: relative; min-height: 80vh; display: grid; align-items: end; }
+  .hero { position: relative; min-height: clamp(34rem, 78vh, 54rem); display: grid; align-items: end; }
   .hero__scene { position: absolute; inset: 0; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
-  .hero__scene :global(.orbit-scene) { width: min(68vw, 60rem); pointer-events: auto; }
-  .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: 40rem; margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
+  .hero__scene :global(.orbit-scene) { width: min(62vw, 60rem); pointer-events: auto; }
+  /* The copy never runs under the scene: on mid-size desktops it is capped by viewport width. */
+  .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: min(40rem, 56vw); margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
   .hero__copy h1 em { font-style: italic; }
   .hero__lede { font-size: var(--text-body); }
   .hero__cta { display: flex; gap: var(--space-3); flex-wrap: wrap; }
@@ -2301,6 +2305,8 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--accent); color: var(--paper); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
+  /* Below 1100px the compact specs would sit on the scene's launch hint; §2 repeats them in full anyway. */
+  @media (max-width: 1099px) { .hero__specs { display: none; } }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
   .specs__note { margin-top: var(--space-4); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
