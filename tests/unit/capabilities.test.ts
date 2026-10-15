@@ -19,6 +19,12 @@ describe('canRenderScene', () => {
   it('false under prefers-reduced-motion', () => {
     expect(canRenderScene({ createCanvas: canvas(true), matchMedia: mm(true) })).toBe(false);
   });
+  it('false when matchMedia throws', () => {
+    expect(canRenderScene({ createCanvas: canvas(true), matchMedia: () => { throw new Error('x'); } })).toBe(false);
+  });
+  it('false when matchMedia returns null', () => {
+    expect(canRenderScene({ createCanvas: canvas(true), matchMedia: () => null as never })).toBe(false);
+  });
   it('false when the connection asks to save data', () => {
     expect(canRenderScene({ createCanvas: canvas(true), matchMedia: mm(false), connection: { saveData: true } })).toBe(false);
   });

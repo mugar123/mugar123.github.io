@@ -5,12 +5,17 @@ export interface EnvLike {
 }
 
 export function canRenderScene(env: EnvLike): boolean {
-  if (env.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
-  if (env.connection?.saveData) return false;
   try {
+    if (env.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+    if (env.connection?.saveData) return false;
     const c = env.createCanvas();
     if (!c) return false;
-    return Boolean(c.getContext('webgl2') ?? c.getContext('webgl'));
+    const context = (c.getContext('webgl2') ?? c.getContext('webgl')) as {
+      getExtension?: (name: string) => { loseContext: () => void } | null;
+    } | null;
+    if (!context) return false;
+    context.getExtension?.('WEBGL_lose_context')?.loseContext();
+    return true;
   } catch {
     return false;
   }

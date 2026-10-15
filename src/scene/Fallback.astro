@@ -6,40 +6,53 @@ import { SQUASH, VIEW_RADIUS } from '@/scene/projection';
 interface Props { satellites: SceneSatellite[] }
 const { satellites } = Astro.props;
 
-const H = 304; const W = (H * 16) / 9;           // 16:9, like the scene container on desktop
-const U = H / (2 * VIEW_RADIUS);                 // px per scene unit — identical framing to the Three camera
+const H = 304; const W = (H * 16) / 9;          // 16:9 drawing; `slice` crops the sides in other aspects, like the camera
+const U = H / (2 * VIEW_RADIUS);                // px per scene unit — identical framing to the Three camera
 const cx = W / 2; const cy = H / 2;
-const FONT = 12; const CHAR = FONT * 0.62;       // JetBrains Mono advance ≈ 0.62 em
-const GAP = 11; const LEADER = 8;
-const rings = (['high', 'mid', 'low'] as const).map((o) => ORBIT_RADIUS[o] * U);
 const project = (p: { x: number; y: number }) => ({ x: cx + p.x * U, y: cy - p.y * U * SQUASH });
+const pct = (p: { x: number; y: number }) => ({ left: `${(p.x / W) * 100}%`, top: `${(p.y / H) * 100}%` });
 const pad = project({ x: LAUNCH_RADIUS, y: 0 });
-const placed = satellites.map((s) => {
-  const p = project(circularPosition(ORBIT_RADIUS[s.orbit], s.phase));
-  const text = s.name.toUpperCase();
-  const width = text.length * CHAR;
-  const outerRight = p.x >= cx;
-  const fitsRight = p.x + GAP + width <= W - 4;
-  const fitsLeft = p.x - GAP - width >= 4;
-  const right = outerRight ? fitsRight : !fitsLeft;  // prefer the outer side; flip only when it would clip
-  return { s, p, text, right };
+const rings = (['high', 'mid', 'low'] as const).map((o) => {
+  const r = ORBIT_RADIUS[o] * U; const ry = r * SQUASH;
+  // Far half (above centre) and near half (below centre) as two arcs so the planet can sit between them.
+  return {
+    far: `M ${cx - r} ${cy} A ${r} ${ry} 0 0 1 ${cx + r} ${cy}`,
+    near: `M ${cx + r} ${cy} A ${r} ${ry} 0 0 1 ${cx - r} ${cy}`,
+  };
 });
+const placed = satellites.map((s) => {
+  const sim = circularPosition(ORBIT_RADIUS[s.orbit], s.phase);
+  const p = project(sim);
+  return { s, p, far: sim.y > 0, right: p.x / W < 0.62 };   // flip the label inward when it sits in the right 38 % of the frame
+});
+const dot = (s: SceneSatellite) => (s.status === 'active' ? 'var(--accent)' : 'var(--ink)');
+const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
 ---
-<svg class="fallback" data-fallback viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="fb-title fb-desc">
-  <title id="fb-title">Planet with project satellites in orbit</title>
-  <desc id="fb-desc">{satellites.map((s) => `${s.name} in ${s.orbit} orbit`).join('; ')}.</desc>
-  {rings.map((r) => <ellipse cx={cx} cy={cy} rx={r} ry={r * SQUASH} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
-  <circle cx={cx} cy={cy} r={U} fill="var(--planet)" />
-  <circle cx={cx - U * 0.25} cy={cy - U * 0.3} r={U * 0.8} fill="var(--planet-hi)" opacity="0.45" />
-  <circle cx={pad.x} cy={pad.y} r="2.5" fill="none" stroke="var(--ink)" />
-  {placed.map(({ s, p, text, right }) => (
-    <g>
-      <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={s.status === 'active' ? 'var(--accent)' : 'var(--ink)'} />
-      <line x1={p.x} y1={p.y} x2={right ? p.x + LEADER : p.x - LEADER} y2={p.y} stroke="var(--ink-2)" stroke-width="1" />
-      <text x={right ? p.x + GAP : p.x - GAP} y={p.y + FONT * 0.35} text-anchor={right ? 'start' : 'end'} font-family="var(--font-mono)" font-size={FONT} fill="var(--ink-2)">{text}</text>
-    </g>
+<div class="fallback" data-fallback>
+  <svg class="fallback__svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby={`${uid}-title`} aria-describedby={satellites.length ? `${uid}-desc` : undefined}>
+    <title id={`${uid}-title`}>Planet with project satellites in orbit</title>
+    {satellites.length > 0 && <desc id={`${uid}-desc`}>{satellites.map((s) => `${s.name} in ${s.orbit} orbit`).join('; ')}.</desc>}
+    {rings.map((r) => <path d={r.far} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
+    {placed.filter((x) => x.far).map(({ s, p }) => <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={dot(s)} />)}
+    <circle cx={cx} cy={cy} r={U} fill="var(--planet)" />
+    <circle cx={cx - U * 0.25} cy={cy - U * 0.3} r={U * 0.8} fill="var(--planet-hi)" opacity="0.45" />
+    {rings.map((r) => <path d={r.near} fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" />)}
+    <circle cx={pad.x} cy={pad.y} r="2.5" fill="none" stroke="var(--ink)" />
+    {placed.filter((x) => !x.far).map(({ s, p }) => <circle cx={p.x} cy={p.y} r={s.status === 'active' ? 5 : 4} fill={dot(s)} />)}
+  </svg>
+  {placed.map(({ s, p, right }) => (
+    <span class:list={['fallback__label', 'mono', { 'fallback__label--left': !right }]} style={`left:${pct(p).left};top:${pct(p).top}`} aria-hidden="true">{s.name.toUpperCase()}</span>
   ))}
-</svg>
+</div>
 <style>
-  .fallback { width: 100%; height: 100%; display: block; }
+  .fallback { position: relative; width: 100%; height: 100%; overflow: hidden; }
+  .fallback__svg { width: 100%; height: 100%; display: block; }
+  .fallback__label {
+    position: absolute; transform: translate(14px, -50%); white-space: nowrap; max-width: 40%;
+    overflow: hidden; text-overflow: ellipsis; font-size: 12px; letter-spacing: 0.04em;
+    color: var(--ink-2); background: var(--paper); padding: 0 0.3em;
+  }
+  .fallback__label::before { content: ''; position: absolute; left: -12px; top: 50%; width: 10px; border-top: 1px solid var(--ink-2); }
+  .fallback__label--left { transform: translate(calc(-100% - 14px), -50%); }
+  .fallback__label--left::before { left: auto; right: -12px; }
 </style>
