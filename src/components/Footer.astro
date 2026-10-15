@@ -1,0 +1,11 @@
+---
+interface Props { buildDate: string }
+const { buildDate } = Astro.props;
+---
+<footer class="container">
+  <span class="mono">Salamanca · 40.96° N, 5.67° W · CET</span>
+  <span class="mono">Last updated {buildDate}</span>
+</footer>
+<style>
+  footer { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding-block: var(--space-6) var(--space-5); border-top: 1px solid var(--grid); margin-top: var(--space-7); }
+</style>

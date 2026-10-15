@@ -1,0 +1,9 @@
+---
+interface Props { accent?: boolean; as?: 'span' | 'div' }
+const { accent = false, as: Tag = 'span' } = Astro.props;
+---
+<Tag class:list={['hud', 'mono', { 'hud--accent': accent }]}><slot /></Tag>
+<style>
+  .hud { display: inline-block; padding: 0.2em 0.6em; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); }
+  .hud--accent { border-color: var(--accent); color: var(--accent); }
+</style>

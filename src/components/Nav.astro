@@ -1,0 +1,22 @@
+---
+const path = Astro.url.pathname;
+const items = [
+  { href: '/#in-orbit', label: 'Work' },
+  { href: '/writing', label: 'Writing' },
+  { href: '/about', label: 'About' },
+];
+---
+<nav class="nav container" aria-label="Primary">
+  <a class="mono mono--ink" href="/">Nicolás Muñoz</a>
+  <ul>
+    {items.map((i) => (
+      <li><a class="mono" href={i.href} aria-current={path.startsWith(i.href.split('#')[0] ?? i.href) && i.href !== '/#in-orbit' ? 'page' : undefined}>{i.label}</a></li>
+    ))}
+  </ul>
+</nav>
+<style>
+  .nav { display: flex; justify-content: space-between; align-items: center; padding-block: var(--space-4); }
+  ul { display: flex; gap: var(--space-4); list-style: none; margin: 0; padding: 0; }
+  a { text-decoration: none; }
+  a:hover, a[aria-current="page"] { color: var(--ink); text-decoration: underline; }
+</style>
