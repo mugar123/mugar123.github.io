@@ -10,7 +10,8 @@
     "check": "astro check && tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fonts": "./scripts/fonts.sh"
+    "fonts": "./scripts/fonts.sh",
+    "og": "node scripts/og.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
