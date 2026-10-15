@@ -153,6 +153,16 @@ GitHub repo `mugar123/mugar123.github.io`, branch `main`. GitHub Actions workflo
 
 English, first person, short sentences, physics vocabulary used lightly and correctly (never a pun that would make a physicist wince). Headlines are sentence case. Labels are UPPERCASE mono. Nicolás reviews all copy before launch.
 
+## 7.1 References
+
+Personal sites that set the pattern (calm base + one memorable interactive object): mikes.cv, shubhu.site, cindyly.design, tomjohn.design, meliketurgut.com, ysuriadesign.com. Ongoing inspiration feed: inspora.design (filters *3D* and *Web*).
+
+Notes taken from Inspora for implementation, not changing any decision:
+
+- Matte, light-on-light 3D objects with a single colored detail validate the "physics diagram" style — keep the planet untextured and let the accent do the work.
+- A huge serif name as the opening line of §0 (paper-title scale, above the scene) is a composition option to try alongside the approved headline.
+- HUD-style mono panels (1 px border, small, no color except the accent) are the shape for *Mission specs* and the launch outcome labels.
+
 ## 8. Open items for the implementation plan
 
 - Final headline and one-liner copy.
