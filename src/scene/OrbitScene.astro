@@ -1,0 +1,150 @@
+---
+import type { SceneSatellite } from '@/lib/satellites';
+import Fallback from './Fallback.astro';
+interface Props { satellites: SceneSatellite[] }
+const { satellites } = Astro.props;
+---
+<div id="orbit-scene" class="orbit-scene" data-satellites={JSON.stringify(satellites)} data-state="fallback">
+  <Fallback satellites={satellites} />
+</div>
+
+<script>
+  import { canRenderScene, browserEnv } from '@/scene/capabilities';
+  import type { SceneSatellite } from '@/lib/satellites';
+
+  /** Matches the CSS cross-fade below: the fallback is hidden once the scene has faded in over it. */
+  const FADE_MS = 500;
+  const root = document.getElementById('orbit-scene');
+
+  if (root && canRenderScene(browserEnv())) boot(root);
+  else console.info('[orbit] static fallback');
+
+  function boot(el: HTMLElement) {
+    el.setAttribute('data-state', 'pending');
+    const fallback = el.querySelector('[data-fallback]');
+    let handle: { destroy(): void } | null = null;
+    let hideTimer = 0;
+
+    const showFallback = () => {
+      handle = null;
+      clearTimeout(hideTimer);
+      fallback?.removeAttribute('hidden');
+      el.setAttribute('data-state', 'fallback');
+    };
+
+    // Keep the SVG until the first WebGL frame exists, cross-fade, then take it out of the page.
+    const ready = new MutationObserver(() => {
+      if (el.getAttribute('data-ready') !== 'true') return;
+      ready.disconnect();
+      hideTimer = window.setTimeout(() => {
+        if (el.getAttribute('data-state') === 'webgl' && el.getAttribute('data-ready') === 'true') fallback?.setAttribute('hidden', '');
+      }, FADE_MS);
+    });
+
+    const start = async () => {
+      try {
+        const { mountOrbitScene } = await import('@/scene/scene');
+        const satellites = JSON.parse(el.getAttribute('data-satellites') ?? '[]') as SceneSatellite[];
+        let storage: Storage | null = null;
+        try { storage = window.localStorage; } catch { storage = null; }
+        ready.observe(el, { attributes: true, attributeFilter: ['data-ready'] });
+        handle = mountOrbitScene(el, { satellites, storage, onContextLost: showFallback });
+        el.setAttribute('data-state', 'webgl');
+      } catch (err) {
+        console.info('[orbit] scene failed to start; showing the static fallback', err);
+        ready.disconnect();
+        handle?.destroy();
+        showFallback();
+      }
+    };
+
+    // Reduced motion switched on mid-visit: stop everything and show the still diagram.
+    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    motion?.addEventListener?.('change', (e) => {
+      if (e.matches && handle) { handle.destroy(); showFallback(); }
+    });
+
+    // Three is fetched only once the hero is (nearly) on screen and the main thread is idle.
+    const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
+    if ('IntersectionObserver' in window) {
+      const near = new IntersectionObserver((entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        near.disconnect();
+        idle(() => void start());
+      }, { rootMargin: '200px 0px' });
+      near.observe(el);
+    } else {
+      idle(() => void start());
+    }
+  }
+</script>
+
+<style is:global>
+  .orbit-scene { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
+  .orbit-scene:focus { outline: none; }
+  .orbit-scene:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .orbit-scene [data-fallback] { transition: opacity 500ms var(--ease); }
+  .orbit-scene[data-ready='true'] [data-fallback] { opacity: 0; }
+  .orbit-scene [data-fallback][hidden] { display: none !important; }
+
+  .orbit-stage {
+    position: absolute; inset: 0; opacity: 0; transition: opacity 500ms var(--ease);
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  .orbit-scene[data-ready='true'] .orbit-stage { opacity: 1; }
+  .orbit-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+  .orbit-overlay { position: absolute; inset: 0; pointer-events: none; }
+
+  /* Satellite labels: the fallback's chip and leader line, re-placed every frame. */
+  .orbit-label { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity var(--dur) var(--ease); }
+  .orbit-label__text {
+    position: absolute; top: 0; left: 0; display: block; width: max-content; max-width: var(--label-max, 40%);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transform: translate(calc(var(--sat-r) + 14px), -50%);
+    color: var(--ink-2); background: var(--paper); padding: 0 0.3em;
+    transition: transform var(--dur) var(--ease);
+  }
+  .orbit-label::before {
+    content: ''; position: absolute; top: 0; left: calc(var(--sat-r) + 3px); width: 9px; border-top: 1px solid var(--ink-2);
+    transition: left var(--dur) var(--ease);
+  }
+  .orbit-label.is-left .orbit-label__text { transform: translate(calc(-100% - var(--sat-r) - 14px), -50%); }
+  .orbit-label.is-left::before { left: calc(-1 * var(--sat-r) - 12px); }
+  .orbit-label.is-occluded { opacity: 0.3; }
+
+  /* Launch pad: the hit area is the whole circle; the mark is a small ring. */
+  .orbit-pad {
+    position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: auto; touch-action: none; cursor: grab;
+  }
+  .orbit-pad::before, .orbit-pad::after { content: ''; position: absolute; left: 50%; top: 50%; border-radius: 50%; }
+  .orbit-pad::after {
+    width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 1px solid var(--ink); background: var(--paper);
+    transition: transform 150ms var(--ease), background-color 150ms var(--ease);
+  }
+  .orbit-pad::before {
+    inset: 0; left: 0; top: 0; border: 1px dashed var(--ink-2); opacity: 0; transition: opacity 150ms var(--ease);
+  }
+  .orbit-pad:hover::before { opacity: 0.6; }
+  .orbit-scene.is-aiming .orbit-pad::before { opacity: 0; }
+  .orbit-pad:hover::after { transform: scale(1.2); }
+  .orbit-scene.is-aiming .orbit-pad { cursor: grabbing; }
+  .orbit-scene.is-aiming .orbit-pad::after { background: var(--ink); transform: scale(1.2); }
+
+  /* Velocity arrow, drawn in screen space from the pad while aiming. */
+  .orbit-aim { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: none; }
+  .orbit-aim.is-on { display: block; }
+  .orbit-aim__line { stroke: var(--ink); stroke-width: 1.5; }
+  .orbit-aim__head { fill: var(--ink); }
+  .orbit-aim__label { fill: var(--ink); font-family: var(--font-mono); font-size: var(--text-label); }
+
+  /* Status HUD (role=status): the hint, the live prediction, then the outcome. */
+  .orbit-status {
+    position: absolute; left: 0; top: 0; white-space: nowrap;
+    padding: 0.2em 0.6em; border: 1px solid var(--ink); background: var(--surface); color: var(--ink);
+    text-transform: none; /* the strings are already upper case; keep v₀ lower case */
+  }
+  .orbit-status.is-success { border-color: var(--accent); color: var(--accent); }
+  .orbit-scene.is-narrow .orbit-status { top: auto; left: auto; right: var(--space-2); bottom: var(--space-2); }
+  .orbit-keys { position: absolute; left: var(--space-2); top: var(--space-2); display: none; color: var(--ink-2); background: var(--paper); padding: 0 0.3em; }
+  .orbit-scene:focus-visible .orbit-keys { display: block; }
+</style>

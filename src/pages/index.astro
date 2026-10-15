@@ -1,8 +1,14 @@
 ---
+import { getCollection } from 'astro:content';
 import Base from '@/layouts/Base.astro';
 import Section from '@/components/Section.astro';
+import OrbitScene from '@/scene/OrbitScene.astro';
+import { toSceneSatellites } from '@/lib/satellites';
+const satellites = toSceneSatellites(await getCollection('work'));
 ---
 <Base title="Nicolás Muñoz — Physics student at Salamanca, already in orbit">
+  <!-- Temporary mount (Task 10); Task 11 builds the real hero around the scene. -->
+  <div class="container"><OrbitScene satellites={satellites} /></div>
   <Section num="0" id="abstract" label="Abstract" title="Physics student at Salamanca. Already in orbit.">
     <p>Placeholder hero; replaced in Task 11.</p>
   </Section>
