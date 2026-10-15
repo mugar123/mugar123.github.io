@@ -55,6 +55,23 @@ test.describe('home', () => {
     await expect(page.locator('#ground-control .mono').first()).toContainText('§3');
   });
 
+  // Guards the built CSS: the minifier once folded animation-timeline into an invalid `animation` shorthand
+  // and browsers dropped the whole reveal (animation-name: none), which only the built site shows.
+  test('sections reveal on scroll by transform only (built CSS keeps the view timeline)', async ({ page, javaScriptEnabled }) => {
+    test.skip(!javaScriptEnabled, 'computed-style checks need page evaluation');
+    await page.goto('/');
+    test.skip(!(await page.evaluate(() => CSS.supports('animation-timeline: view()'))), 'no scroll-driven animations in this browser');
+    const section = page.locator('section.reveal').last();
+    const style = () => section.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { name: cs.animationName, opacity: cs.opacity, transform: cs.transform, below: el.getBoundingClientRect().top > innerHeight };
+    });
+    expect(await style()).toEqual({ name: 'rise-transform', opacity: '1', transform: 'matrix(1, 0, 0, 1, 0, 8)', below: true });
+    await section.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await expect.poll(async () => (await style()).transform).toMatch(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
+    expect((await style()).opacity).toBe('1');
+  });
+
   test('scene mounts WebGL or keeps the SVG fallback, never neither', async ({ page, javaScriptEnabled }) => {
     await page.goto('/');
     const scene = page.locator('#orbit-scene');

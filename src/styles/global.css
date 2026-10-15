@@ -34,11 +34,24 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outlin
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Spec §4.3 motion: hero copy fades in (CSS only) and sections reveal on scroll via CSS scroll-driven
-   animations where supported. No JavaScript involved; browsers without support show content at rest. */
+   animations where supported. No JavaScript involved; browsers without support show content at rest.
+   Sections move only (no opacity): one partly in view at load rests mid-range, and a partial opacity
+   there would fail contrast. The hero is never partially revealed, so it keeps the fade. */
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes rise-transform { from { transform: translateY(8px); } to { transform: none; } }
 .rise { animation: rise var(--dur) var(--ease) both; }
+/* Longhands only, never the `animation` shorthand in this rule: the build's minifier (Lightning CSS)
+   folds animation-timeline into the shorthand (`animation: … view()`), which browsers reject, dropping
+   the whole reveal. Without a shorthand in the rule it keeps the longhands as written. */
 @supports (animation-timeline: view()) {
-  .reveal { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 30%; }
+  .reveal {
+    animation-name: rise-transform;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

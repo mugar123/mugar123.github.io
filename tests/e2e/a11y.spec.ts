@@ -2,6 +2,9 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 const opacity = (loc: Locator) => loc.evaluate((el) => getComputedStyle(el).opacity);
+const transform = (loc: Locator) => loc.evaluate((el) => getComputedStyle(el).transform);
+/** A finished reveal (identity matrix) or no reveal at all (no scroll-driven animation support). */
+const AT_REST = /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/;
 
 /**
  * Axe audits the home page at rest: once the island has settled and, if WebGL mounted, the 500 ms
@@ -30,8 +33,8 @@ for (const path of ['/', '/work/papertok', '/about', '/cv']) {
 }
 
 /**
- * Sections below the fold reveal on scroll (a view-timeline animation from opacity 0), and axe skips
- * colour contrast under an opacity-0 ancestor, so the audit above never sees them. Here each section is
+ * Sections reveal on scroll with a view-timeline animation that moves them (transform only; opacity
+ * stays 1, so a section resting mid-reveal at load never fails contrast). Here each section is
  * scrolled into view until its reveal has finished, then the whole page is audited again.
  */
 test('axe: / with every section revealed', async ({ page, javaScriptEnabled }) => {
@@ -43,10 +46,13 @@ test('axe: / with every section revealed', async ({ page, javaScriptEnabled }) =
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {
     await sections.nth(i).scrollIntoViewIfNeeded();
-    await expect.poll(() => opacity(sections.nth(i))).toBe('1');
+    await expect.poll(() => transform(sections.nth(i))).toMatch(AT_REST);
   }
   // Past its range the reveal fills forwards, so scrolling on leaves the earlier sections revealed.
-  for (let i = 0; i < count; i++) await expect.poll(() => opacity(sections.nth(i))).toBe('1');
+  for (let i = 0; i < count; i++) {
+    await expect.poll(() => transform(sections.nth(i))).toMatch(AT_REST);
+    expect(await opacity(sections.nth(i))).toBe('1');
+  }
   const results = await audit(page);
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
 });
