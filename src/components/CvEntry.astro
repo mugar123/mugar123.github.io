@@ -17,8 +17,9 @@ const { entry } = Astro.props;
   .entry + .entry { border-top: 1px solid var(--grid); }
   .entry__period { padding-top: 0.35em; position: relative; }
   .entry__period::after { content: ''; position: absolute; top: 0.95em; right: -1.25rem; width: 1rem; border-top: 1px solid var(--grid); transition: border-color var(--dur) var(--ease), width var(--dur) var(--ease); }
-  .entry:hover .entry__period { color: var(--accent); }
-  .entry:hover .entry__period::after { border-color: var(--accent); width: 1.5rem; }
+  /* 12px accent text on white is below AA, so the date only darkens to ink; the leader line carries the accent. */
+  .entry:hover .entry__period { color: var(--ink); }
+  .entry:hover .entry__period::after { border-color: var(--accent); border-top-width: 2px; width: 1.5rem; }
   h3 { font-size: 1.25rem; margin: 0; }
   h3 a { text-decoration: none; } h3 a:hover { text-decoration: underline; }
   .entry__sub { margin: 0.15em 0 0; font-style: italic; }
