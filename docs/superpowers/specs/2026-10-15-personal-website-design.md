@@ -71,7 +71,7 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 ### 4.3 Components and motion
 
 - Cards are white, 1 px `--grid` border, square corners, sitting on the graph paper.
-- Motion is purposeful and sparse: hero text fades in (CSS only); section reveals on scroll with ~300 ms ease-out; continuous motion is limited to the orbiting satellites, the custom cursor's inertia, and the `/cv` live background. Everything stops under `prefers-reduced-motion`.
+- Motion is purposeful and sparse: hero text fades in (CSS only); section reveals on scroll with ~300 ms ease-out; the home mission console (§5.1) plays its boot once, in time and not tied to the scroll, when it first comes into view, then rests; continuous motion is limited to the orbiting satellites, the custom cursor's inertia, and the `/cv` live background. Everything stops under `prefers-reduced-motion`.
 - The 3D style is a **physics diagram**: matte/clay planet, dashed orbit lines, small polyhedral satellites, mono labels with leader lines, no textures, no bloom, no starfield.
 
 ## 5. Information architecture
@@ -80,9 +80,9 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 
 | § | block | content |
 |---|---|---|
-| 0 | **Abstract / hero** — full-bleed | 3D scene fills the hero width, planet offset right. Bottom-left: headline *"Physics student at Salamanca. Already in orbit."* (final copy TBD in implementation, same shape), one sentence, two CTAs: `SEE WHAT'S IN ORBIT` (secondary) and `CONTACT` (accent). Bottom-right: compact Mission specs in mono. |
-| 1 | **In orbit** | One card per satellite from the `work` collection: `SAT-0n · ORBIT · STATUS`, name, one-liner, stack tags in mono, link to its page. |
-| 2 | **Mission specs** | The five strengths as short items, plus the owner's own account of how he works (needs → ranking → validating the top three → UI inspiration first → build and test → Claude Code and Codex in parallel), rewritten in English but adding nothing he did not say. |
+| 0 | **Abstract / hero** — full-bleed | 3D scene fills the hero width, planet offset right. Bottom-left: headline *"Physics student at Salamanca. Already in orbit."* (final copy TBD in implementation, same shape), one sentence, two CTAs: `SEE WHAT'S IN ORBIT` (secondary) and `CONTACT` (accent). |
+| 1 | **In orbit** | A dark **mission console** (ground-control terminal). Its boot log types itself when it first comes into view: `uplink`, then `specs --vehicle` printing the six Mission specs (real content, the only place they appear on the home page), a radar scan of the orbit bands, a handshake with each satellite, `deploy --panels`. Then one panel per satellite from the `work` collection powers on: `SAT-0n · ORBIT · STATUS`, name, one-liner, launch month and stack in mono; the whole panel links to its page. The log is decoration (hidden from assistive tech); the specs and panels are not. Without JS, under reduced motion, or when already on screen at load, it is the finished console. |
+| 2 | **How I work** | The owner's own account of how he works (needs → ranking → validating the top three → UI inspiration first → build and test → Claude Code and Codex in parallel), rewritten in English but adding nothing he did not say. |
 | 3 | **Logbook** | Latest 3 posts from `writing`, link to `/writing`. Hidden automatically if there are no posts; when hidden, Ground control becomes §3 so the numbering stays contiguous. |
 | 4 | **Ground control** | Contact and social: "Open to internships and junior roles." Email `nicomg60@gmail.com` (accent), GitHub `mugar123`, `papertok.app`, and a link to the native CV page `/cv`. Only networks the owner actually lists; no LinkedIn until he has one. |
 | — | footer | `SALAMANCA · 40.96° N, 5.67° W · CET` · `LAST UPDATED <build date>` |
@@ -183,6 +183,7 @@ Notes taken from Inspora for implementation, not changing any decision:
 - The scene container is always 16:9; satellite labels are hidden in scenes narrower than 480 px; the SVG fallback uses HTML labels at a real 12 px.
 - Rings start at staggered base phases so satellites on different rings never line up.
 - Scroll reveals animate transform only (no opacity), after a CSS-minifier bug was found folding `animation-timeline` into an invalid shorthand.
+- The mission console (2026-10-16) replaced the project cards and the separate skills terminal shipped earlier that day. Its schedule is computed at build time (`src/lib/bootSchedule.ts`) and written into the markup; each step's waiting state is a plain CSS rule and its animation only holds the arrived state, because Chrome can stop a 1 ms step animation at progress 0.99999.
 
 ## 9. Decisions log
 
@@ -195,6 +196,7 @@ Notes taken from Inspora for implementation, not changing any decision:
 | Metaphor | escape velocity, planet + satellites | chalkboard, lab notebook |
 | 3D style | physics diagram (matte, dashed, mono labels) | glossy, pixel, realistic |
 | Story mapping | projects as satellites | milestones on one trajectory; visitor launches joining low orbit (shipped, removed 2026-10-16) |
+| Projects block | mission console with a timed boot log (owner, 2026-10-16) | cards; a scroll-scrubbed, pinned console (prototyped: the owner wanted it to play, not follow the scroll); a separate skills terminal above the projects (shipped, merged into the console) |
 | Interaction | none: an ambient scene (owner, 2026-10-16) | drag to set a launch with real physics (shipped, then removed: it did not read as intended), scroll-driven, orbit camera only |
 | Palette | graph paper + vermilion | warm paper + blue, lab white + orange |
 | Type | Latin Modern + JetBrains Mono | Geist + mono, Instrument Serif + Inter |

@@ -1,25 +1,14 @@
 ---
-const specs = [
-  { k: 'Propulsion', v: 'Building things end to end' },
-  { k: 'Guidance', v: 'Product design' },
-  { k: 'Core', v: 'Python' },
-  { k: 'Payload', v: 'Neural networks' },
-  { k: 'Instruments', v: 'LaTeX (advanced) · MATLAB (intermediate)' },
-  { k: 'Tooling', v: 'Cursor · Codex · Claude Code' },
-];
+import { MISSION_SPECS } from '@/data/missionSpecs';
 ---
 <dl class="specs">
-  {specs.map((s, i) => (<div class="specs__row" style={`--row:${i}`}><dt>{s.k}</dt><dd>{s.v}</dd></div>))}
+  {MISSION_SPECS.map((s) => (<div><dt class="mono">{s.k}</dt><dd>{s.v}</dd></div>))}
 </dl>
 <style>
-  .specs { display: grid; margin: 0; font: inherit; }
-  .specs__row { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1rem; padding: 0.5rem 0; }
-  dt { color: var(--grid); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; padding-top: 0.12rem; }
-  dd { margin: 0; overflow-wrap: anywhere; }
-  :global(.is-booting) .specs__row { animation: row-read 360ms steps(2, end) both; animation-delay: calc(200ms + var(--row) * 120ms); }
-  @keyframes row-read { from { transform: translateX(4px); background: rgb(255 255 255 / 9%); } to { transform: none; background: transparent; } }
-  @media (max-width: 599px) {
-    .specs__row { grid-template-columns: 1fr; gap: 0.125rem; padding: 0.55rem 0; }
-  }
-  @media (prefers-reduced-motion: reduce) { :global(.is-booting) .specs__row { animation: none; } }
+  /* Six items read as 3 × 2, not 4 + 2. */
+  .specs { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+  @media (max-width: 899px) { .specs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 599px) { .specs { grid-template-columns: 1fr; } }
+  .specs div { background: var(--surface); border: 1px solid var(--grid); padding: var(--space-3); }
+  dt { margin: 0 0 var(--space-1); } dd { margin: 0; font-size: var(--text-small); }
 </style>

@@ -53,6 +53,10 @@ test('axe: / with every section revealed', async ({ page, javaScriptEnabled }) =
     await expect.poll(() => transform(sections.nth(i))).toMatch(AT_REST);
     expect(await opacity(sections.nth(i))).toBe('1');
   }
+  // The mission console boots once in view; audit it finished, not mid-animation.
+  const console = page.locator('mission-console');
+  await console.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  await expect(console).toHaveAttribute('data-boot', /^(done|static)$/, { timeout: 15_000 });
   const results = await audit(page);
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
 });

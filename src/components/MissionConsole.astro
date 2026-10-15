@@ -1,140 +1,388 @@
 ---
-import MissionSpecs from './MissionSpecs.astro';
-import type { SceneSatellite } from '@/lib/satellites';
-interface Props { satellites: SceneSatellite[] }
-const { satellites } = Astro.props;
-const active = satellites.filter((s) => s.status === 'active').length;
+import type { CollectionEntry } from 'astro:content';
+import { MISSION_SPECS } from '@/data/missionSpecs';
+import { toSceneSatellites, type Orbit, type Status } from '@/lib/satellites';
+import { scheduleBoot, scheduleDeploy } from '@/lib/bootSchedule';
+
+/**
+ * The home's mission console: a ground-control terminal whose boot log types itself once when it comes
+ * into view (uplink, the Mission specs, a radar scan of the orbit bands, a handshake with each satellite),
+ * then powers on one panel per satellite. The schedule is computed here, at build time, and written into
+ * the markup as `--t` (start) and `--d` (length) in ms. Without JS, under reduced motion, or when the
+ * console is already on screen at load, it is simply the finished console.
+ */
+interface Props { work: CollectionEntry<'work'>[] }
+const entries = [...Astro.props.work].sort((a, b) => a.data.order - b.data.order);
+const satellites = toSceneSatellites(entries);
+
+const BANDS: Orbit[] = ['low', 'mid', 'high'];
+const RADAR_R: Record<Orbit, number> = { low: 44, mid: 66, high: 90 };
+const SIGNAL: Record<Status, string> = { active: 'Nominal', paused: 'Standby', retired: 'Offline' };
+const satId = (i: number) => `SAT-${String(i + 1).padStart(2, '0')}`;
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+const log = [
+  { kind: 'cmd', text: 'uplink --station classroom' },
+  { kind: 'out', label: 'carrier lock', value: 'OK' },
+  { kind: 'out', label: 'latency 42 ms · bit errors 0', value: 'OK', linksUp: true },
+  { kind: 'cmd', text: 'specs --vehicle' },
+  { kind: 'rows', count: MISSION_SPECS.length },
+  { kind: 'cmd', text: `telemetry scan --bands ${BANDS.join(',')}`, opensRadar: true },
+  ...BANDS.map((band) => ({ kind: 'scan', band, count: satellites.filter((s) => s.orbit === band).length }) as const),
+  { kind: 'cmd', text: `handshake ${entries.map((_, i) => satId(i)).join(' ')}` },
+  ...entries.map((_, index) => ({ kind: 'sat', index }) as const),
+  { kind: 'cmd', text: 'deploy --panels' },
+  { kind: 'ready', text: `${plural(entries.length, 'satellite')} in orbit · go for display` },
+] as const;
+
+const PANEL_ROWS = 5; // head, title, one-liner, meta, "mission file"
+const boot = scheduleBoot(log);
+const deploy = scheduleDeploy(entries.length, PANEL_ROWS);
+const bandAt = (band: Orbit) => boot.lines[log.findIndex((l) => l.kind === 'scan' && l.band === band)]!.at;
+const at = (t: number, d?: number) => (d === undefined ? `--t:${t}` : `--t:${t};--d:${d}`);
 ---
-<mission-console data-boot="idle">
-  <section class="console" aria-labelledby="console-title">
-    <header class="console__titlebar">
-      <h2 id="console-title"><span class="console__icon" aria-hidden="true">&gt;_</span> Mission PowerShell</h2>
-      <span class="console__session">LOCAL SESSION</span>
-    </header>
-    <div class="console__screen">
-      <div class="console__profile">
-        <p class="console__command"><span>PS C:\mission&gt;</span> Get-MissionProfile</p>
-        <MissionSpecs />
-        <p class="console__prompt" aria-hidden="true">PS C:\mission&gt; <span class="console__cursor">_</span></p>
-      </div>
-      <aside class="console__telemetry" aria-label="Launch status">
-        <p class="console__label">Launch status</p>
-        <p class="console__state"><span class="console__signal" aria-hidden="true"></span>{active > 0 ? 'IN ORBIT' : 'STANDBY'}</p>
-        <div class="console__meter" aria-hidden="true">{Array.from({ length: 16 }, () => <span />)}</div>
-        <dl class="console__readouts">
-          <div><dt>Active satellites</dt><dd>{String(active).padStart(2, '0')}</dd></div>
-          <div><dt>Ground station</dt><dd>Salamanca</dd></div>
-        </dl>
-        <ul class="console__manifest" aria-label="Satellite manifest">
-          {satellites.map((s, i) => <li><span class="console__slot">{String(i + 1).padStart(2, '0')}</span><span>{s.name}<small>{s.orbit.toUpperCase()} ORBIT / {s.status.toUpperCase()}</small></span></li>)}
-        </ul>
-      </aside>
+<mission-console data-boot="static" data-boot-ms={boot.total} data-deploy-ms={deploy.total}>
+  <div class="console">
+    <div class="bar mono" aria-hidden="true">
+      <b>Ground control</b><span class="wide">Console 01 · Station classroom</span>
+      <span class="link">
+        <i class="dot k k-go" style={at(boot.link)}></i>
+        <span class="link__state"><span class="wait k k-hide" style={at(boot.link)}>Acquiring link</span><span class="k k-show" style={at(boot.link)}>Link nominal</span></span>
+      </span>
+      <span>MET T+<b class="met k k-met" style={at(0, boot.total)}></b></span>
     </div>
-    <footer class="console__footer">
-      <span><span class="console__footer-mark" aria-hidden="true">■</span> Profile loaded <span class="console__footer-detail">/ 6 systems checked</span></span>
-      <button type="button" class="console__replay" hidden>Replay boot <span aria-hidden="true">↵</span></button>
-    </footer>
-  </section>
+
+    <div class="deck">
+      <div class="log">
+        {log.map((line, i) => {
+          const tm = boot.lines[i]!;
+          if (line.kind === 'cmd') return (
+            <p class="ln cmd k k-show" style={at(tm.at)} aria-hidden="true">
+              <span class="ps">$</span><span class="typed k k-type" style={`--n:${line.text.length};${at(tm.type!.t, tm.type!.d)}`}>{line.text}</span><span class="caret k k-caret" style={at(tm.caret!.t, tm.caret!.d)}></span>
+            </p>
+          );
+          if (line.kind === 'out') return <p class="ln out k k-show" style={at(tm.at)} aria-hidden="true"><span>{line.label}</span><i></i><b>{line.value}</b></p>;
+          if (line.kind === 'rows') return (
+            <div class="ln">
+              <h3 class="visually-hidden">Mission specs</h3>
+              <dl class="specs">
+                {MISSION_SPECS.map((s, r) => <div class="k k-print" style={at(tm.rows![r]!)}><dt>{s.k}</dt><dd>{s.v}</dd></div>)}
+              </dl>
+            </div>
+          );
+          if (line.kind === 'scan') return <p class="ln out k k-show" style={at(tm.at)} aria-hidden="true"><span>{line.band} band</span><i></i><b>{plural(line.count, 'object')}</b></p>;
+          if (line.kind === 'sat') {
+            const e = entries[line.index]!;
+            return (
+              <p class="ln sat k k-show" style={at(tm.at)} aria-hidden="true">
+                <b>{satId(line.index)}</b><span class="sat__name">{e.data.title}</span>
+                <span class="meter"><i class="k k-fill" style={at(tm.fill!.t, tm.fill!.d)}></i></span>
+                <b class="k k-show" style={at(tm.fill!.t + tm.fill!.d)}>{SIGNAL[e.data.status]}</b>
+              </p>
+            );
+          }
+          return <p class="ln ready k k-show" style={at(tm.at)} aria-hidden="true">{line.text}<span class="caret caret--end k k-blink" style={at(tm.at)}></span></p>;
+        })}
+      </div>
+
+      <div class="screen">
+        {boot.radar && (
+          <div class="radar k k-radar" style={at(boot.radar.t, boot.radar.d)} aria-hidden="true">
+            <div class="radar__dial">
+              <svg viewBox="-100 -100 200 200">
+                <line class="axis" x1="-98" y1="0" x2="98" y2="0" /><line class="axis" x1="0" y1="-98" x2="0" y2="98" />
+                {BANDS.map((band) => <circle class="ring" r={RADAR_R[band]} />)}
+                <circle class="planet" r="20" />
+                {satellites.map((s, i) => {
+                  const x = RADAR_R[s.orbit] * Math.cos(s.phase), y = -RADAR_R[s.orbit] * Math.sin(s.phase);
+                  return (
+                    <g class="blip k k-show" style={at(bandAt(s.orbit))}>
+                      <circle cx={x.toFixed(1)} cy={y.toFixed(1)} r="3.5" />
+                      <text x={(x > 40 ? x - 7 : x + 7).toFixed(1)} y={(y - 6).toFixed(1)} text-anchor={x > 40 ? 'end' : 'start'}>{satId(i)}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <div class="sweep"></div>
+            </div>
+            <p class="mono">Scanning bands · {BANDS.join(' · ')}</p>
+          </div>
+        )}
+
+        <ul class="panels" aria-label="Satellites in orbit">
+          {entries.map((e, i) => {
+            const p = deploy.panels[i]!;
+            const { title, orbit, status, launched, oneLiner, stack } = e.data;
+            return (
+              <li class="panel k k-panel p2" style={`${at(p.open.t, p.open.d)};--t2:${p.flash.t};--d2:${p.flash.d}`}>
+                <p class="panel__head mono k k-print p2" style={at(p.rows[0]!)}><b>{satId(i)}</b><span>{orbit} orbit</span><span class:list={['status', { 'status--active': status === 'active' }]}>{status}</span></p>
+                <h3 class="k k-print p2" style={at(p.rows[1]!)}><a href={`/work/${e.id}`}>{title}</a></h3>
+                <p class="panel__line k k-print p2" style={at(p.rows[2]!)}>{oneLiner}</p>
+                <div class="panel__foot">
+                  <dl class="panel__meta mono k k-print p2" style={at(p.rows[3]!)}>
+                    <div><dt>Launched</dt><dd>{launched.toISOString().slice(0, 7)}</dd></div>
+                    <div><dt>Payload</dt><dd>{stack.join(' · ')}</dd></div>
+                  </dl>
+                  <span class="panel__open mono k k-print p2" style={at(p.rows[4]!)} aria-hidden="true">Mission file <span>→</span></span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div class="scanline k k-scan p2" style={at(deploy.scan.t, deploy.scan.d)} aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="bar bar--foot mono" aria-hidden="true">
+      <span>Operator N. Muñoz</span><span class="wide">40.96° N · 5.66° W</span><span class="push">{plural(entries.length, 'object')} tracked</span>
+    </div>
+  </div>
 </mission-console>
 
 <script>
+  /**
+   * Arms the console (hides what the boot will print), boots it when it scrolls into view, and powers the
+   * panels on once the log has finished and the screen is in view. Then it rests as the static console.
+   */
   class MissionConsole extends HTMLElement {
-    private cleanup?: () => void;
+    #timers: ReturnType<typeof setTimeout>[] = [];
+    #observers: IntersectionObserver[] = [];
+    #motion = matchMedia('(prefers-reduced-motion: reduce)');
+    #onMotion = () => { if (this.#motion.matches) this.#finish(); };
+
     connectedCallback() {
-      const button = this.querySelector<HTMLButtonElement>('button')!;
-      const motion = matchMedia('(prefers-reduced-motion: reduce)');
-      const events = new AbortController();
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      let frame = 0;
-      const finish = () => {
-        clearTimeout(timer);
-        cancelAnimationFrame(frame);
-        this.classList.remove('is-booting');
-        this.dataset.boot = 'complete';
-      };
-      const boot = () => {
-        finish();
-        if (motion.matches) return;
-        frame = requestAnimationFrame(() => {
-          this.classList.add('is-booting');
-          this.dataset.boot = 'running';
-          timer = setTimeout(finish, 1800);
-        });
-      };
-      const preference = () => {
-        button.hidden = motion.matches;
-        if (motion.matches) finish();
-      };
-      preference();
-      motion.addEventListener('change', preference, { signal: events.signal });
-      button.addEventListener('click', boot, { signal: events.signal });
-      const observer = new IntersectionObserver((entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) { boot(); observer.disconnect(); }
-      }, { threshold: 0.2 });
-      observer.observe(this);
-      this.cleanup = () => { finish(); observer.disconnect(); events.abort(); };
+      this.#motion.addEventListener('change', this.#onMotion);
+      if (this.#motion.matches || this.#onScreenAtLoad()) return; // nothing to play, or it would hide what is being read
+      const screen = this.querySelector('.screen');
+      if (!screen) return;
+      this.dataset.boot = 'armed';
+      this.classList.add('is-live');
+      this.#whenInView(this, 30, () => {
+        this.dataset.boot = 'booting';
+        this.#after(Number(this.dataset.bootMs), () => this.#whenInView(screen, 25, () => {
+          this.dataset.boot = 'deploying';
+          this.#after(Number(this.dataset.deployMs), () => this.#finish());
+        }));
+      });
     }
-    disconnectedCallback() { this.cleanup?.(); }
+
+    disconnectedCallback() {
+      this.#stop();
+      this.#motion.removeEventListener('change', this.#onMotion);
+    }
+
+    /** On screen already, or about to be: a link to an anchor around it (`/#in-orbit`) scrolls there after this runs. */
+    #onScreenAtLoad() {
+      const box = this.getBoundingClientRect();
+      if (box.top < innerHeight * 0.7 && box.bottom > 0) return true;
+      const target = location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+      return !!target && (target.contains(this) || this.contains(target));
+    }
+
+    /** Runs `fn` once `el` reaches the upper (100 − marginPct)% of the viewport. */
+    #whenInView(el: Element, marginPct: number, fn: () => void) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { io.disconnect(); fn(); }
+      }, { rootMargin: `0px 0px -${marginPct}% 0px` });
+      io.observe(el);
+      this.#observers.push(io);
+    }
+
+    #after(ms: number, fn: () => void) { this.#timers.push(setTimeout(fn, ms)); }
+
+    #stop() {
+      this.#timers.forEach(clearTimeout);
+      this.#observers.forEach((io) => io.disconnect());
+      this.#timers = [];
+      this.#observers = [];
+    }
+
+    #finish() {
+      this.#stop();
+      if (this.dataset.boot !== 'static') this.dataset.boot = 'done';
+      this.classList.remove('is-live');
+    }
   }
   if (!customElements.get('mission-console')) customElements.define('mission-console', MissionConsole);
 </script>
 
 <style>
   mission-console { display: block; }
-  .console { padding: 5px; background: var(--grid); border: 1px solid var(--ink); box-shadow: inset 1px 1px var(--surface), inset -1px -1px var(--ink-2), 6px 6px 0 var(--grid); font: 0.875rem/1.65 var(--font-mono); }
-  .console__titlebar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.45rem 0.65rem 0.65rem; }
-  .console__titlebar h2 { display: flex; align-items: center; gap: 0.65rem; margin: 0; font: 0.8125rem/1.4 var(--font-mono); letter-spacing: 0; }
-  .console__icon { background: var(--ink); color: var(--paper); padding: 0 0.25rem; box-shadow: 1px 1px var(--surface); }
-  .console__session { font-size: 0.6875rem; letter-spacing: 0.06em; }
-  .console__screen { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; background: var(--ink); color: var(--paper); border: 1px solid var(--ink-2); box-shadow: 1px 1px var(--surface); }
-  .console__profile { padding: 1.5rem 2rem; min-width: 0; }
-  .console__command { margin: 0 0 1.15rem; font-size: 0.75rem; overflow-wrap: anywhere; }
-  .console__command > span { color: var(--grid); }
-  .console__prompt { margin: 1.1rem 0 0; font-size: 0.75rem; }
-  .console__cursor { display: inline-block; color: var(--paper); }
-  .console__telemetry { border-left: 1px solid var(--ink-2); padding: 1.5rem; }
-  .console__label { color: var(--grid); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.35rem; }
-  .console__state { font-size: 1.25rem; letter-spacing: 0.06em; margin: 0 0 1rem; display: flex; align-items: center; gap: 0.6rem; }
-  .console__signal { width: 0.6rem; height: 0.6rem; background: var(--accent); box-shadow: 2px 2px 0 rgb(226 64 28 / 25%); }
-  .console__meter { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--ink-2); height: 15px; margin-bottom: 1.25rem; }
-  .console__meter span { flex: 1; background: var(--grid); }
-  .console__meter span:last-child { background: var(--accent); }
-  .console__readouts { margin: 0 0 1.25rem; font-size: 0.75rem; }
-  .console__readouts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; }
-  .console__readouts dt { color: var(--grid); }
-  .console__readouts dd { margin: 0; }
-  .console__manifest { list-style: none; padding: 1rem 0 0; margin: 0; border-top: 1px dashed var(--ink-2); font-size: 0.75rem; }
-  .console__manifest li { display: flex; gap: 0.75rem; margin-bottom: 0.65rem; }
-  .console__manifest li:last-child { margin-bottom: 0; }
-  .console__slot { color: var(--grid); }
-  .console__manifest small { display: block; color: var(--grid); font-size: 0.625rem; letter-spacing: 0.04em; margin-top: 0.15rem; }
-  .console__footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.35rem 1rem; padding: 0.5rem 0.6rem 0.15rem; min-height: 2.2rem; font-size: 0.6875rem; }
-  .console__footer-mark { margin-right: 0.35rem; }
-  .console__replay { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); box-shadow: inset 1px 1px var(--surface), 1px 1px var(--ink-2); padding: 0.15rem 0.5rem; cursor: pointer; }
-  .console__replay:hover { background: var(--surface); }
-  .console__replay:active { box-shadow: inset 1px 1px var(--ink-2); transform: translate(1px, 1px); }
-  .is-booting .console__meter { animation: meter-fill 1200ms steps(16, end) both; }
-  .is-booting .console__cursor { animation: cursor-blink 450ms steps(1, end) 4; }
-  .is-booting .console__signal { animation: signal-on 1600ms steps(1, end) both; }
-  @keyframes meter-fill { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
-  @keyframes cursor-blink { 50% { visibility: hidden; } }
-  @keyframes signal-on { 0% { background: var(--grid); box-shadow: none; } 85%, 100% { background: var(--accent); } }
-  @media (max-width: 999px) {
-    .console__screen { grid-template-columns: minmax(0, 1fr) 15rem; }
-    .console__profile, .console__telemetry { padding: 1.25rem; }
+
+  .console {
+    --c-bg: var(--ink); --c-fg: var(--paper); --c-dim: rgb(242 243 241 / 64%);
+    --c-line: rgb(242 243 241 / 18%); --c-grid: rgb(242 243 241 / 4.5%); --c-panel: #191C19;
+    display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: min(44rem, 84vh);
+    background-color: var(--c-bg); color: var(--c-fg); border: 1px solid var(--ink);
+    background-image: linear-gradient(var(--c-grid) 1px, transparent 1px), linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+    background-size: var(--grid-cell) var(--grid-cell);
   }
-  @media (max-width: 767px) {
-    .console__screen { grid-template-columns: 1fr; }
-    .console__telemetry { border-left: 0; border-top: 1px dashed var(--ink-2); }
-    .console__session { display: none; }
-    .console__footer-detail { display: none; }
-    .console__profile, .console__telemetry { padding: 1rem; }
+  .console .mono { color: var(--c-dim); }
+
+  .bar { display: flex; gap: 2ch; align-items: center; padding: 0.7rem var(--space-4); border-bottom: 1px solid var(--c-line); white-space: nowrap; overflow: clip; }
+  .bar--foot { border-bottom: 0; border-top: 1px solid var(--c-line); }
+  .bar b { font-weight: 400; color: var(--c-fg); }
+  .link, .push { margin-left: auto; }
+  .link + span { margin-left: 0; }
+  .link { display: inline-grid; grid-template-columns: auto auto; gap: 0.6em; align-items: center; }
+  .dot { width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--accent); }
+  .link__state { display: inline-grid; }
+  .link__state > * { grid-area: 1 / 1; }
+  .wait { visibility: hidden; }
+  /* Mission elapsed time: a registered integer counted up during the boot, printed as mm:ss. */
+  @property --met { syntax: '<integer>'; inherits: true; initial-value: 754; }
+  .met::after { counter-reset: mm round(down, var(--met) / 60, 1) ss mod(var(--met), 60); content: '00:' counter(mm, decimal-leading-zero) ':' counter(ss, decimal-leading-zero); }
+
+  .deck { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 7fr); min-height: 0; }
+
+  .log { padding: var(--space-4); border-right: 1px solid var(--c-line); font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.8; overflow: clip; }
+  .ln { margin: 0; max-width: none; white-space: nowrap; }
+  .cmd:not(:first-child) { margin-top: 0.7em; }
+  .ps { color: var(--accent); margin-right: 1ch; }
+  /* Monospace, so a character is exactly 1ch: typing is a width that grows one character at a time. */
+  .typed { display: inline-block; vertical-align: bottom; overflow: clip; white-space: pre; width: calc(var(--n) * 1ch); }
+  .caret { display: inline-block; width: 0.6em; height: 1.05em; margin-left: 0.15ch; vertical-align: -0.18em; background: var(--accent); visibility: hidden; }
+  .caret--end { visibility: inherit; margin-left: 0.6ch; }
+  .out, .sat, .ready { padding-left: 2ch; }
+  .out, .sat { color: var(--c-dim); }
+  .out { display: grid; grid-template-columns: auto minmax(2ch, 1fr) auto; gap: 1ch; align-items: baseline; }
+  .out i { border-bottom: 1px dotted var(--c-line); transform: translateY(-0.35em); }
+  .out b, .sat b { font-weight: 400; color: var(--c-fg); }
+  .sat { display: grid; grid-template-columns: 7ch minmax(0, 1fr) 10ch auto; gap: 1.2ch; align-items: center; }
+  .sat__name { overflow: hidden; text-overflow: ellipsis; }
+  .meter { position: relative; height: 0.7em; background: repeating-linear-gradient(90deg, var(--c-line) 0 calc(10% - 2px), transparent calc(10% - 2px) 10%); }
+  .meter i { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, var(--accent) 0 calc(10% - 2px), transparent calc(10% - 2px) 10%); }
+  /* The Mission specs: real content, printed as the output of `specs --vehicle`. */
+  .specs { margin: 0; padding-left: 2ch; display: grid; white-space: normal; }
+  .specs div { display: grid; grid-template-columns: 12ch minmax(0, 1fr); gap: 1ch; }
+  .specs dt { color: var(--c-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .specs dd { margin: 0; }
+
+  .screen { position: relative; overflow: clip; min-height: 0; display: grid; }
+  .radar { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--space-3); opacity: 0; pointer-events: none; }
+  .radar__dial { position: relative; width: min(22rem, 30vw, 52vh); aspect-ratio: 1; }
+  .radar svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .radar .ring { fill: none; stroke: color-mix(in srgb, var(--c-fg) 34%, transparent); stroke-width: 0.8; stroke-dasharray: 3 4; }
+  .radar .axis { stroke: var(--c-line); }
+  .radar .planet { fill: var(--planet); }
+  .radar .blip circle { fill: var(--accent); }
+  .radar .blip text { fill: var(--c-fg); font: 7px var(--font-mono); letter-spacing: 0.04em; }
+  .radar p { margin: 0; }
+  .sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 290deg, color-mix(in srgb, var(--accent) 38%, transparent) 360deg); }
+  .scanline { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(to bottom, transparent calc(100% - 2px), var(--accent) calc(100% - 2px)); }
+
+  /* In flow, so the taller of the log and the panels sets the console's height. */
+  .panels { position: relative; margin: var(--space-4); display: grid; grid-template-rows: 1fr 1fr; gap: var(--space-3); list-style: none; padding: 0; }
+  .panel { position: relative; display: grid; align-content: space-between; gap: var(--space-2); min-height: 0; padding: var(--space-3) var(--space-4); background: var(--c-panel); border: 1px solid var(--c-line); transition: border-color var(--dur) var(--ease); }
+  /* HUD corner brackets, drawn on hover and keyboard focus. */
+  .panel::before {
+    content: ''; position: absolute; inset: -5px; pointer-events: none; opacity: 0; transition: opacity var(--dur) var(--ease), inset var(--dur) var(--ease);
+    --c: var(--accent);
+    background:
+      linear-gradient(var(--c), var(--c)) top left / 16px 2px no-repeat, linear-gradient(var(--c), var(--c)) top left / 2px 16px no-repeat,
+      linear-gradient(var(--c), var(--c)) top right / 16px 2px no-repeat, linear-gradient(var(--c), var(--c)) top right / 2px 16px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom left / 16px 2px no-repeat, linear-gradient(var(--c), var(--c)) bottom left / 2px 16px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom right / 16px 2px no-repeat, linear-gradient(var(--c), var(--c)) bottom right / 2px 16px no-repeat;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .is-booting .console__meter, .is-booting .console__cursor, .is-booting .console__signal { animation: none; }
+  .panel:hover, .panel:has(a:focus-visible) { border-color: var(--accent); }
+  .panel:hover::before, .panel:has(a:focus-visible)::before { opacity: 1; inset: -9px; }
+  .panel__head { display: flex; gap: 1.5ch; align-items: center; margin: 0; }
+  .panel__head b { font-weight: 400; color: var(--c-fg); }
+  .status { margin-left: auto; display: inline-flex; gap: 0.5em; align-items: center; color: var(--c-fg); }
+  .status--active::before { content: ''; width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--accent); }
+  .panel h3 { font-size: clamp(1.5rem, 1rem + 1.2vw, 2.125rem); margin: 0; }
+  .panel h3 a { text-decoration: none; }
+  .panel h3 a:focus-visible { outline: none; } /* the panel draws the focus instead */
+  .panel h3 a::after { content: ''; position: absolute; inset: 0; } /* the whole panel is the link */
+  .panel__line { margin: 0; font-size: 1.0625rem; line-height: 1.45; }
+  .panel__foot { display: flex; justify-content: space-between; align-items: end; gap: var(--space-4); }
+  .panel__meta { display: flex; flex-wrap: wrap; gap: 0.3em 2.5ch; margin: 0; flex: 1 1 auto; min-width: 0; }
+  .panel__meta div { display: flex; gap: 1ch; }
+  .panel__meta dd { margin: 0; color: var(--c-fg); text-transform: none; letter-spacing: 0; }
+  .panel__open { display: inline-flex; gap: 0.6em; align-items: center; white-space: nowrap; flex: none; color: var(--c-fg) !important; }
+  .panel__open span { transition: transform var(--dur) var(--ease); }
+  .panel:hover .panel__open span { transform: translateX(4px); }
+
+  /*
+   * Playback. Each step's waiting state is a plain rule, and its animation only holds the arrived state
+   * (fill: forwards): steps never depend on reaching progress 1 exactly, which Chrome can miss on a 1 ms
+   * animation. Phase 1 (.k) is the log; phase 2 (.p2) is the panels. At `done` none of this matches and
+   * the console is the static one again, with nothing left animating.
+   */
+  .is-live .k {
+    animation-delay: calc(var(--t) * 1ms); animation-duration: calc(var(--d, 1) * 1ms);
+    animation-fill-mode: forwards; animation-timing-function: linear; animation-play-state: paused;
   }
+  .is-live .k-show { visibility: hidden; animation-name: show; }
+  .is-live .k-hide { visibility: visible; animation-name: hide; }
+  .is-live .k-go { background: var(--c-dim); animation-name: go; }
+  .is-live .k-type { width: 0; animation-name: type; animation-timing-function: steps(var(--n), jump-start); }
+  .is-live .k-fill { clip-path: inset(0 100% 0 0); animation-name: fill; animation-timing-function: steps(10, jump-start); }
+  .is-live .k-print { clip-path: inset(0 0 100% 0); animation-name: print; }
+  .is-live .k-met { animation-name: met; }
+  .is-live .k-caret { animation-name: caret, blink; animation-duration: calc(var(--d) * 1ms), 1.1s; animation-iteration-count: 1, infinite; animation-timing-function: step-end, steps(1); animation-fill-mode: none; animation-delay: calc(var(--t) * 1ms), 0s; }
+  .is-live .k-blink { animation-name: blink; animation-duration: 1.1s; animation-iteration-count: 3; animation-timing-function: steps(1); animation-fill-mode: none; }
+  .is-live .k-radar { animation-name: radar; }
+  .is-live .k-scan { animation-name: scan; animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }
+  /* A panel powers on like a CRT, then its border settles from the accent. */
+  .is-live .k-panel {
+    clip-path: inset(50%);
+    animation-name: power, flash; animation-duration: calc(var(--d) * 1ms), calc(var(--d2) * 1ms);
+    animation-delay: calc(var(--t) * 1ms), calc(var(--t2) * 1ms); animation-fill-mode: forwards, backwards;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1), ease-out;
+  }
+  /* Phase 1 (the log) runs from `booting`; phase 2 (.p2, the panels) from `deploying`. */
+  [data-boot="booting"] .k:not(.p2), [data-boot="deploying"] .k:not(.p2) { animation-play-state: running; }
+  [data-boot="deploying"] .p2 { animation-play-state: running; }
+  [data-boot="booting"] .sweep, [data-boot="deploying"] .sweep { animation: sweep 1.6s linear infinite; }
+  /* A keyboard user who tabs to a project before the boot reaches it gets the finished panel. */
+  .is-live .panel:focus-within, .is-live .panel:focus-within .k { animation: none; clip-path: none; }
+
+  @keyframes show { from, to { visibility: visible; } }
+  @keyframes hide { from, to { visibility: hidden; } }
+  @keyframes go { from, to { background: var(--accent); } }
+  @keyframes type { from { width: 0; } to { width: calc(var(--n) * 1ch); } }
+  @keyframes fill { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+  @keyframes print { from, to { clip-path: inset(0); } }
+  @keyframes met { from { --met: 0; } to { --met: 754; } }
+  @keyframes caret { from, to { visibility: visible; } }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes radar { 0% { opacity: 0; transform: scale(0.96); } 6%, 94% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(0.94); } }
+  @keyframes sweep { to { transform: rotate(1turn); } }
+  @keyframes scan { 0% { opacity: 1; transform: translateY(-100%); } 90% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
+  @keyframes power {
+    0% { clip-path: inset(calc(50% - 1px) 50% calc(50% - 1px) 50%); background-color: var(--accent); }
+    38% { clip-path: inset(calc(50% - 1px) 0 calc(50% - 1px) 0); background-color: var(--accent); }
+    50% { background-color: var(--c-panel); }
+    100% { clip-path: inset(0); background-color: var(--c-panel); }
+  }
+  @keyframes flash { from { border-color: var(--accent); } }
+
+  /* Below 900px the console stacks: log, then the panels, which boot when they scroll into view. */
+  @media (max-width: 899px) {
+    .console { min-height: 0; }
+    .deck { grid-template-columns: minmax(0, 1fr); }
+    .log { border-right: 0; border-bottom: 1px solid var(--c-line); }
+    .radar { display: none; }
+    .panels { margin: 0; padding: var(--space-4); grid-template-rows: none; }
+  }
+  @media (max-width: 599px) {
+    .log { font-size: 0.75rem; padding: var(--space-3); }
+    .bar { padding-inline: var(--space-3); flex-wrap: wrap; row-gap: 0.3rem; white-space: normal; }
+    .bar .wide { display: none; }
+    .link { margin-left: 0; }
+    .panels { padding: var(--space-3); }
+    .panel { padding: var(--space-3); }
+    .panel__head { flex-wrap: wrap; row-gap: 0.2em; }
+    .panel__foot { flex-direction: column; align-items: start; gap: var(--space-2); }
+    .sat { grid-template-columns: 6ch minmax(0, 1fr) 6ch auto; }
+  }
+
   @media print {
-    .console, .console__screen { background: white; color: black; box-shadow: none; }
-    .console__replay { display: none; }
+    .console { --c-bg: #fff; --c-fg: #000; --c-dim: #444; --c-line: #999; --c-panel: #fff; background-image: none; border-color: #000; }
+    .bar, .radar, .scanline, .caret { display: none; }
+    .k { animation: none !important; visibility: visible !important; clip-path: none !important; }
+    .typed { width: auto !important; }
   }
 </style>
