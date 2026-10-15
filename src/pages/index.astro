@@ -59,7 +59,8 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 <style>
   .hero { position: relative; min-height: clamp(34rem, 78vh, 54rem); display: grid; align-items: end; }
   .hero__scene { position: absolute; inset: 0; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
-  .hero__scene :global(.orbit-scene) { width: min(62vw, 60rem); }
+  /* With VIEW_RADIUS 2.5 the outer ring spans 0.72 of this width, so its left edge stays at the copy's right edge (as at 62vw with 3.8) while the planet draws 30% larger. */
+  .hero__scene :global(.orbit-scene) { width: min(53vw, 51.5rem); }
   /* The copy never runs under the scene: on mid-size desktops it is capped by viewport width. */
   .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: min(40rem, 56vw); margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
   .hero__copy h1 em { font-style: italic; }
