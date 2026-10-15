@@ -1363,7 +1363,7 @@ describe('saveVisitorSatellite', () => {
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { toSceneSatellites, ORBIT_RADIUS } from '@/lib/satellites';
+import { toSceneSatellites, ORBIT_RADIUS, RING_PHASE } from '@/lib/satellites';
 
 const e = (id: string, orbit: 'high' | 'mid' | 'low', order: number) => ({ id, data: { title: id, orbit, status: 'active' as const, order } });
 
@@ -1378,12 +1378,19 @@ describe('toSceneSatellites', () => {
     expect(out.map((s) => s.id)).toEqual(['a', 'b']);
     expect(out[0].href).toBe('/work/a');
   });
-  it('spreads satellites sharing a ring evenly in phase', () => {
+  it('spreads satellites sharing a ring evenly in phase, starting at the ring base phase', () => {
     const out = toSceneSatellites([e('a', 'mid', 1), e('b', 'mid', 2), e('c', 'mid', 3)]);
     const phases = out.map((s) => s.phase);
-    expect(phases[0]).toBeCloseTo(0, 12);
-    expect(phases[1]).toBeCloseTo((2 * Math.PI) / 3, 12);
-    expect(phases[2]).toBeCloseTo((4 * Math.PI) / 3, 12);
+    expect(phases[0]).toBeCloseTo(RING_PHASE.mid, 12);
+    expect(phases[1]).toBeCloseTo(RING_PHASE.mid + (2 * Math.PI) / 3, 12);
+    expect(phases[2]).toBeCloseTo(RING_PHASE.mid + (4 * Math.PI) / 3, 12);
+  });
+  it('gives different rings different base phases so single satellites never line up', () => {
+    const out = toSceneSatellites([e('a', 'high', 1), e('b', 'mid', 2), e('c', 'low', 3)]);
+    const [h, m, l] = out.map((s) => s.phase % (2 * Math.PI));
+    expect(Math.abs(h! - m!)).toBeGreaterThan(1);
+    expect(Math.abs(m! - l!)).toBeGreaterThan(1);
+    expect(Math.abs(h! - l!)).toBeGreaterThan(1);
   });
 });
 ```
@@ -1442,6 +1449,8 @@ export function saveVisitorSatellite(storage: StorageLike | null | undefined, sa
 export type Orbit = 'high' | 'mid' | 'low';
 export type Status = 'active' | 'paused' | 'retired';
 export const ORBIT_RADIUS: Record<Orbit, number> = { high: 3.2, mid: 2.2, low: 1.5 };
+/** Each ring starts at its own phase so satellites on different rings never line up (labels would collide). */
+export const RING_PHASE: Record<Orbit, number> = { high: 0, mid: (2 * Math.PI) / 3, low: (4 * Math.PI) / 3 };
 
 export interface SceneSatellite { id: string; name: string; orbit: Orbit; status: Status; href: string; phase: number }
 export interface WorkEntryLike { id: string; data: { title: string; orbit: Orbit; status: Status; order: number } }
@@ -1455,7 +1464,7 @@ export function toSceneSatellites(entries: WorkEntryLike[]): SceneSatellite[] {
     const i = seen.get(e.data.orbit) ?? 0;
     seen.set(e.data.orbit, i + 1);
     const n = perRing.get(e.data.orbit) ?? 1;
-    return { id: e.id, name: e.data.title, orbit: e.data.orbit, status: e.data.status, href: `/work/${e.id}`, phase: (2 * Math.PI * i) / n };
+    return { id: e.id, name: e.data.title, orbit: e.data.orbit, status: e.data.status, href: `/work/${e.id}`, phase: RING_PHASE[e.data.orbit] + (2 * Math.PI * i) / n };
   });
 }
 ```
@@ -1651,7 +1660,7 @@ const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
   .fallback { position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
   .fallback__svg { width: 100%; height: 100%; display: block; }
   .fallback__label {
-    position: absolute; transform: translate(14px, -50%); max-width: 40%; font-size: 12px; letter-spacing: 0.04em;
+    position: absolute; transform: translate(14px, -50%); width: max-content; max-width: 40%; font-size: 12px; letter-spacing: 0.04em;
     color: var(--ink-2); background: var(--paper); padding: 0 0.3em;
   }
   .fallback__text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
