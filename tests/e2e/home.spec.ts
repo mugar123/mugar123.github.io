@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { published } from './content';
 
 /** Waits for the island to decide between WebGL and the fallback; returns the final state. */
 async function settledSceneState(page: Page) {
@@ -49,10 +50,17 @@ test.describe('home', () => {
     await expect(page.locator('#ground-control')).toBeVisible();
   });
 
-  test('logbook is hidden while there are no published posts, and numbering stays contiguous', async ({ page }) => {
+  test(`logbook ${published.length > 0 ? 'lists the latest posts' : 'is hidden without published posts'}, and numbering stays contiguous`, async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('#logbook')).toHaveCount(0);
-    await expect(page.locator('#ground-control .mono').first()).toContainText('§3');
+    const logbook = page.locator('#logbook');
+    if (published.length > 0) {
+      await expect(logbook).toBeVisible();
+      await expect(logbook.locator('.mono').first()).toContainText('§3');
+      await expect(logbook.locator('a[href^="/writing/"]')).toHaveCount(Math.min(3, published.length));
+    } else {
+      await expect(logbook).toHaveCount(0);
+    }
+    await expect(page.locator('#ground-control .mono').first()).toContainText(published.length > 0 ? '§4' : '§3');
   });
 
   // Guards the built CSS: the minifier once folded animation-timeline into an invalid `animation` shorthand

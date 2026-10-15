@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PHONE_PATTERN, privateExclusions, NO_EXCLUSIONS_MESSAGE } from '../helpers/privacy';
+import { published, drafts } from './content';
 
 for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/about', '/cv']) {
   test(`${path} renders with a heading and ships no Three`, async ({ page }) => {
@@ -31,11 +32,26 @@ test('no page mentions the facts the owner keeps private', async ({ page }) => {
   }
 });
 
-test('writing index shows the empty state while every post is a draft, and draft routes do not exist', async ({ page }) => {
+test(`writing index: ${published.length > 0 ? 'lists the published posts' : 'shows the empty state'}`, async ({ page }) => {
   await page.goto('/writing');
-  await expect(page.getByText(/no entries yet/i)).toBeVisible();
-  const res = await page.goto('/writing/first-entry');
-  expect(res?.status()).toBe(404);
+  const empty = page.getByText(/no entries yet/i);
+  if (published.length === 0) { await expect(empty).toBeVisible(); return; }
+  await expect(empty).toHaveCount(0);
+  for (const p of published) await expect(page.locator(`a[href="/writing/${p.slug}"]`)).toHaveText(p.title);
+});
+
+test('draft routes 404 and published routes render', async ({ page }) => {
+  for (const p of drafts) expect((await page.goto(`/writing/${p.slug}`))?.status(), `draft ${p.slug}`).toBe(404);
+  for (const p of published) {
+    expect((await page.goto(`/writing/${p.slug}`))?.status(), `post ${p.slug}`).toBe(200);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(p.title);
+  }
+});
+
+test(`the Writing nav item and the feed link appear only with published posts (${published.length})`, async ({ page }) => {
+  await page.goto('/about');
+  await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Writing' })).toHaveCount(published.length > 0 ? 1 : 0);
+  await expect(page.locator('link[rel="alternate"][type="application/rss+xml"]')).toHaveCount(published.length > 0 ? 1 : 0);
 });
 
 test('404 page', async ({ page }) => {
@@ -43,9 +59,19 @@ test('404 page', async ({ page }) => {
   const res = await page.goto('/does-not-exist');
   expect(res?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Trajectory decayed');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
 });
 
-test('rss and sitemap exist', async ({ request }) => {
-  expect((await request.get('/rss.xml')).ok()).toBe(true);
+test('content pages keep their canonical link and stay indexable', async ({ page }) => {
+  await page.goto('/about');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/about\/?$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+});
+
+test('rss has one item per published post, and the sitemap exists', async ({ request }) => {
+  const rss = await request.get('/rss.xml');
+  expect(rss.ok()).toBe(true);
+  expect((await rss.text()).match(/<item>/g) ?? []).toHaveLength(published.length);
   expect((await request.get('/sitemap-index.xml')).ok()).toBe(true);
 });
