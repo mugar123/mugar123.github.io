@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 
 /** Waits for the island to decide between WebGL and the fallback; returns the final state. */
 async function settledSceneState(page: Page) {
@@ -8,6 +8,34 @@ async function settledSceneState(page: Page) {
   if (state === 'webgl') await expect(scene).toHaveAttribute('data-ready', 'true', { timeout: 10_000 });
   return state;
 }
+
+/** Whether this browser can create a WebGL context at all, checked independently of the island. */
+async function webglAvailable(page: Page) {
+  return page.evaluate(() => {
+    const c = document.createElement('canvas');
+    const gl = (c.getContext('webgl2') ?? c.getContext('webgl')) as WebGLRenderingContext | null;
+    if (!gl) return false;
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
+  });
+}
+
+/**
+ * For the interaction tests: skips only when the runner has no WebGL. Otherwise the scene must have
+ * mounted and drawn — a fallback here means the island failed (import, mount or runtime error), and
+ * that is a failure, not a reason to skip.
+ */
+async function requireMountedScene(page: Page) {
+  test.skip(!(await webglAvailable(page)), 'WebGL unavailable in this runner — run locally for the interaction tests');
+  const scene = page.locator('#orbit-scene');
+  await expect(scene).toHaveAttribute('data-state', 'webgl', { timeout: 10_000 });
+  await expect(scene).toHaveAttribute('data-ready', 'true', { timeout: 10_000 });
+}
+
+/** The launch HUD, located by test id and by its live-region role, so dropping role="status" fails. */
+const launchStatus = (page: Page) => page.getByTestId('launch-status').and(page.getByRole('status'));
+
+const opacity = (loc: Locator) => loc.evaluate((el) => getComputedStyle(el).opacity);
 
 test.describe('home', () => {
   test('hero text, CTAs and sections render', async ({ page }) => {
@@ -40,10 +68,9 @@ test.describe('home', () => {
   test('a drag from the pad produces a trajectory outcome; a click does not', async ({ page, javaScriptEnabled }) => {
     test.skip(!javaScriptEnabled, 'needs JS');
     await page.goto('/');
-    const state = await settledSceneState(page);
-    test.skip(state !== 'webgl', 'WebGL unavailable in this runner — run locally for the interaction test');
+    await requireMountedScene(page);
     const pad = (await page.getByTestId('launch-pad').boundingBox())!;
-    const status = page.getByTestId('launch-status');
+    const status = launchStatus(page);
     const cx = pad.x + pad.width / 2, cy = pad.y + pad.height / 2;
     // A stationary click is not a launch.
     await page.mouse.click(cx, cy);
@@ -58,28 +85,32 @@ test.describe('home', () => {
   test('the toy is keyboard operable', async ({ page, javaScriptEnabled }) => {
     test.skip(!javaScriptEnabled, 'needs JS');
     await page.goto('/');
-    const state = await settledSceneState(page);
-    test.skip(state !== 'webgl', 'WebGL unavailable in this runner');
+    await requireMountedScene(page);
     await page.locator('#orbit-scene').focus();
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');
-    await expect(page.getByTestId('launch-status')).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
+    await expect(launchStatus(page)).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
   });
 
   test('losing the WebGL context restores the SVG fallback', async ({ page, javaScriptEnabled }) => {
     test.skip(!javaScriptEnabled, 'needs JS');
     await page.goto('/');
-    const state = await settledSceneState(page);
-    test.skip(state !== 'webgl', 'WebGL unavailable in this runner');
+    await requireMountedScene(page);
+    const scene = page.locator('#orbit-scene');
+    const fallback = scene.locator('[data-fallback]');
+    // Lose the context only once the cross-fade is over, so the restoration path (un-hiding) is exercised.
+    await expect(fallback).toHaveAttribute('hidden');
+    await expect.poll(() => opacity(scene.locator('.orbit-stage'))).toBe('1');
     await page.evaluate(() => {
       const c = document.querySelector<HTMLCanvasElement>('#orbit-scene canvas')!;
       const gl = (c.getContext('webgl2') ?? c.getContext('webgl')) as WebGLRenderingContext;
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     });
-    const scene = page.locator('#orbit-scene');
     await expect(scene).toHaveAttribute('data-state', 'fallback');
-    await expect(scene.locator('[data-fallback]')).toBeVisible();
+    await expect(fallback).not.toHaveAttribute('hidden');
+    await expect(fallback).toBeVisible();
+    await expect.poll(() => opacity(fallback)).toBe('1');
   });
 
   test('mobile: headline in the first viewport, CTAs within 1.5 viewports', async ({ page, isMobile }) => {
