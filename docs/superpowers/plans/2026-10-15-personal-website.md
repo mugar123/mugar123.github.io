@@ -126,9 +126,11 @@ export default defineConfig({
 ```
 
 ```bash
-npm i @astrojs/sitemap
-npm i -D @astrojs/check typescript
+npm i astro@7 @astrojs/sitemap@3
+npm i -D @astrojs/check typescript@5
 ```
+
+TypeScript stays on 5.x: `@astrojs/check` declares a `^5` peer, and TypeScript 7 removes `baseUrl`. `paths` works without `baseUrl` when the targets are relative to the tsconfig.
 
 Replace `tsconfig.json`:
 
@@ -138,8 +140,7 @@ Replace `tsconfig.json`:
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": { "@/*": ["./src/*"] }
   }
 }
 ```
