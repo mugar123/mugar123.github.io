@@ -72,8 +72,8 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
-  /* Below 1240px the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); §2 repeats them in full anyway. */
-  @media (max-width: 1239px) { .hero__specs { display: none; } }
+  /* 768–1239px: the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); §2 repeats them in full. Phones keep them in the stack below the copy. */
+  @media (min-width: 768px) and (max-width: 1239px) { .hero__specs { display: none; } }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
   .specs__note { margin-top: var(--space-4); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
