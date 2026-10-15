@@ -585,7 +585,7 @@ Expected: `public/fonts/` contains `lmroman-400.woff2`, `lmroman-400-italic.woff
   --paper: #F2F3F1;
   --grid: #DADDD8;
   --ink: #121412;
-  --ink-2: #6E736D;
+  --ink-2: #6A6F69;
   --accent: #E2401C;
   --planet: #5E6B7A;
   --planet-hi: #7B8898;

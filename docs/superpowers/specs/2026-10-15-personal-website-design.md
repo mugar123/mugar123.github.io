@@ -55,7 +55,7 @@ Building things · Product design · Python · Neural networks · LaTeX (advance
 | `--paper` | `#F2F3F1` | page background |
 | `--grid` | `#DADDD8` | graph-paper lines (CSS gradients, 20–24 px cell) |
 | `--ink` | `#121412` | text, orbit lines, borders |
-| `--ink-2` | `#6E736D` | secondary text, mono labels |
+| `--ink-2` | `#6A6F69` | secondary text, mono labels (4.6:1 on paper; the earlier #6E736D measured 4.35:1 and failed AA at 12 px) |
 | `--accent` | `#E2401C` | the only accent: active satellite, primary CTA, live status |
 | `--planet` | `#5E6B7A` | matte planet; highlight `#7B8898` |
 | `--surface` | `#FFFFFF` | cards on top of the grid |
