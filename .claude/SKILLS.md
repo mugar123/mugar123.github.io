@@ -33,3 +33,5 @@ Component libraries without a skill of their own. For each, a short reference sk
 | `cursify` | https://github.com/ui-layouts/cursify | b3a173c |
 | `hyperiux` | https://github.com/Hyperiux-Immersion-Labs/hyperiux-components (the given URL `Hyperiux-Immersive/Hyperiux` is a 404) | 71f7398 |
 | `trickle` | https://github.com/akaieuan/trickle-UI-kit (the given URL `akaieuan/trickle` is a 404) | 4112907 |
+
+> Note (2026-10-15): the skill packs themselves are kept out of git (`.claude/skills/` and `.agents/` are ignored) because most third-party packs ship without a license file. They stay on disk for the agents; this file records where they came from.

@@ -6,6 +6,6 @@ tags: [python, latex, ml]
 draft: true
 ---
 
-<!-- REVIEW: draft. The Logbook stays hidden until a post has draft: false. -->
+<!-- draft: the Logbook stays hidden until a post has draft: false -->
 
 Draft.

@@ -40,7 +40,7 @@ The site tells one story: **the student who is already leaving the classroom's g
 
 Facts that must never appear on the site: two facts the owner keeps private (owner's decision). No phone number anywhere.
 
-Visitor launches that reach orbit occupy the **low** orbit band and are visually smaller and lighter than real satellites.
+Visitor launches that reach orbit follow their real ellipse (every surface launch passes back through the pad at r = 1.05, so they thread between the rings) and are visually smaller and lighter than real satellites.
 
 ### 3.2 Mission specs (strengths to highlight)
 

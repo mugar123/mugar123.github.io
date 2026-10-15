@@ -8,3 +8,6 @@ playwright-report/
 .lighthouseci/
 .venv/
 .worktrees/
+.private-exclusions.json
+.claude/skills/
+.agents/
