@@ -10,6 +10,7 @@
     "check": "astro check && tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "fonts": "./scripts/fonts.sh",
     "og": "node scripts/og.mjs"
   },
