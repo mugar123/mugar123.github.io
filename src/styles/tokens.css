@@ -1,0 +1,30 @@
+:root {
+  --paper: #F2F3F1;
+  --grid: #DADDD8;
+  --ink: #121412;
+  --ink-2: #6E736D;
+  --accent: #E2401C;
+  --planet: #5E6B7A;
+  --planet-hi: #7B8898;
+  --surface: #FFFFFF;
+
+  /* The size-adjusted fallback must come right after the web font, before any generic family, or it is never used. */
+  --font-serif: 'Latin Modern', 'Latin Modern Fallback', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-body: 1.1875rem;      /* 19px */
+  --text-small: 1rem;
+  --text-label: 0.75rem;       /* 12px mono labels */
+  --text-h1: clamp(2.25rem, 5vw + 1rem, 4.5rem);
+  --text-h2: clamp(1.5rem, 2vw + 1rem, 2.25rem);
+  --leading-body: 1.65;
+
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 1rem; --space-4: 1.5rem;
+  --space-5: 2.5rem; --space-6: 4rem; --space-7: 6rem;
+  --measure: 68ch;
+  --grid-cell: 24px;
+  --content-max: 72rem;
+
+  --dur: 300ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
