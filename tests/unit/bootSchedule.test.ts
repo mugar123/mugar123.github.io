@@ -7,7 +7,7 @@ const LOG: BootLine[] = [
   { kind: 'out' }, { kind: 'out', linksUp: true },
   { kind: 'cmd', text: 'specs --vehicle' },
   { kind: 'rows', count: 6 },
-  { kind: 'cmd', text: 'telemetry scan --bands low,mid,high', opensRadar: true },
+  { kind: 'cmd', text: 'scan --bands low,mid,high', opensRadar: true },
   { kind: 'scan' }, { kind: 'scan' }, { kind: 'scan' },
   { kind: 'cmd', text: 'handshake SAT-01 SAT-02' },
   { kind: 'sat' }, { kind: 'sat' },

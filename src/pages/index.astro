@@ -72,8 +72,9 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
-  .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
-  .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
+  /* minmax(0, 1fr) + anywhere: at 320px the email is wider than its column and would push the page sideways. */
+  .links li { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: var(--space-3); align-items: baseline; }
+  .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; overflow-wrap: anywhere; }
   .links__primary { color: var(--ink); text-decoration-color: var(--accent); text-decoration-thickness: 2px; } /* accent as underline, text stays ink (AA) */
   /* Below 1024px (phones and portrait tablets) the side-by-side hero collides, so it stacks: scene, copy. */
   @media (max-width: 1023px) {

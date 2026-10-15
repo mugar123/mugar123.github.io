@@ -24,10 +24,10 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const log = [
   { kind: 'cmd', text: 'uplink --station classroom' },
   { kind: 'out', label: 'carrier lock', value: 'OK' },
-  { kind: 'out', label: 'latency 42 ms · bit errors 0', value: 'OK', linksUp: true },
+  { kind: 'out', label: 'latency 42 ms · errors 0', value: 'OK', linksUp: true },
   { kind: 'cmd', text: 'specs --vehicle' },
   { kind: 'rows', count: MISSION_SPECS.length },
-  { kind: 'cmd', text: `telemetry scan --bands ${BANDS.join(',')}`, opensRadar: true },
+  { kind: 'cmd', text: `scan --bands ${BANDS.join(',')}`, opensRadar: true },
   ...BANDS.map((band) => ({ kind: 'scan', band, count: satellites.filter((s) => s.orbit === band).length }) as const),
   { kind: 'cmd', text: `handshake ${entries.map((_, i) => satId(i)).join(' ')}` },
   ...entries.map((_, index) => ({ kind: 'sat', index }) as const),
@@ -240,11 +240,13 @@ const at = (t: number, d?: number) => (d === undefined ? `--t:${t}` : `--t:${t};
   .ln { margin: 0; max-width: none; white-space: nowrap; }
   .cmd:not(:first-child) { margin-top: 0.7em; }
   .ps { color: var(--accent); margin-right: 1ch; }
-  /* Monospace, so a character is exactly 1ch: typing is a width that grows one character at a time. */
-  .typed { display: inline-block; vertical-align: bottom; overflow: clip; white-space: pre; width: calc(var(--n) * 1ch); }
+  /* Monospace, so a character is 1ch: typing is a width that grows one character at a time. Only while it
+     types: at rest the width is auto, because Linux Chrome rounds glyph advances and n × 1ch can fall short. */
+  .typed { display: inline-block; vertical-align: bottom; overflow: clip; white-space: pre; }
   .caret { display: inline-block; width: 0.6em; height: 1.05em; margin-left: 0.15ch; vertical-align: -0.18em; background: var(--accent); visibility: hidden; }
   .caret--end { visibility: inherit; margin-left: 0.6ch; }
   .out, .sat, .ready { padding-left: 2ch; }
+  .ready { white-space: normal; } /* on a narrow phone it wraps instead of cutting off its caret */
   .out, .sat { color: var(--c-dim); }
   .out { display: grid; grid-template-columns: auto minmax(2ch, 1fr) auto; gap: 1ch; align-items: baseline; }
   .out i { border-bottom: 1px dotted var(--c-line); transform: translateY(-0.35em); }
@@ -378,6 +380,7 @@ const at = (t: number, d?: number) => (d === undefined ? `--t:${t}` : `--t:${t};
     .panel__foot { flex-direction: column; align-items: start; gap: var(--space-2); }
     .sat { grid-template-columns: 6ch minmax(0, 1fr) 6ch auto; }
   }
+
 
   @media print {
     .console { --c-bg: #fff; --c-fg: #000; --c-dim: #444; --c-line: #999; --c-panel: #fff; background-image: none; border-color: #000; }
