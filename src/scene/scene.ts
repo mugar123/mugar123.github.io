@@ -12,7 +12,7 @@ import { ACCENT, INK, INK_2, Trace, createRing, toThree } from './rings';
 import { createSatelliteMesh, SATELLITE_SIZE } from './satelliteMesh';
 import {
   HINT, DEFAULT_AIM, stepAim, statusText, isSuccess, AMBIENT_RATE, flightTime, packPoints, sampleTrajectory,
-  simplifyPath, placeLabels, behindPlanet, padHitRadius, withinPad, exceedsSlop, type LabelItem,
+  simplifyPath, placeLabels, behindPlanet, padHitReach, withinPad, exceedsSlop, type LabelItem,
 } from './interaction';
 
 export interface MountOptions {
@@ -403,10 +403,10 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
 
     listen<PointerEvent>(pad, 'pointerdown', (ev) => {
       if (drag || !running || !ev.isPrimary || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
-      // The gate is the orbital plane: the down point must lie within the effective pad radius of the
-      // pad there (see padHitRadius), and the drag vector is then measured from that accepted point.
+      // The gate is the orbital plane: the down point must lie within the pad's gate ellipse there
+      // (see padHitReach), and the drag vector is then measured from that accepted point.
       const origin = { x: 0, y: 0 };
-      if (!planeAt(ev.clientX, ev.clientY, origin) || !withinPad(origin, PAD, padHitRadius(pxPerUnit))) return;
+      if (!planeAt(ev.clientX, ev.clientY, origin) || !withinPad(origin, PAD, padHitReach(pxPerUnit))) return;
       // Set before the browser's own mousedown focuses the container, so focus does not preview the keyboard aim.
       drag = { id: ev.pointerId, type: ev.pointerType, sx: ev.clientX, sy: ev.clientY, origin, moved: false };
       pad.setPointerCapture(ev.pointerId);
@@ -490,12 +490,12 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(w, h, false);
 
-      // The pad's DOM hit target is the gate itself: the plane circle around the pad, an ellipse on screen.
+      // The pad's DOM hit target is the gate itself: the plane ellipse around the pad, ≥ 44 × 44 px on screen.
       toScreen(toThree(PAD, new Vector3()), padPx);
-      const reach = padHitRadius(pxPerUnit);
+      const reach = padHitReach(pxPerUnit);
       const edge = { x: 0, y: 0 };
-      toScreen(toThree({ x: PAD.x, y: PAD.y + reach }, new Vector3()), edge);
-      const rx = reach * pxPerUnit, ry = Math.abs(edge.y - padPx.y);
+      toScreen(toThree({ x: PAD.x, y: PAD.y + reach.tangential }, new Vector3()), edge);
+      const rx = reach.radial * pxPerUnit, ry = Math.abs(edge.y - padPx.y);
       pad.style.width = `${2 * rx}px`;
       pad.style.height = `${2 * ry}px`;
       pad.style.transform = `translate(${padPx.x - rx}px, ${padPx.y - ry}px)`;

@@ -8,7 +8,7 @@ import { DocumentStub, ElementStub, ObserverStub } from '../helpers/sceneDom';
 import { STORAGE_KEY } from '@/lib/visitorSatellites';
 import { VIEW_RADIUS, CAMERA_POSITION } from '@/scene/projection';
 import { LAUNCH_RADIUS } from '@/lib/orbit';
-import { PAD_HIT_RADIUS, MIN_PAD_HIT_PX } from '@/scene/interaction';
+import { PAD_HIT_RADIUS, MIN_PAD_HIT_PX, padHitReach } from '@/scene/interaction';
 
 const gpu = vi.hoisted(() => ({
   scene: null as Scene | null,
@@ -261,10 +261,16 @@ describe('guarded frame loop (fix round 1, finding 1)', () => {
 describe('plane-space pad gate (finding 4)', () => {
   const e = 1e-3;
   const starts = () => pad().captures.size === 1;
+  // The default 960 × 540 scene: radially the plain PAD_HIT_RADIUS; tangentially widened to 22 px on screen.
+  const reach = padHitReach(540 / (2 * VIEW_RADIUS));
+  it('the default scene gates radially at PAD_HIT_RADIUS and tangentially beyond it', () => {
+    expect(reach.radial).toBe(PAD_HIT_RADIUS);
+    expect(reach.tangential).toBeGreaterThan(PAD_HIT_RADIUS);
+  });
   it.each([
-    ['radial out', PAD_HIT_RADIUS, 0], ['radial in', -PAD_HIT_RADIUS, 0],
-    ['prograde', 0, PAD_HIT_RADIUS], ['retrograde', 0, -PAD_HIT_RADIUS],
-  ])('%s: a drag starts just inside the radius and not just outside', (_name, dx, dy) => {
+    ['radial out', reach.radial, 0], ['radial in', -reach.radial, 0],
+    ['prograde', 0, reach.tangential], ['retrograde', 0, -reach.tangential],
+  ])('%s: a drag starts just inside the gate and not just outside', (_name, dx, dy) => {
     mount(); frame();
     const ux = Math.sign(dx), uy = Math.sign(dy);
     pointer('pointerdown', LAUNCH_RADIUS + dx - ux * e, dy - uy * e);
@@ -306,6 +312,21 @@ describe('plane-space pad gate (finding 4)', () => {
     pointer('pointerdown', LAUNCH_RADIUS + reach + e, 0);
     expect(starts()).toBe(false);
     expect(parseFloat(pad().style['width']!)).toBeCloseTo(2 * MIN_PAD_HIT_PX, 6);
+  });
+
+  it('on a 375-px-wide phone scene the pad is at least 44 px in both axes, and the gate matches it', () => {
+    container.clientWidth = 375; container.clientHeight = Math.round((375 * 9) / 16);
+    mount(); frame();
+    const w = parseFloat(pad().style['width']!), h = parseFloat(pad().style['height']!);
+    expect(w).toBeGreaterThanOrEqual(2 * MIN_PAD_HIT_PX - 1e-6);
+    expect(h).toBeGreaterThanOrEqual(2 * MIN_PAD_HIT_PX - 1e-6);
+    // The DOM pad's vertical edge is the gate's tangential edge: just inside starts a drag, just outside does not.
+    const { tangential } = padHitReach(container.clientHeight / (2 * VIEW_RADIUS));
+    pointer('pointerdown', LAUNCH_RADIUS, tangential - e);
+    expect(starts()).toBe(true);
+    pointer('pointercancel', 0, 0);
+    pointer('pointerdown', LAUNCH_RADIUS, tangential + e);
+    expect(starts()).toBe(false);
   });
 
   it('right clicks, secondary pointers and a click that never moves launch nothing', () => {

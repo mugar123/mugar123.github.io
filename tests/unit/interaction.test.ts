@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   HINT, DEFAULT_AIM, stepAim, formatAngle, outcomeLabel, statusText, isSuccess,
   AMBIENT_RATE, FLIGHT_RATE, flightTime, packPoints, sampleTrajectory, simplifyPath,
-  labelOnRight, placeLabels, behindPlanet, padHitRadius, withinPad, PAD_HIT_RADIUS, MIN_PAD_HIT_PX, exceedsSlop,
+  labelOnRight, placeLabels, behindPlanet, padHitRadius, padHitReach, withinPad, PAD_HIT_RADIUS, MIN_PAD_HIT_PX, exceedsSlop,
 } from '@/scene/interaction';
 import { simulate, circularPosition, type Point } from '@/lib/orbit';
 import { MIN_SPEED, MAX_SPEED } from '@/lib/launch';
-import { CAMERA_POSITION } from '@/scene/projection';
+import { CAMERA_POSITION, SQUASH } from '@/scene/projection';
 
 const deg = (d: number) => (d * Math.PI) / 180;
 
@@ -213,15 +213,27 @@ describe('overlay geometry', () => {
     expect(padHitRadius(10)).toBeCloseTo(MIN_PAD_HIT_PX / 10, 12);       // 2.2 units = 22 px at 10 px/unit
     expect(padHitRadius(10) * 10).toBeCloseTo(MIN_PAD_HIT_PX, 12);
   });
-  it('withinPad gates on orbital-plane distance from the pad, radially and tangentially, on both sides', () => {
-    const pad = { x: 1.05, y: 0 };
-    const r = PAD_HIT_RADIUS, e = 1e-6;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      expect(withinPad({ x: pad.x + dx * (r - e), y: pad.y + dy * (r - e) }, pad, r)).toBe(true);
-      expect(withinPad({ x: pad.x + dx * (r + e), y: pad.y + dy * (r + e) }, pad, r)).toBe(false);
+  it('the gate ellipse reaches 22 px on screen tangentially too, where the plane is foreshortened by SQUASH', () => {
+    expect(padHitReach(1000)).toEqual({ radial: PAD_HIT_RADIUS, tangential: PAD_HIT_RADIUS }); // big scene: a circle
+    for (const ppu of [10, 27.8, 71]) {
+      const { radial, tangential } = padHitReach(ppu);
+      expect(radial).toBe(padHitRadius(ppu));
+      expect(tangential).toBeGreaterThanOrEqual(radial);
+      expect(tangential * ppu * SQUASH).toBeGreaterThanOrEqual(MIN_PAD_HIT_PX - 1e-9);
     }
+  });
+  it('withinPad gates on the orbital-plane ellipse around the pad, radially and tangentially, on both sides', () => {
+    const pad = { x: 1.05, y: 0 };
+    const reach = { radial: PAD_HIT_RADIUS, tangential: 0.9 }, e = 1e-6;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const r = dx !== 0 ? reach.radial : reach.tangential;
+      expect(withinPad({ x: pad.x + dx * (r - e), y: pad.y + dy * (r - e) }, pad, reach)).toBe(true);
+      expect(withinPad({ x: pad.x + dx * (r + e), y: pad.y + dy * (r + e) }, pad, reach)).toBe(false);
+    }
+    // On the diagonal the ellipse is tighter than its bounding box.
+    expect(withinPad({ x: pad.x + 0.8 * reach.radial, y: pad.y + 0.8 * reach.tangential }, pad, reach)).toBe(false);
     // One full plane unit "behind" the pad (tangential) is far outside, however close it looks on screen.
-    expect(withinPad({ x: pad.x, y: pad.y + 1 }, pad, r)).toBe(false);
+    expect(withinPad({ x: pad.x, y: pad.y + 1 }, pad, reach)).toBe(false);
   });
   it('a press that barely moves is a click, not a drag', () => {
     expect(exceedsSlop(2, 2, 'mouse')).toBe(false);

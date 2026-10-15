@@ -7,6 +7,7 @@
  */
 import { formatSpeed, MIN_SPEED, MAX_SPEED } from '@/lib/launch';
 import type { LaunchParams, Point, Simulation } from '@/lib/orbit';
+import { SQUASH } from './projection';
 
 export const HINT = 'DRAG TO LAUNCH ↗';
 export const DEFAULT_AIM: Readonly<LaunchParams> = { angle: 0, speed: 1 };
@@ -194,12 +195,26 @@ export const MIN_PAD_HIT_PX = 22;
  * Effective pad radius in orbital-plane units for a scene drawn at `pxPerUnit` CSS px per unit
  * (= renderer height / (2 · VIEW_RADIUS)). Controller ruling (Task 10 fix round 1):
  * `max(PAD_HIT_RADIUS, 22 px · unitsPerPx)`, so the radial (screen-horizontal) reach is never under a
- * 44 px touch target on phone-sized scenes; tangential reach is foreshortened on screen like the plane.
+ * 44 px touch target on phone-sized scenes.
  */
 export const padHitRadius = (pxPerUnit: number): number => Math.max(PAD_HIT_RADIUS, MIN_PAD_HIT_PX / pxPerUnit);
 
-/** Whether an orbital-plane point lies within `radius` of the pad: the gate every drag must pass. */
-export const withinPad = (p: Point, pad: Point, radius: number): boolean => Math.hypot(p.x - pad.x, p.y - pad.y) <= radius;
+/** The pad gate's semi-axes in orbital-plane units: `radial` (screen-horizontal) and `tangential` (screen-vertical). */
+export interface PadReach { radial: number; tangential: number }
+
+/**
+ * The pad gate is an ellipse in the orbital plane. Radially it reaches `padHitRadius`; tangentially the
+ * plane is foreshortened on screen by SQUASH, so that axis reaches `max(radial, 22 px / (pxPerUnit · SQUASH))`
+ * and the target is at least 44 px tall on screen as well as 44 px wide.
+ */
+export const padHitReach = (pxPerUnit: number): PadReach => {
+  const radial = padHitRadius(pxPerUnit);
+  return { radial, tangential: Math.max(radial, MIN_PAD_HIT_PX / (pxPerUnit * SQUASH)) };
+};
+
+/** Whether an orbital-plane point lies within the pad's gate ellipse: the gate every drag must pass. */
+export const withinPad = (p: Point, pad: Point, reach: PadReach): boolean =>
+  ((p.x - pad.x) / reach.radial) ** 2 + ((p.y - pad.y) / reach.tangential) ** 2 <= 1;
 
 /** Movement (CSS px) below which a press is a click, not a drag; fingers jitter more than mice. */
 export function exceedsSlop(dx: number, dy: number, pointerType: string): boolean {

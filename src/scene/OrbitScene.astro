@@ -32,7 +32,7 @@ const { satellites } = Astro.props;
   .orbit-overlay { position: absolute; inset: 0; pointer-events: none; }
 
   /* Satellite labels: the fallback's chip and leader line, re-placed every frame. */
-  .orbit-label { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity var(--dur) var(--ease); }
+  .orbit-label { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity var(--dur) var(--ease), visibility var(--dur); }
   .orbit-label__text {
     position: absolute; top: 0; left: 0; display: block; width: max-content; max-width: var(--label-max, 40%);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -46,7 +46,8 @@ const { satellites } = Astro.props;
   }
   .orbit-label.is-left .orbit-label__text { transform: translate(calc(-100% - var(--sat-r) - 14px), -50%); }
   .orbit-label.is-left::before { left: calc(-1 * var(--sat-r) - 12px); }
-  .orbit-label.is-occluded { opacity: 0.3; }
+  /* Behind the planet: hidden, not faded (a 30 % label read at only 1.46:1). It fades out, then leaves the accessibility tree. */
+  .orbit-label.is-occluded { opacity: 0; visibility: hidden; }
 
   /* Launch pad: the hit area is the whole circle; the mark is a small ring. */
   .orbit-pad {
