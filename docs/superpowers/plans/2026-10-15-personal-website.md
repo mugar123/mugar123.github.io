@@ -2705,8 +2705,9 @@ const { entry } = Astro.props;
   .entry + .entry { border-top: 1px solid var(--grid); }
   .entry__period { padding-top: 0.35em; position: relative; }
   .entry__period::after { content: ''; position: absolute; top: 0.95em; right: -1.25rem; width: 1rem; border-top: 1px solid var(--grid); transition: border-color var(--dur) var(--ease), width var(--dur) var(--ease); }
-  .entry:hover .entry__period { color: var(--accent); }
-  .entry:hover .entry__period::after { border-color: var(--accent); width: 1.5rem; }
+  /* The 12px date stays ink (accent text that small fails AA); the leader line carries the accent. */
+  .entry:hover .entry__period { color: var(--ink); }
+  .entry:hover .entry__period::after { border-color: var(--accent); border-top-width: 2px; width: 1.5rem; }
   h3 { font-size: 1.25rem; margin: 0; }
   h3 a { text-decoration: none; } h3 a:hover { text-decoration: underline; }
   .entry__sub { margin: 0.15em 0 0; font-style: italic; }
@@ -2757,10 +2758,23 @@ const { entry } = Astro.props;
 </div>
 
 <script>
-  const fine = matchMedia('(pointer: fine)').matches;
-  const motion = matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  // Guarded: no matchMedia → native cursor, no error. Preferences are live: enabling reduced motion or
+  // losing the fine pointer mid-visit disables the custom cursor without a reload.
   const root = document.querySelector<HTMLElement>('.cursor');
-  if (root && fine && motion) {
+  const mm = typeof window.matchMedia === 'function' ? window.matchMedia.bind(window) : null;
+  const fineQ = mm?.('(pointer: fine)');
+  const motionQ = mm?.('(prefers-reduced-motion: no-preference)');
+  const allowed = () => Boolean(root && fineQ?.matches && motionQ?.matches);
+  let enabled = false;
+  const enable = () => { /* body as below, registering listeners and starting the loop */ };
+  const disable = () => { /* remove has-cursor, hide root, remove listeners, cancelAnimationFrame */ };
+  const sync = () => { const ok = allowed(); if (ok && !enabled) enable(); else if (!ok && enabled) disable(); };
+  fineQ?.addEventListener?.('change', sync);
+  motionQ?.addEventListener?.('change', sync);
+  sync();
+  // Implementation note: structure `enable`/`disable` so the pointermove/leave/enter listeners and the
+  // rAF handle are stored in closure variables that `disable` can remove and cancel; the original body:
+  if (false && root) {
     root.hidden = false;
     document.documentElement.classList.add('has-cursor');
     const dot = root.querySelector<HTMLElement>('.cursor__dot')!;
@@ -2795,7 +2809,7 @@ const { entry } = Astro.props;
   .cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--accent); }
   .cursor__ring { width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 1px solid var(--ink); display: grid; place-items: center;
     transition: width var(--dur) var(--ease), height var(--dur) var(--ease), margin var(--dur) var(--ease), background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
-  .cursor__label { font-size: 9px; color: var(--accent); opacity: 0; transition: opacity var(--dur) var(--ease); }
+  .cursor__label { font-size: 12px; color: var(--ink); opacity: 0; transition: opacity var(--dur) var(--ease); } /* ink, 12px: AA + spec minimum */
   .cursor.is-link .cursor__ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: rgba(226, 64, 28, 0.12); border-color: var(--accent); }
   .cursor.is-launch .cursor__ring { width: 56px; height: 56px; margin: -28px 0 0 -28px; border-style: dashed; border-color: var(--accent); }
   .cursor.is-launch .cursor__label { opacity: 1; }
