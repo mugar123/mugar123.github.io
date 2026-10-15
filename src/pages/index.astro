@@ -23,7 +23,6 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   <section class="hero" id="abstract" aria-labelledby="hero-title">
     <div class="hero__scene"><OrbitScene satellites={satellites} /></div>
     <div class="hero__copy container rise">
-      <p class="mono">§0 · Abstract</p>
       <h1 id="hero-title">Physics student at Salamanca.<br /><em>Already in orbit.</em></h1>
       <p class="hero__lede">I build products from my own problems: a swipeable feed for discovering arXiv papers, with real users, and a pipeline that turns my handwritten notes into LaTeX. Second year, still building.</p>
       <p class="hero__cta">
@@ -34,11 +33,11 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
     <aside class="hero__specs container" aria-label="Mission specs"><MissionSpecs compact /></aside>
   </section>
 
-  <Section num="1" id="in-orbit" label="In orbit" title={inOrbitTitle}>
+  <Section id="in-orbit" title={inOrbitTitle}>
     <div class="grid-2">{work.map((e, i) => <SatelliteCard entry={e} index={i} />)}</div>
   </Section>
 
-  <Section num="2" id="mission-specs" label="Mission specs" title="What I bring aboard.">
+  <Section id="mission-specs" title="What I bring aboard.">
     <MissionSpecs />
     <div class="specs__note">
       <HowIWork />
@@ -46,13 +45,13 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   </Section>
 
   {posts.length > 0 && (
-    <Section num="3" id="logbook" label="Logbook" title="Latest entries.">
+    <Section id="logbook" title="Latest entries.">
       <PostList posts={posts} />
       <p><a class="mono mono--ink" href="/writing">All entries →</a></p>
     </Section>
   )}
 
-  <Section num={posts.length > 0 ? '4' : '3'} id="ground-control" label="Ground control" title="Open to internships and junior roles.">
+  <Section id="ground-control" title="Open to internships and junior roles.">
     <ul class="links mono" aria-label="Contact and social">
       <li><span>Email</span><a class="links__primary" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
       <li><span>GitHub</span><a href="https://github.com/mugar123" rel="me">github.com/mugar123</a></li>
@@ -77,7 +76,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
-  /* 1024–1239px: the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); §2 repeats them in full. Below 1024px the hero stacks and keeps them below the copy. */
+  /* 1024–1239px: the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); the Mission specs section repeats them in full. Below 1024px the hero stacks and keeps them below the copy. */
   @media (min-width: 1024px) and (max-width: 1239px) { .hero__specs { display: none; } }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
   .specs__note { margin-top: var(--space-4); }

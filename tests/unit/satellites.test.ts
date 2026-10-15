@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toSceneSatellites, ORBIT_RADIUS, RING_PHASE } from '@/lib/satellites';
+import { toSceneSatellites, describeSatellites, ORBIT_RADIUS, RING_PHASE, SCENE_LABEL } from '@/lib/satellites';
 
 const e = (id: string, orbit: 'high' | 'mid' | 'low', order: number) => ({ id, data: { title: id, orbit, status: 'active' as const, order } });
 
@@ -27,5 +27,18 @@ describe('toSceneSatellites', () => {
     expect(Math.abs(h! - m!)).toBeGreaterThan(1);
     expect(Math.abs(m! - l!)).toBeGreaterThan(1);
     expect(Math.abs(h! - l!)).toBeGreaterThan(1);
+  });
+});
+
+describe('scene text for assistive technology (shared by the SVG fallback and the live scene)', () => {
+  it('names the scene', () => {
+    expect(SCENE_LABEL).toBe('Planet with project satellites in orbit');
+  });
+  it('describes each satellite with its orbit, in order, as one sentence', () => {
+    const out = toSceneSatellites([e('Notes', 'mid', 2), e('PaperTok', 'high', 1)]);
+    expect(describeSatellites(out)).toBe('PaperTok in high orbit; Notes in mid orbit.');
+  });
+  it('has no description without satellites', () => {
+    expect(describeSatellites([])).toBe('');
   });
 });

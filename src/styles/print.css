@@ -13,7 +13,7 @@
   h1 { font-size: 22pt !important; } h2 { font-size: 14pt; margin-top: 10pt; } h3 { font-size: 11.5pt !important; }
   .entry { break-inside: avoid; }
 
-  /* CV: flat sections without the screen card chrome; each § label stays with its first entry. */
+  /* CV: flat sections without the screen card chrome; each section label stays with its first entry. */
   .cv { width: auto !important; max-width: none !important; padding: 0 !important; }
   .cv__head { margin-bottom: 6pt !important; }
   .cv__section { background: none !important; border: 0 !important; padding: 0 !important; margin-top: 12pt !important; }

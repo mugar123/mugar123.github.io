@@ -17,16 +17,16 @@ import { cv } from '@/data/cv';
       <p class="no-print"><button class="btn" type="button" id="print">Print / save as PDF</button></p>
     </header>
 
-    {cv.sections.map((s, i) => (
+    {cv.sections.map((s) => (
       <section class="cv__section" aria-labelledby={`cv-${s.id}`}>
-        <p class="mono">§{i + 1} · {s.label}</p>
+        <p class="mono">{s.label}</p>
         <h2 id={`cv-${s.id}`} class="visually-hidden">{s.label}</h2>
         <ol class="cv__entries">{s.entries.map((e) => <CvEntry entry={e} />)}</ol>
       </section>
     ))}
 
     <section class="cv__section" aria-labelledby="cv-skills">
-      <p class="mono">§{cv.sections.length + 1} · Technical skills and interests</p>
+      <p class="mono">Technical skills and interests</p>
       <h2 id="cv-skills" class="visually-hidden">Technical skills and interests</h2>
       <dl class="cv__skills">
         {cv.skills.map((g) => (<div><dt class="mono">{g.label}</dt><dd>{g.items.join(' · ')}</dd></div>))}

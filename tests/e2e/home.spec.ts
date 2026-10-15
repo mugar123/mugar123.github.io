@@ -50,17 +50,15 @@ test.describe('home', () => {
     await expect(page.locator('#ground-control')).toBeVisible();
   });
 
-  test(`logbook ${published.length > 0 ? 'lists the latest posts' : 'is hidden without published posts'}, and numbering stays contiguous`, async ({ page }) => {
+  test(`logbook ${published.length > 0 ? 'lists the latest posts' : 'is hidden without published posts'}`, async ({ page }) => {
     await page.goto('/');
     const logbook = page.locator('#logbook');
     if (published.length > 0) {
       await expect(logbook).toBeVisible();
-      await expect(logbook.locator('.mono').first()).toContainText('§3');
       await expect(logbook.locator('a[href^="/writing/"]')).toHaveCount(Math.min(3, published.length));
     } else {
       await expect(logbook).toHaveCount(0);
     }
-    await expect(page.locator('#ground-control .mono').first()).toContainText(published.length > 0 ? '§4' : '§3');
   });
 
   // Guards the built CSS: the minifier once folded animation-timeline into an invalid `animation` shorthand
@@ -88,6 +86,17 @@ test.describe('home', () => {
     const state = await settledSceneState(page);
     if (state === 'webgl') await expect(scene.locator('canvas')).toBeVisible();
     else await expect(scene.locator('[data-fallback]')).toBeVisible();
+  });
+
+  test('the hero scene is one still image: named, out of the tab order, with no launch controls', async ({ page, javaScriptEnabled }) => {
+    await page.goto('/');
+    const scene = page.locator('#orbit-scene');
+    // Once WebGL has faded in, the fallback is hidden and the live scene alone carries the name.
+    if (javaScriptEnabled && (await settledSceneState(page)) === 'webgl') await expect(scene.locator('[data-fallback]')).toBeHidden();
+    await expect(page.getByRole('img', { name: 'Planet with project satellites in orbit' })).toBeVisible();
+    await expect(scene).not.toHaveAttribute('tabindex');
+    await expect(page.getByTestId('launch-pad')).toHaveCount(0);
+    await expect(page.getByText(/drag to launch/i)).toHaveCount(0);
   });
 
   test('a drag from the pad produces a trajectory outcome; a click does not', async ({ page, javaScriptEnabled }) => {

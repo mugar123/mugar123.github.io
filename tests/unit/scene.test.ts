@@ -48,6 +48,7 @@ vi.mock('@/lib/orbit', async (importOriginal) => {
 });
 import { simulate } from '@/lib/orbit';
 import { mountOrbitScene, type MountOptions } from '@/scene/scene';
+import { SCENE_LABEL } from '@/lib/satellites';
 
 let container: ElementStub;
 let fallback: ElementStub;
@@ -181,6 +182,17 @@ describe('mount and destroy', () => {
     mounted.destroy();
     expectTornDown();
     expect(gpu.forceContextLoss).toHaveBeenCalledTimes(1);
+  });
+
+  it('is one still image for assistive technology: named and described like the fallback, never focusable, no launch controls', () => {
+    mount(); frame();
+    expect(container.getAttribute('role')).toBe('img');
+    expect(container.getAttribute('aria-label')).toBe(SCENE_LABEL);
+    const descId = container.getAttribute('aria-describedby');
+    expect(container.querySelector(`[id="${descId}"]`)?.textContent).toBe('PaperTok in high orbit.');
+    expect(container.getAttribute('tabindex')).toBeNull();
+    expect(container.querySelector('[data-testid="launch-pad"]')).toBeNull();
+    expect(container.querySelector('[role="status"]')).toBeNull();
   });
 
   it('cleans up a partial mount when a later constructor throws', () => {

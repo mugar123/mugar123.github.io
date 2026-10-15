@@ -7,6 +7,12 @@ export const RING_PHASE: Record<Orbit, number> = { high: 0, mid: (2 * Math.PI) /
 export interface SceneSatellite { id: string; name: string; orbit: Orbit; status: Status; href: string; phase: number }
 export interface WorkEntryLike { id: string; data: { title: string; orbit: Orbit; status: Status; order: number } }
 
+/** Accessible name of the hero scene: the SVG fallback's title and the live scene's label. */
+export const SCENE_LABEL = 'Planet with project satellites in orbit';
+/** Accessible description of the hero scene (empty without satellites). */
+export const describeSatellites = (satellites: readonly SceneSatellite[]): string =>
+  satellites.length ? `${satellites.map((s) => `${s.name} in ${s.orbit} orbit`).join('; ')}.` : '';
+
 export function toSceneSatellites(entries: WorkEntryLike[]): SceneSatellite[] {
   const sorted = [...entries].sort((a, b) => a.data.order - b.data.order);
   const perRing = new Map<Orbit, number>();
