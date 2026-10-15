@@ -1,0 +1,140 @@
+---
+import MissionSpecs from './MissionSpecs.astro';
+import type { SceneSatellite } from '@/lib/satellites';
+interface Props { satellites: SceneSatellite[] }
+const { satellites } = Astro.props;
+const active = satellites.filter((s) => s.status === 'active').length;
+---
+<mission-console data-boot="idle">
+  <section class="console" aria-labelledby="console-title">
+    <header class="console__titlebar">
+      <h2 id="console-title"><span class="console__icon" aria-hidden="true">&gt;_</span> Mission PowerShell</h2>
+      <span class="console__session">LOCAL SESSION</span>
+    </header>
+    <div class="console__screen">
+      <div class="console__profile">
+        <p class="console__command"><span>PS C:\mission&gt;</span> Get-MissionProfile</p>
+        <MissionSpecs />
+        <p class="console__prompt" aria-hidden="true">PS C:\mission&gt; <span class="console__cursor">_</span></p>
+      </div>
+      <aside class="console__telemetry" aria-label="Launch status">
+        <p class="console__label">Launch status</p>
+        <p class="console__state"><span class="console__signal" aria-hidden="true"></span>{active > 0 ? 'IN ORBIT' : 'STANDBY'}</p>
+        <div class="console__meter" aria-hidden="true">{Array.from({ length: 16 }, () => <span />)}</div>
+        <dl class="console__readouts">
+          <div><dt>Active satellites</dt><dd>{String(active).padStart(2, '0')}</dd></div>
+          <div><dt>Ground station</dt><dd>Salamanca</dd></div>
+        </dl>
+        <ul class="console__manifest" aria-label="Satellite manifest">
+          {satellites.map((s, i) => <li><span class="console__slot">{String(i + 1).padStart(2, '0')}</span><span>{s.name}<small>{s.orbit.toUpperCase()} ORBIT / {s.status.toUpperCase()}</small></span></li>)}
+        </ul>
+      </aside>
+    </div>
+    <footer class="console__footer">
+      <span><span class="console__footer-mark" aria-hidden="true">■</span> Profile loaded <span class="console__footer-detail">/ 6 systems checked</span></span>
+      <button type="button" class="console__replay" hidden>Replay boot <span aria-hidden="true">↵</span></button>
+    </footer>
+  </section>
+</mission-console>
+
+<script>
+  class MissionConsole extends HTMLElement {
+    private cleanup?: () => void;
+    connectedCallback() {
+      const button = this.querySelector<HTMLButtonElement>('button')!;
+      const motion = matchMedia('(prefers-reduced-motion: reduce)');
+      const events = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let frame = 0;
+      const finish = () => {
+        clearTimeout(timer);
+        cancelAnimationFrame(frame);
+        this.classList.remove('is-booting');
+        this.dataset.boot = 'complete';
+      };
+      const boot = () => {
+        finish();
+        if (motion.matches) return;
+        frame = requestAnimationFrame(() => {
+          this.classList.add('is-booting');
+          this.dataset.boot = 'running';
+          timer = setTimeout(finish, 1800);
+        });
+      };
+      const preference = () => {
+        button.hidden = motion.matches;
+        if (motion.matches) finish();
+      };
+      preference();
+      motion.addEventListener('change', preference, { signal: events.signal });
+      button.addEventListener('click', boot, { signal: events.signal });
+      const observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) { boot(); observer.disconnect(); }
+      }, { threshold: 0.2 });
+      observer.observe(this);
+      this.cleanup = () => { finish(); observer.disconnect(); events.abort(); };
+    }
+    disconnectedCallback() { this.cleanup?.(); }
+  }
+  if (!customElements.get('mission-console')) customElements.define('mission-console', MissionConsole);
+</script>
+
+<style>
+  mission-console { display: block; }
+  .console { padding: 5px; background: var(--grid); border: 1px solid var(--ink); box-shadow: inset 1px 1px var(--surface), inset -1px -1px var(--ink-2), 6px 6px 0 var(--grid); font: 0.875rem/1.65 var(--font-mono); }
+  .console__titlebar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.45rem 0.65rem 0.65rem; }
+  .console__titlebar h2 { display: flex; align-items: center; gap: 0.65rem; margin: 0; font: 0.8125rem/1.4 var(--font-mono); letter-spacing: 0; }
+  .console__icon { background: var(--ink); color: var(--paper); padding: 0 0.25rem; box-shadow: 1px 1px var(--surface); }
+  .console__session { font-size: 0.6875rem; letter-spacing: 0.06em; }
+  .console__screen { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; background: var(--ink); color: var(--paper); border: 1px solid var(--ink-2); box-shadow: 1px 1px var(--surface); }
+  .console__profile { padding: 1.5rem 2rem; min-width: 0; }
+  .console__command { margin: 0 0 1.15rem; font-size: 0.75rem; overflow-wrap: anywhere; }
+  .console__command > span { color: var(--grid); }
+  .console__prompt { margin: 1.1rem 0 0; font-size: 0.75rem; }
+  .console__cursor { display: inline-block; color: var(--paper); }
+  .console__telemetry { border-left: 1px solid var(--ink-2); padding: 1.5rem; }
+  .console__label { color: var(--grid); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.35rem; }
+  .console__state { font-size: 1.25rem; letter-spacing: 0.06em; margin: 0 0 1rem; display: flex; align-items: center; gap: 0.6rem; }
+  .console__signal { width: 0.6rem; height: 0.6rem; background: var(--accent); box-shadow: 2px 2px 0 rgb(226 64 28 / 25%); }
+  .console__meter { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--ink-2); height: 15px; margin-bottom: 1.25rem; }
+  .console__meter span { flex: 1; background: var(--grid); }
+  .console__meter span:last-child { background: var(--accent); }
+  .console__readouts { margin: 0 0 1.25rem; font-size: 0.75rem; }
+  .console__readouts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; }
+  .console__readouts dt { color: var(--grid); }
+  .console__readouts dd { margin: 0; }
+  .console__manifest { list-style: none; padding: 1rem 0 0; margin: 0; border-top: 1px dashed var(--ink-2); font-size: 0.75rem; }
+  .console__manifest li { display: flex; gap: 0.75rem; margin-bottom: 0.65rem; }
+  .console__manifest li:last-child { margin-bottom: 0; }
+  .console__slot { color: var(--grid); }
+  .console__manifest small { display: block; color: var(--grid); font-size: 0.625rem; letter-spacing: 0.04em; margin-top: 0.15rem; }
+  .console__footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.35rem 1rem; padding: 0.5rem 0.6rem 0.15rem; min-height: 2.2rem; font-size: 0.6875rem; }
+  .console__footer-mark { margin-right: 0.35rem; }
+  .console__replay { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--ink-2); box-shadow: inset 1px 1px var(--surface), 1px 1px var(--ink-2); padding: 0.15rem 0.5rem; cursor: pointer; }
+  .console__replay:hover { background: var(--surface); }
+  .console__replay:active { box-shadow: inset 1px 1px var(--ink-2); transform: translate(1px, 1px); }
+  .is-booting .console__meter { animation: meter-fill 1200ms steps(16, end) both; }
+  .is-booting .console__cursor { animation: cursor-blink 450ms steps(1, end) 4; }
+  .is-booting .console__signal { animation: signal-on 1600ms steps(1, end) both; }
+  @keyframes meter-fill { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+  @keyframes cursor-blink { 50% { visibility: hidden; } }
+  @keyframes signal-on { 0% { background: var(--grid); box-shadow: none; } 85%, 100% { background: var(--accent); } }
+  @media (max-width: 999px) {
+    .console__screen { grid-template-columns: minmax(0, 1fr) 15rem; }
+    .console__profile, .console__telemetry { padding: 1.25rem; }
+  }
+  @media (max-width: 767px) {
+    .console__screen { grid-template-columns: 1fr; }
+    .console__telemetry { border-left: 0; border-top: 1px dashed var(--ink-2); }
+    .console__session { display: none; }
+    .console__footer-detail { display: none; }
+    .console__profile, .console__telemetry { padding: 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .is-booting .console__meter, .is-booting .console__cursor, .is-booting .console__signal { animation: none; }
+  }
+  @media print {
+    .console, .console__screen { background: white; color: black; box-shadow: none; }
+    .console__replay { display: none; }
+  }
+</style>

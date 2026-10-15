@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import Base from '@/layouts/Base.astro';
 import Section from '@/components/Section.astro';
 import SatelliteCard from '@/components/SatelliteCard.astro';
-import MissionSpecs from '@/components/MissionSpecs.astro';
+import MissionConsole from '@/components/MissionConsole.astro';
 import HowIWork from '@/components/HowIWork.astro';
 import PostList from '@/components/PostList.astro';
 import OrbitScene from '@/scene/OrbitScene.astro';
@@ -30,18 +30,16 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
         <a class="btn btn--accent" href="mailto:nicomg60@gmail.com">Contact</a>
       </p>
     </div>
-    <aside class="hero__specs container" aria-label="Mission specs"><MissionSpecs compact /></aside>
   </section>
+
+  <div class="mission-console-wrap container"><MissionConsole satellites={satellites} /></div>
 
   <Section id="in-orbit" title={inOrbitTitle}>
     <div class="grid-2">{work.map((e, i) => <SatelliteCard entry={e} index={i} />)}</div>
   </Section>
 
-  <Section id="mission-specs" title="What I bring aboard.">
-    <MissionSpecs />
-    <div class="specs__note">
-      <HowIWork />
-    </div>
+  <Section id="mission-specs" title="How I work.">
+    <HowIWork />
   </Section>
 
   {posts.length > 0 && (
@@ -75,21 +73,17 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn--accent { border-color: var(--accent); border-width: 2px; color: var(--ink); }
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
-  .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
-  /* 1024–1239px: hidden; the Mission specs section repeats them in full. On viewports under ~760px tall they would crowd the scene's outer ring (measured 12–22px into it at 700px tall); wider screens have the same problem at short heights. Below 1024px the hero stacks and keeps them below the copy. */
-  @media (min-width: 1024px) and (max-width: 1239px) { .hero__specs { display: none; } }
+  .mission-console-wrap { padding-block: var(--space-3) var(--space-3); }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
-  .specs__note { margin-top: var(--space-4); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
   .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
   .links__primary { color: var(--ink); text-decoration-color: var(--accent); text-decoration-thickness: 2px; } /* accent as underline, text stays ink (AA) */
-  /* Below 1024px (phones and portrait tablets) the side-by-side hero collides, so it stacks: scene, copy, specs. */
+  /* Below 1024px (phones and portrait tablets) the side-by-side hero collides, so it stacks: scene, copy. */
   @media (max-width: 1023px) {
     .hero { min-height: 0; display: block; }
     .hero__scene { position: static; display: block; }
     .hero__scene :global(.orbit-scene) { width: 100%; }
     .hero__copy { padding-block: var(--space-4); margin-left: var(--space-4); max-width: none; }
-    .hero__specs { position: static; margin: 0 var(--space-4) var(--space-4); }
   }
 </style>
