@@ -185,11 +185,21 @@ export function behindPlanet(p: { x: number; y: number; z: number }, camera: rea
   return along > 0 && perp2 < radius * radius;
 }
 
-/** Drags start within this distance of the pad (scene units, measured on screen). */
+/** Drags start only within this distance of the pad, measured in the orbital plane (scene units). */
 export const PAD_HIT_RADIUS = 0.6;
-/** …but never within less than this many CSS px: a 44 px touch target on small scenes. */
+/** Half of a 44 px touch target, in CSS px. */
 export const MIN_PAD_HIT_PX = 22;
-export const padHitRadiusPx = (pxPerUnit: number): number => Math.max(PAD_HIT_RADIUS * pxPerUnit, MIN_PAD_HIT_PX);
+
+/**
+ * Effective pad radius in orbital-plane units for a scene drawn at `pxPerUnit` CSS px per unit
+ * (= renderer height / (2 · VIEW_RADIUS)). Controller ruling (Task 10 fix round 1):
+ * `max(PAD_HIT_RADIUS, 22 px · unitsPerPx)`, so the radial (screen-horizontal) reach is never under a
+ * 44 px touch target on phone-sized scenes; tangential reach is foreshortened on screen like the plane.
+ */
+export const padHitRadius = (pxPerUnit: number): number => Math.max(PAD_HIT_RADIUS, MIN_PAD_HIT_PX / pxPerUnit);
+
+/** Whether an orbital-plane point lies within `radius` of the pad: the gate every drag must pass. */
+export const withinPad = (p: Point, pad: Point, radius: number): boolean => Math.hypot(p.x - pad.x, p.y - pad.y) <= radius;
 
 /** Movement (CSS px) below which a press is a click, not a drag; fingers jitter more than mice. */
 export function exceedsSlop(dx: number, dy: number, pointerType: string): boolean {

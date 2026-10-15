@@ -12,7 +12,7 @@ import { ACCENT, INK, INK_2, Trace, createRing, toThree } from './rings';
 import { createSatelliteMesh, SATELLITE_SIZE } from './satelliteMesh';
 import {
   HINT, DEFAULT_AIM, stepAim, statusText, isSuccess, AMBIENT_RATE, flightTime, packPoints, sampleTrajectory,
-  simplifyPath, placeLabels, behindPlanet, padHitRadiusPx, exceedsSlop, type LabelItem,
+  simplifyPath, placeLabels, behindPlanet, padHitRadius, withinPad, exceedsSlop, type LabelItem,
 } from './interaction';
 
 export interface MountOptions {
@@ -20,6 +20,11 @@ export interface MountOptions {
   storage: Storage | null;
   onOutcome?: (outcome: Outcome, speed: number) => void;
   onContextLost?: () => void;
+  /**
+   * The running scene hit an unexpected error (a frame, an input or resize handler) and destroyed
+   * itself; the caller should show its fallback. Without it, `onContextLost` is called instead.
+   */
+  onFailure?: (error: unknown) => void;
 }
 
 /** Time step of every simulation the scene runs; playback relies on samples being exactly this far apart. */
@@ -100,8 +105,20 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       try { cleanups.pop()!(); } catch { /* keep tearing down */ }
     }
   };
+  /** After mount, any error tears the scene down and hands back to the fallback instead of freezing it. */
+  const fail = (error: unknown) => {
+    if (destroyed) return;
+    console.info('[orbit] scene failed; showing the static fallback', error);
+    destroy();
+    if (opts.onFailure) opts.onFailure(error); else opts.onContextLost?.();
+  };
+  /** Runs a callback unless the scene is gone; an exception becomes `fail`. */
+  const guard = <A extends unknown[]>(fn: (...args: A) => void) => (...args: A): void => {
+    if (destroyed) return;
+    try { fn(...args); } catch (error) { fail(error); }
+  };
   const listen = <E extends Event>(target: EventTarget, type: string, fn: (ev: E) => void, options?: AddEventListenerOptions) => {
-    const h = fn as EventListener;
+    const h = guard(fn) as EventListener;
     target.addEventListener(type, h, options);
     cleanups.push(() => target.removeEventListener(type, h, options));
   };
@@ -228,6 +245,7 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       mesh.scale.setScalar(visitorScale);
       if (orbit && !fresh) trace.material.opacity = VISITOR_PATH_OPACITY;
       const group = new Group();
+      group.name = orbit ? 'visitor-orbit' : 'flight';
       group.add(trace.line, mesh);
       scene.add(group);
       const c: Craft = { group, trace, mesh, xy: packPoints(sim.points), period: orbit ? sim.period : null, born: clock, tau0, fresh, settled: !fresh, fadeFrom: null };
@@ -348,11 +366,11 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       opts.onOutcome?.(sim.outcome, p.speed);
     }
 
-    // At most one preview per animation frame: input only records the latest request.
+    // At most one preview per animation frame: input only records the latest request, and only the frame
+    // loop applies it. While paused (off-screen) the request waits for the next frame; nothing runs inline.
     let pending: LaunchParams | null | undefined;
     function requestAim(p: LaunchParams | null) {
       pending = p;
-      if (!running) flush(); // paused (off-screen): apply at once and draw a frame
     }
 
     // ── Pointer: a drag starts only at the pad; the vector is measured on the orbital plane ──
@@ -384,12 +402,11 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
     function cancelDrag() { endDrag(); hideAim(); setStatus(HINT, 'hint'); }
 
     listen<PointerEvent>(pad, 'pointerdown', (ev) => {
-      if (drag || !ev.isPrimary || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
-      const r = canvas.getBoundingClientRect();
-      const dx = ev.clientX - r.left - padPx.x, dy = ev.clientY - r.top - padPx.y;
-      if (dx * dx + dy * dy > padHitRadiusPx(pxPerUnit) ** 2) return;
+      if (drag || !running || !ev.isPrimary || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+      // The gate is the orbital plane: the down point must lie within the effective pad radius of the
+      // pad there (see padHitRadius), and the drag vector is then measured from that accepted point.
       const origin = { x: 0, y: 0 };
-      if (!planeAt(ev.clientX, ev.clientY, origin)) return;
+      if (!planeAt(ev.clientX, ev.clientY, origin) || !withinPad(origin, PAD, padHitRadius(pxPerUnit))) return;
       // Set before the browser's own mousedown focuses the container, so focus does not preview the keyboard aim.
       drag = { id: ev.pointerId, type: ev.pointerType, sx: ev.clientX, sy: ev.clientY, origin, moved: false };
       pad.setPointerCapture(ev.pointerId);
@@ -416,8 +433,10 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
     listen<KeyboardEvent>(container, 'keydown', (ev) => {
       if (ev.target !== container || ev.altKey || ev.ctrlKey || ev.metaKey) return;
       if (ev.key === 'Escape') {
+        const queued = pending !== undefined;
+        pending = undefined; // a queued, not yet rendered aim is cleared too
         if (drag) cancelDrag();
-        else if (statusMode !== 'hint') { pending = undefined; hideAim(); setStatus(HINT, 'hint'); }
+        else if (queued || statusMode !== 'hint') { hideAim(); setStatus(HINT, 'hint'); }
         else return;
         ev.preventDefault();
         return;
@@ -443,8 +462,10 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       if (keyboard && !drag && statusMode !== 'preview') requestAim(aim);
     });
     listen(container, 'blur', () => {
+      const queued = pending !== undefined;
+      pending = undefined;
       if (drag) cancelDrag();
-      else if (statusMode === 'preview') { pending = undefined; hideAim(); setStatus(HINT, 'hint'); }
+      else if (queued || statusMode === 'preview') { hideAim(); setStatus(HINT, 'hint'); }
     });
 
     // ── Context loss: hand back to the static fallback (spec §6.5) ──────────────────────────
@@ -469,10 +490,15 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(w, h, false);
 
+      // The pad's DOM hit target is the gate itself: the plane circle around the pad, an ellipse on screen.
       toScreen(toThree(PAD, new Vector3()), padPx);
-      const hit = padHitRadiusPx(pxPerUnit);
-      pad.style.width = pad.style.height = `${2 * hit}px`;
-      pad.style.transform = `translate(${padPx.x - hit}px, ${padPx.y - hit}px)`;
+      const reach = padHitRadius(pxPerUnit);
+      const edge = { x: 0, y: 0 };
+      toScreen(toThree({ x: PAD.x, y: PAD.y + reach }, new Vector3()), edge);
+      const rx = reach * pxPerUnit, ry = Math.abs(edge.y - padPx.y);
+      pad.style.width = `${2 * rx}px`;
+      pad.style.height = `${2 * ry}px`;
+      pad.style.transform = `translate(${padPx.x - rx}px, ${padPx.y - ry}px)`;
       overlay.style.setProperty('--label-max', `${Math.round(w * 0.4)}px`);
       for (const p of projects) {
         const rPx = Math.max(p.size * pxPerUnit, MIN_SATELLITE_PX);
@@ -491,7 +517,7 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       else status.style.removeProperty('transform');
       if (shownAim) drawArrow(shownAim);
     }
-    const ro = new ResizeObserver(() => { layout(); if (!running) flush(); });
+    const ro = new ResizeObserver(guard(() => layout())); // the next frame redraws; nothing renders inline
     ro.observe(container);
     cleanups.push(() => ro.disconnect());
     layout();
@@ -529,24 +555,37 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
       if (width > 0 && container.getAttribute('data-ready') !== 'true') container.setAttribute('data-ready', 'true');
     }
 
+    /** One frame; any exception (render, preview, update) destroys the scene and restores the fallback. */
     function frame(now: number) {
       raf = 0;
       if (destroyed || !running) return;
-      clock += last ? Math.min((now - last) / 1000, 0.1) : 0;
-      last = now;
-      flush();
+      try {
+        clock += last ? Math.min((now - last) / 1000, 0.1) : 0;
+        last = now;
+        flush();
+      } catch (error) {
+        fail(error);
+        return;
+      }
       raf = requestAnimationFrame(frame);
     }
     function setRunning(on: boolean) {
       running = on;
-      if (on && !raf && !destroyed) { last = 0; raf = requestAnimationFrame(frame); }
+      if (!on) {
+        // Off-screen: stop the loop, and end any drag rather than let it run (or launch) unseen.
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+        if (drag) cancelDrag();
+        return;
+      }
+      if (!raf && !destroyed) { last = 0; raf = requestAnimationFrame(frame); }
     }
     cleanups.push(() => { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; });
 
-    const io = new IntersectionObserver((entries) => {
+    const io = new IntersectionObserver(guard((entries: IntersectionObserverEntry[]) => {
       const e = entries[entries.length - 1];
       if (e) setRunning(e.isIntersecting);
-    }, { threshold: 0.02 });
+    }), { threshold: 0.02 });
     io.observe(container);
     cleanups.push(() => io.disconnect());
     setRunning(true);

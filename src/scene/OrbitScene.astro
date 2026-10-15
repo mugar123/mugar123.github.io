@@ -9,78 +9,14 @@ const { satellites } = Astro.props;
 </div>
 
 <script>
-  import { canRenderScene, browserEnv } from '@/scene/capabilities';
-  import type { SceneSatellite } from '@/lib/satellites';
+  import { bootOrbitScene } from '@/scene/island';
 
-  /** Matches the CSS cross-fade below: the fallback is hidden once the scene has faded in over it. */
-  const FADE_MS = 500;
   const root = document.getElementById('orbit-scene');
-
-  if (root && canRenderScene(browserEnv())) boot(root);
-  else console.info('[orbit] static fallback');
-
-  function boot(el: HTMLElement) {
-    el.setAttribute('data-state', 'pending');
-    const fallback = el.querySelector('[data-fallback]');
-    let handle: { destroy(): void } | null = null;
-    let hideTimer = 0;
-
-    const showFallback = () => {
-      handle = null;
-      clearTimeout(hideTimer);
-      fallback?.removeAttribute('hidden');
-      el.setAttribute('data-state', 'fallback');
-    };
-
-    // Keep the SVG until the first WebGL frame exists, cross-fade, then take it out of the page.
-    const ready = new MutationObserver(() => {
-      if (el.getAttribute('data-ready') !== 'true') return;
-      ready.disconnect();
-      hideTimer = window.setTimeout(() => {
-        if (el.getAttribute('data-state') === 'webgl' && el.getAttribute('data-ready') === 'true') fallback?.setAttribute('hidden', '');
-      }, FADE_MS);
-    });
-
-    const start = async () => {
-      try {
-        const { mountOrbitScene } = await import('@/scene/scene');
-        const satellites = JSON.parse(el.getAttribute('data-satellites') ?? '[]') as SceneSatellite[];
-        let storage: Storage | null = null;
-        try { storage = window.localStorage; } catch { storage = null; }
-        ready.observe(el, { attributes: true, attributeFilter: ['data-ready'] });
-        handle = mountOrbitScene(el, { satellites, storage, onContextLost: showFallback });
-        el.setAttribute('data-state', 'webgl');
-      } catch (err) {
-        console.info('[orbit] scene failed to start; showing the static fallback', err);
-        ready.disconnect();
-        handle?.destroy();
-        showFallback();
-      }
-    };
-
-    // Reduced motion switched on mid-visit: stop everything and show the still diagram.
-    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    motion?.addEventListener?.('change', (e) => {
-      if (e.matches && handle) { handle.destroy(); showFallback(); }
-    });
-
-    // Three is fetched only once the hero is (nearly) on screen and the main thread is idle.
-    const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 200));
-    if ('IntersectionObserver' in window) {
-      const near = new IntersectionObserver((entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        near.disconnect();
-        idle(() => void start());
-      }, { rootMargin: '200px 0px' });
-      near.observe(el);
-    } else {
-      idle(() => void start());
-    }
-  }
+  if (root) bootOrbitScene(root);
 </script>
 
 <style is:global>
-  .orbit-scene { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
+  .orbit-scene { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; container-type: inline-size; }
   .orbit-scene:focus { outline: none; }
   .orbit-scene:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
   .orbit-scene [data-fallback] { transition: opacity 500ms var(--ease); }
@@ -143,8 +79,17 @@ const { satellites } = Astro.props;
     padding: 0.2em 0.6em; border: 1px solid var(--ink); background: var(--surface); color: var(--ink);
     text-transform: none; /* the strings are already upper case; keep v₀ lower case */
   }
-  .orbit-status.is-success { border-color: var(--accent); color: var(--accent); }
+  /* Success: accent border, ink text — 12 px accent text on white is only 4.21:1 (fails AA). The 2 px border
+     takes 1 px from the padding so the box does not jump. */
+  .orbit-status.is-success { border-color: var(--accent); border-width: 2px; padding: calc(0.2em - 1px) calc(0.6em - 1px); color: var(--ink); }
   .orbit-scene.is-narrow .orbit-status { top: auto; left: auto; right: var(--space-2); bottom: var(--space-2); }
   .orbit-keys { position: absolute; left: var(--space-2); top: var(--space-2); display: none; color: var(--ink-2); background: var(--paper); padding: 0 0.3em; }
   .orbit-scene:focus-visible .orbit-keys { display: block; }
+
+  /* Narrow scenes (phones): 12 px name labels would cover the planet and truncate, and §1 lists the
+     projects right below the hero, so the names and their leader lines go; the pad mark and the status
+     stay. The status already sits along the bottom edge here (is-narrow), below the pad and the planet. */
+  @container (max-width: 479px) {
+    .orbit-label { display: none; }
+  }
 </style>

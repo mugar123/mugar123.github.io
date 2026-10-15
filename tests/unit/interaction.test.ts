@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   HINT, DEFAULT_AIM, stepAim, formatAngle, outcomeLabel, statusText, isSuccess,
   AMBIENT_RATE, FLIGHT_RATE, flightTime, packPoints, sampleTrajectory, simplifyPath,
-  labelOnRight, placeLabels, behindPlanet, padHitRadiusPx, PAD_HIT_RADIUS, MIN_PAD_HIT_PX, exceedsSlop,
+  labelOnRight, placeLabels, behindPlanet, padHitRadius, withinPad, PAD_HIT_RADIUS, MIN_PAD_HIT_PX, exceedsSlop,
 } from '@/scene/interaction';
 import { simulate, circularPosition, type Point } from '@/lib/orbit';
 import { MIN_SPEED, MAX_SPEED } from '@/lib/launch';
@@ -208,9 +208,20 @@ describe('overlay geometry', () => {
     expect(behindPlanet({ x: 0, y: 0, z: -3.2 }, CAMERA_POSITION)).toBe(false);  // high ring clears the limb
     expect(behindPlanet({ x: 1.5, y: 0, z: 0 }, CAMERA_POSITION)).toBe(false);   // beside the planet
   });
-  it('the pad hit radius is PAD_HIT_RADIUS scene units, never smaller than a touch target', () => {
-    expect(padHitRadiusPx(100)).toBeCloseTo(PAD_HIT_RADIUS * 100, 12);
-    expect(padHitRadiusPx(10)).toBe(MIN_PAD_HIT_PX);
+  it('the pad hit radius is PAD_HIT_RADIUS orbital-plane units, widened to a 44 px target on small scenes', () => {
+    expect(padHitRadius(100)).toBe(PAD_HIT_RADIUS);                    // 60 px across the plane: no widening
+    expect(padHitRadius(10)).toBeCloseTo(MIN_PAD_HIT_PX / 10, 12);       // 2.2 units = 22 px at 10 px/unit
+    expect(padHitRadius(10) * 10).toBeCloseTo(MIN_PAD_HIT_PX, 12);
+  });
+  it('withinPad gates on orbital-plane distance from the pad, radially and tangentially, on both sides', () => {
+    const pad = { x: 1.05, y: 0 };
+    const r = PAD_HIT_RADIUS, e = 1e-6;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      expect(withinPad({ x: pad.x + dx * (r - e), y: pad.y + dy * (r - e) }, pad, r)).toBe(true);
+      expect(withinPad({ x: pad.x + dx * (r + e), y: pad.y + dy * (r + e) }, pad, r)).toBe(false);
+    }
+    // One full plane unit "behind" the pad (tangential) is far outside, however close it looks on screen.
+    expect(withinPad({ x: pad.x, y: pad.y + 1 }, pad, r)).toBe(false);
   });
   it('a press that barely moves is a click, not a drag', () => {
     expect(exceedsSlop(2, 2, 'mouse')).toBe(false);
