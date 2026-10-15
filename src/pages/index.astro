@@ -84,7 +84,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
     .hero { min-height: 0; display: block; }
     .hero__scene { position: static; display: block; }
     .hero__scene :global(.orbit-scene) { width: 100%; }
-    .hero__copy { padding-block: var(--space-4); margin-left: var(--space-4); }
+    .hero__copy { padding-block: var(--space-4); margin-left: var(--space-4); max-width: none; }
     .hero__specs { position: static; margin: 0 var(--space-4) var(--space-4); }
   }
 </style>
