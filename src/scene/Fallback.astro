@@ -48,7 +48,7 @@ const uid = `fb-${Math.random().toString(36).slice(2, 8)}`;
   .fallback { position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
   .fallback__svg { width: 100%; height: 100%; display: block; }
   .fallback__label {
-    position: absolute; transform: translate(14px, -50%); max-width: 40%; font-size: 12px; letter-spacing: 0.04em;
+    position: absolute; transform: translate(14px, -50%); width: max-content; max-width: 40%; font-size: 12px; letter-spacing: 0.04em;
     color: var(--ink-2); background: var(--paper); padding: 0 0.3em;
   }
   .fallback__text { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
