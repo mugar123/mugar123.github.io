@@ -2,14 +2,84 @@
 import { getCollection } from 'astro:content';
 import Base from '@/layouts/Base.astro';
 import Section from '@/components/Section.astro';
+import SatelliteCard from '@/components/SatelliteCard.astro';
+import MissionSpecs from '@/components/MissionSpecs.astro';
+import PostList from '@/components/PostList.astro';
 import OrbitScene from '@/scene/OrbitScene.astro';
 import { toSceneSatellites } from '@/lib/satellites';
-const satellites = toSceneSatellites(await getCollection('work'));
+import { publishedPosts } from '@/lib/posts';
+
+const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
+const satellites = toSceneSatellites(work);
+const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 ---
 <Base title="Nicolás Muñoz — Physics student at Salamanca, already in orbit">
-  <!-- Temporary mount (Task 10); Task 11 builds the real hero around the scene. -->
-  <div class="container"><OrbitScene satellites={satellites} /></div>
-  <Section num="0" id="abstract" label="Abstract" title="Physics student at Salamanca. Already in orbit.">
-    <p>Placeholder hero; replaced in Task 11.</p>
+  <section class="hero" id="abstract" aria-labelledby="hero-title">
+    <div class="hero__scene"><OrbitScene satellites={satellites} /></div>
+    <div class="hero__copy container rise">
+      <p class="mono">§0 · Abstract</p>
+      <h1 id="hero-title">Physics student at Salamanca.<br /><em>Already in orbit.</em></h1>
+      <p class="hero__lede">I build products from my own problems: a swipeable feed for discovering arXiv papers, with real users, and a pipeline that turns my handwritten notes into LaTeX. Second year, still building.</p>
+      <p class="hero__cta">
+        <a class="btn" href="#in-orbit">See what's in orbit</a>
+        <a class="btn btn--accent" href="mailto:nicomg60@gmail.com">Contact</a>
+      </p>
+    </div>
+    <aside class="hero__specs container" aria-label="Mission specs"><MissionSpecs compact /></aside>
+  </section>
+
+  <Section num="1" id="in-orbit" label="In orbit" title="Two satellites, both launched from the classroom.">
+    <div class="grid-2">{work.map((e, i) => <SatelliteCard entry={e} index={i} />)}</div>
+  </Section>
+
+  <Section num="2" id="mission-specs" label="Mission specs" title="What I bring aboard.">
+    <MissionSpecs />
+    <div class="specs__note">
+      <p>My way of working is simple. First I look for a need: while I work on other projects or on my degree, I run into plenty of needs nobody is covering. I write them down and ask who else has them. I rank the list from most to least pressing and look hard at the top three: do other people really have this need? Is it really uncovered, or is it covered and I just didn't know?</p>
+      <p>If it is real, and I don't like the alternatives out there, I start the project and give it my time. I begin by looking for UI inspiration, then I build. I spend hours programming, but just as many testing and checking that the result is really what I wanted. Then I work with Claude Code and Codex in parallel.</p>
+    </div>
+  </Section>
+
+  {posts.length > 0 && (
+    <Section num="3" id="logbook" label="Logbook" title="Latest entries.">
+      <PostList posts={posts} />
+      <p><a class="mono mono--ink" href="/writing">All entries →</a></p>
+    </Section>
+  )}
+
+  <Section num={posts.length > 0 ? '4' : '3'} id="ground-control" label="Ground control" title="Open to internships and junior roles.">
+    <ul class="links mono" aria-label="Contact and social">
+      <li><span>Email</span><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
+      <li><span>GitHub</span><a href="https://github.com/mugar123" rel="me">github.com/mugar123</a></li>
+      <li><span>Building</span><a href="https://papertok.app" rel="me">papertok.app</a></li>
+      <li><span>CV</span><a href="/cv">Read it on this site →</a></li>
+    </ul>
   </Section>
 </Base>
+
+<style>
+  .hero { position: relative; min-height: 80vh; display: grid; align-items: end; }
+  .hero__scene { position: absolute; inset: 0; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
+  .hero__scene :global(.orbit-scene) { width: min(68vw, 60rem); pointer-events: auto; }
+  .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: 40rem; margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
+  .hero__copy h1 em { font-style: italic; }
+  .hero__lede { font-size: var(--text-body); }
+  .hero__cta { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+  .btn { font-family: var(--font-mono); font-size: var(--text-label); text-transform: uppercase; letter-spacing: 0.04em; text-decoration: none; border: 1px solid var(--ink); padding: 0.6em 1em; background: var(--surface); }
+  .btn--accent { border-color: var(--accent); color: var(--accent); }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn--accent:hover { background: var(--accent); color: var(--paper); }
+  .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
+  .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+  .specs__note { margin-top: var(--space-4); }
+  .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
+  .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
+  @media (max-width: 767px) {
+    .hero { min-height: 0; display: block; }
+    .hero__scene { position: static; display: block; }
+    .hero__scene :global(.orbit-scene) { width: 100%; }
+    .hero__copy { padding-block: var(--space-4); margin-left: var(--space-4); }
+    .hero__specs { position: static; margin: 0 var(--space-4) var(--space-4); }
+  }
+</style>

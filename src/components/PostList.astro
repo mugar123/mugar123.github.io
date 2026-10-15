@@ -1,0 +1,21 @@
+---
+import type { CollectionEntry } from 'astro:content';
+interface Props { posts: CollectionEntry<'writing'>[] }
+const { posts } = Astro.props;
+const fmt = (d: Date) => d.toISOString().slice(0, 10);
+---
+<ol class="posts">
+  {posts.map((p) => (
+    <li>
+      <a href={`/writing/${p.id}`}>{p.data.title}</a>
+      <span class="mono">{fmt(p.data.date)}</span>
+      <p>{p.data.summary}</p>
+    </li>
+  ))}
+</ol>
+<style>
+  .posts { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+  li { background: var(--surface); border: 1px solid var(--grid); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-1); }
+  li a { font-size: 1.25rem; text-decoration: none; } li a:hover { text-decoration: underline; }
+  li p { margin: 0; font-size: var(--text-small); }
+</style>

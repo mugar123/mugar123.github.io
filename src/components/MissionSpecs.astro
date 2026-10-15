@@ -1,0 +1,23 @@
+---
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+const specs = [
+  { k: 'Propulsion', v: 'Building things end to end' },
+  { k: 'Guidance', v: 'Product design' },
+  { k: 'Core', v: 'Python' },
+  { k: 'Payload', v: 'Neural networks' },
+  { k: 'Instruments', v: 'LaTeX (advanced) · MATLAB (intermediate)' },
+  { k: 'Tooling', v: 'Cursor · Codex · Claude Code' },
+];
+---
+<dl class:list={['specs', { 'specs--compact': compact }]}>
+  {specs.map((s) => (<div><dt class="mono">{s.k}</dt><dd>{s.v}</dd></div>))}
+</dl>
+<style>
+  .specs { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); margin: 0; }
+  .specs div { background: var(--surface); border: 1px solid var(--grid); padding: var(--space-3); }
+  dt { margin: 0 0 var(--space-1); } dd { margin: 0; font-size: var(--text-small); }
+  .specs--compact { gap: var(--space-1); grid-template-columns: 1fr; }
+  .specs--compact div { background: none; border: 0; padding: 0; display: flex; gap: 0.6em; align-items: baseline; }
+  .specs--compact dd { font-family: var(--font-mono); font-size: var(--text-label); color: var(--ink); }
+</style>
