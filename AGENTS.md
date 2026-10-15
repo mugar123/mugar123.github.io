@@ -19,11 +19,11 @@ Your sandbox has no network, so here is what each reference site does; design ag
 - https://ysuriadesign.com — agency style: big headline, work carousel, "Talk to Yogi" card, tweets as social proof.
 - https://www.inspora.design (filters *3D* and *Web*) — ongoing feed: matte light-on-light 3D objects with one coloured detail, huge serif names as hero, mono HUD panels under 3D scenes.
 
-The shared pattern we are building to: a calm, readable base; **one** memorable interactive object (our planet and launch toy); a metaphor that tells the career story (escape velocity); mono "HUD" labels; everything else scannable. Bold means a crafted detail with personality, not visual noise.
+The shared pattern we are building to: a calm, readable base; **one** memorable object (our planet and its satellites); a metaphor that tells the career story (escape velocity); mono "HUD" labels; everything else scannable. Bold means a crafted detail with personality, not visual noise.
 
 ## The product in one paragraph
 
-A static Astro site on GitHub Pages. Graph-paper background, LaTeX typography (Latin Modern + JetBrains Mono), one accent color. The home hero is an interactive Three.js scene: a matte planet (the classroom), dashed orbit rings, the owner's projects as satellites, and a drag-to-launch toy driven by real two-body physics (`src/lib/orbit.ts`, pure functions, unit-tested). Everything else is calm, server-rendered content from Markdown collections.
+A static Astro site on GitHub Pages. Graph-paper background, LaTeX typography (Latin Modern + JetBrains Mono), one accent color. The home hero is an ambient Three.js scene: a matte planet (the classroom), dashed orbit rings and the owner's projects as satellites, going round at their Kepler rates (`src/lib/orbit.ts`, pure functions, unit-tested). It takes no input: the owner removed the drag-to-launch toy on 2026-10-16, so do not bring it back. Everything else is calm, server-rendered content from Markdown collections.
 
 ## Hard rules
 

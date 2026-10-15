@@ -64,7 +64,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 <style>
   .hero { position: relative; min-height: clamp(34rem, 78vh, 54rem); display: grid; align-items: end; }
   .hero__scene { position: absolute; inset: 0; display: flex; justify-content: flex-end; align-items: center; pointer-events: none; }
-  .hero__scene :global(.orbit-scene) { width: min(62vw, 60rem); pointer-events: auto; }
+  .hero__scene :global(.orbit-scene) { width: min(62vw, 60rem); }
   /* The copy never runs under the scene: on mid-size desktops it is capped by viewport width. */
   .hero__copy { position: relative; padding-block: var(--space-6) var(--space-5); max-width: min(40rem, 56vw); margin-inline: 0; margin-left: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
   .hero__copy h1 em { font-style: italic; }
@@ -76,7 +76,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
-  /* 1024–1239px: the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); the Mission specs section repeats them in full. Below 1024px the hero stacks and keeps them below the copy. */
+  /* 1024–1239px: hidden; the Mission specs section repeats them in full. On viewports under ~760px tall they would crowd the scene's outer ring (measured 12–22px into it at 700px tall); wider screens have the same problem at short heights. Below 1024px the hero stacks and keeps them below the copy. */
   @media (min-width: 1024px) and (max-width: 1239px) { .hero__specs { display: none; } }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
   .specs__note { margin-top: var(--space-4); }

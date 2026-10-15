@@ -1,6 +1,6 @@
 /**
  * Minimal DOM adapter for scene and island lifecycle tests (adapted from impl/codex-t10). It models
- * events, attributes, the element tree and pointer capture — not WebGL, CSS or layout.
+ * events, attributes and the element tree — not WebGL, CSS or layout.
  */
 type Style = Record<string, string> & { setProperty(name: string, value: string): void; removeProperty(name: string): void };
 
@@ -13,10 +13,6 @@ export class ElementStub extends EventTarget {
   className = '';
   clientWidth = 960;
   clientHeight = 540;
-  captures = new Set<number>();
-  focused = false;
-  /** What `matches(':focus-visible')` answers (true = keyboard focus). */
-  focusVisible = false;
   constructor(readonly tagName: string) {
     super();
     const style = {} as Style;
@@ -29,8 +25,6 @@ export class ElementStub extends EventTarget {
   get id() { return this.getAttribute('id') ?? ''; }
   get offsetWidth() { return Math.min(this.textContent.length * 7.5 + 12, 944); }
   get offsetHeight() { return 18; }
-  get tabIndex() { return Number(this.getAttribute('tabindex') ?? -1); }
-  set tabIndex(value: number) { this.setAttribute('tabindex', String(value)); }
   classList = {
     contains: (name: string) => this.className.split(' ').includes(name),
     toggle: (name: string, force?: boolean) => {
@@ -65,23 +59,12 @@ export class ElementStub extends EventTarget {
     }
     return null;
   }
-  matches(selector: string) { return selector === ':focus-visible' ? this.focused && this.focusVisible : this.matchesSelector(selector); }
-  getBoundingClientRect() { return { left: 20, top: 10, width: this.clientWidth, height: this.clientHeight }; }
-  focus() { this.focused = true; }
-  setPointerCapture(id: number) { this.captures.add(id); }
-  hasPointerCapture(id: number) { return this.captures.has(id); }
-  /** Like browsers, releasing capture fires `lostpointercapture` (synchronously here, the harsher case). */
-  releasePointerCapture(id: number) {
-    this.captures.delete(id);
-    this.dispatchEvent(Object.assign(new Event('lostpointercapture'), { pointerId: id }));
-  }
 }
 
 export class DocumentStub extends EventTarget {
   hidden = false;
   fonts = { ready: Promise.resolve() };
   createElement(tag: string) { return new ElementStub(tag); }
-  createElementNS(_ns: string, tag: string) { return new ElementStub(tag); }
 }
 
 /** Stands in for ResizeObserver, IntersectionObserver and MutationObserver. */

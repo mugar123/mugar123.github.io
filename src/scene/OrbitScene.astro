@@ -17,8 +17,6 @@ const { satellites } = Astro.props;
 
 <style is:global>
   .orbit-scene { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; container-type: inline-size; }
-  .orbit-scene:focus { outline: none; }
-  .orbit-scene:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
   .orbit-scene [data-fallback] { transition: opacity 500ms var(--ease); }
   .orbit-scene[data-ready='true'] [data-fallback] { opacity: 0; }
   .orbit-scene [data-fallback][hidden] { display: none !important; }
@@ -49,47 +47,8 @@ const { satellites } = Astro.props;
   /* Behind the planet: hidden, not faded (a 30 % label read at only 1.46:1). It fades out, then leaves the accessibility tree. */
   .orbit-label.is-occluded { opacity: 0; visibility: hidden; }
 
-  /* Launch pad: the hit area is the whole circle; the mark is a small ring. */
-  .orbit-pad {
-    position: absolute; left: 0; top: 0; border-radius: 50%; pointer-events: auto; touch-action: none; cursor: grab;
-  }
-  .orbit-pad::before, .orbit-pad::after { content: ''; position: absolute; left: 50%; top: 50%; border-radius: 50%; }
-  .orbit-pad::after {
-    width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 1px solid var(--ink); background: var(--paper);
-    transition: transform 150ms var(--ease), background-color 150ms var(--ease);
-  }
-  .orbit-pad::before {
-    inset: 0; left: 0; top: 0; border: 1px dashed var(--ink-2); opacity: 0; transition: opacity 150ms var(--ease);
-  }
-  .orbit-pad:hover::before { opacity: 0.6; }
-  .orbit-scene.is-aiming .orbit-pad::before { opacity: 0; }
-  .orbit-pad:hover::after { transform: scale(1.2); }
-  .orbit-scene.is-aiming .orbit-pad { cursor: grabbing; }
-  .orbit-scene.is-aiming .orbit-pad::after { background: var(--ink); transform: scale(1.2); }
-
-  /* Velocity arrow, drawn in screen space from the pad while aiming. */
-  .orbit-aim { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: none; }
-  .orbit-aim.is-on { display: block; }
-  .orbit-aim__line { stroke: var(--ink); stroke-width: 1.5; }
-  .orbit-aim__head { fill: var(--ink); }
-  .orbit-aim__label { fill: var(--ink); font-family: var(--font-mono); font-size: var(--text-label); }
-
-  /* Status HUD (role=status): the hint, the live prediction, then the outcome. */
-  .orbit-status {
-    position: absolute; left: 0; top: 0; white-space: nowrap;
-    padding: 0.2em 0.6em; border: 1px solid var(--ink); background: var(--surface); color: var(--ink);
-    text-transform: none; /* the strings are already upper case; keep v₀ lower case */
-  }
-  /* Success: accent border, ink text — 12 px accent text on white is only 4.21:1 (fails AA). The 2 px border
-     takes 1 px from the padding so the box does not jump. */
-  .orbit-status.is-success { border-color: var(--accent); border-width: 2px; padding: calc(0.2em - 1px) calc(0.6em - 1px); color: var(--ink); }
-  .orbit-scene.is-narrow .orbit-status { top: auto; left: auto; right: var(--space-2); bottom: var(--space-2); }
-  .orbit-keys { position: absolute; left: var(--space-2); top: var(--space-2); display: none; color: var(--ink-2); background: var(--paper); padding: 0 0.3em; }
-  .orbit-scene:focus-visible .orbit-keys { display: block; }
-
-  /* Narrow scenes (phones): 12 px name labels would cover the planet and truncate, and §1 lists the
-     projects right below the hero, so the names and their leader lines go; the pad mark and the status
-     stay. The status already sits along the bottom edge here (is-narrow), below the pad and the planet. */
+  /* Narrow scenes (phones): 12 px name labels would cover the planet and truncate, and the projects are
+     listed right below the hero, so the names and their leader lines go. */
   @container (max-width: 479px) {
     .orbit-label { display: none; }
   }

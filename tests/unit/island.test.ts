@@ -37,7 +37,6 @@ function boot(extra: Partial<BootDeps> = {}) {
     idle: (fn) => { idle = fn; return () => { cancelled.push('idle'); idle = null; }; },
     later: (fn, ms) => { const t = { fn, ms, cancelled: false }; timers.push(t); return () => { t.cancelled = true; }; },
     watchReady: (_e, fn) => { ready = fn; return () => { cancelled.push('ready'); ready = null; }; },
-    storage: () => null,
     ...extra,
   };
   bootOrbitScene(el as unknown as HTMLElement, deps);

@@ -31,7 +31,6 @@ export interface BootDeps {
   later: (fn: () => void, ms: number) => Cancel;
   /** Calls `fn` when the scene marks its first rendered frame (`data-ready="true"`). */
   watchReady: (el: HTMLElement, fn: () => void) => Cancel;
-  storage: () => Storage | null;
 }
 
 const browserDeps = (): BootDeps => ({
@@ -68,9 +67,6 @@ const browserDeps = (): BootDeps => ({
     });
     mo.observe(el, { attributes: true, attributeFilter: ['data-ready'] });
     return () => mo.disconnect();
-  },
-  storage: () => {
-    try { return window.localStorage; } catch { return null; }
   },
 });
 
@@ -120,7 +116,7 @@ export function bootOrbitScene(el: HTMLElement, overrides: Partial<BootDeps> = {
           if (!stopped && el.getAttribute('data-ready') === 'true') fallback?.setAttribute('hidden', '');
         }, FADE_MS));
       }));
-      handle = mod.mountOrbitScene(el, { satellites, storage: d.storage(), onContextLost: stop, onFailure: stop });
+      handle = mod.mountOrbitScene(el, { satellites, onContextLost: stop, onFailure: stop });
       el.setAttribute('data-state', 'webgl');
     } catch (err) {
       console.info('[orbit] scene failed to start; showing the static fallback', err);

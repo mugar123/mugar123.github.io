@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Superseded in part (2026-10-16):** the owner removed the drag-to-launch toy. Tasks 7 and 8 (`launch.ts`, `visitorSatellites.ts`), the launch parts of Tasks 6, 9, 10 and 12b (trajectory physics, launch pad, keyboard aiming, the cursor's `LAUNCH` state) and the drag and keyboard tests of Task 14 no longer describe the code. The spec (§3, §9) is current; do not re-implement them.
+
 **Goal:** Ship Nicolás's personal site — a static Astro site on GitHub Pages whose hero is an interactive Three.js "escape velocity" scene (planet, project satellites, drag-to-launch with real two-body physics) over a graph-paper, LaTeX-typeset page.
 
 **Architecture:** Astro (static output) renders every page from Markdown content collections; the only client JavaScript is a vanilla Three.js island on the home hero, fed satellite data from the `work` collection at build time. Physics lives in a pure TypeScript module (`src/lib/orbit.ts`) with no DOM or Three dependency, so it is unit-tested with Vitest; the scene only draws what that module computes. A server-rendered SVG fallback of the same scene is always in the HTML and is replaced by the canvas only when WebGL is available and the visitor has not asked for reduced motion.

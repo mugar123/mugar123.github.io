@@ -3,6 +3,7 @@
 **Date:** 2026-10-15
 **Owner:** Nicolás Muñoz García
 **Status:** approved in conversation; pending implementation plan
+**Revised:** 2026-10-16 — the drag-to-launch toy was removed; the hero scene is ambient (§3, §9).
 
 ## 1. Purpose
 
@@ -24,11 +25,11 @@ Success looks like: a recruiter lands, understands the pitch, scrolls through tw
 
 ## 3. Concept: escape velocity
 
-The site tells one story: **the student who is already leaving the classroom's gravity**. One memorable interactive 3D object carries it, over a calm, readable base — the pattern shared by the reference sites (mikes.cv, cindyly.design, tomjohn.design, meliketurgut.com).
+The site tells one story: **the student who is already leaving the classroom's gravity**. One memorable 3D object carries it, over a calm, readable base — the pattern shared by the reference sites (mikes.cv, cindyly.design, tomjohn.design, meliketurgut.com).
 
 - **The planet** is the classroom (Salamanca).
 - **Satellites in orbit** are things actually launched: projects. Higher orbit = bigger project.
-- **The toy:** the visitor drags to set launch angle and speed from a launch pad just above the surface (r = 1.05 planet radii — from exactly the surface no non-tangential launch can orbit, so the pad is what makes the game winnable; aiming within 3° of the horizontal snaps to a tangential launch). The trajectory is computed with real two-body physics. Too slow → falls back. Fast enough → stays in a low orbit as a small satellite of their own (persisted per visitor in `localStorage`). Faster than escape velocity → leaves the scene. The three outcomes are labelled in mono type (`SUBORBITAL` / `ORBIT ACHIEVED` / `ESCAPE`).
+- **The scene is ambient.** The satellites go round at their Kepler rates and nothing in the scene responds to the pointer or the keyboard. A drag-to-launch toy shipped first and was removed by the owner on 2026-10-16: it did not read as intended (§9).
 - **Skills are not satellites.** A satellite is something launched, not an ability. Skills live in a text panel called *Mission specs*.
 
 ### 3.1 Content in orbit (initial)
@@ -39,8 +40,6 @@ The site tells one story: **the student who is already leaving the classroom's g
 | `notes-to-latex` | Notes → LaTeX pipeline | mid | active | Handwritten lecture notes transcribed into compiled LaTeX automatically, mixing open-source and closed models. Grew out of hand-typeset course notes; code not public. |
 
 Facts that must never appear on the site: two facts the owner keeps private (owner's decision). No phone number anywhere.
-
-Visitor launches that reach orbit follow their real ellipse (every surface launch passes back through the pad at r = 1.05, so they thread between the rings) and are visually smaller and lighter than real satellites.
 
 ### 3.2 Mission specs (strengths to highlight)
 
@@ -60,7 +59,7 @@ Building things · Product design · Python · Neural networks · LaTeX (advance
 | `--planet` | `#5E6B7A` | matte planet; highlight `#7B8898` |
 | `--surface` | `#FFFFFF` | cards on top of the grid |
 
-Rules: exactly one accent, used only for what is "alive" (PaperTok/active status, the primary CTA, the visitor's successful launch). All text/background pairs pass WCAG AA; `--ink-2` on `--paper` is for labels ≥ 12 px mono only, never body text.
+Rules: exactly one accent, used only for what is "alive" (PaperTok/active status, the primary CTA). All text/background pairs pass WCAG AA; `--ink-2` on `--paper` is for labels ≥ 12 px mono only, never body text.
 
 ### 4.2 Typography (approved: "paper")
 
@@ -81,14 +80,14 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 
 | § | block | content |
 |---|---|---|
-| 0 | **Abstract / hero** — full-bleed | 3D scene fills the hero width, planet offset right. Bottom-left: headline *"Physics student at Salamanca. Already in orbit."* (final copy TBD in implementation, same shape), one sentence, two CTAs: `SEE WHAT'S IN ORBIT` (secondary) and `CONTACT` (accent). Bottom-right: compact Mission specs in mono. Hint label `drag to launch ↗` near the planet. |
+| 0 | **Abstract / hero** — full-bleed | 3D scene fills the hero width, planet offset right. Bottom-left: headline *"Physics student at Salamanca. Already in orbit."* (final copy TBD in implementation, same shape), one sentence, two CTAs: `SEE WHAT'S IN ORBIT` (secondary) and `CONTACT` (accent). Bottom-right: compact Mission specs in mono. |
 | 1 | **In orbit** | One card per satellite from the `work` collection: `SAT-0n · ORBIT · STATUS`, name, one-liner, stack tags in mono, link to its page. |
 | 2 | **Mission specs** | The five strengths as short items, plus the owner's own account of how he works (needs → ranking → validating the top three → UI inspiration first → build and test → Claude Code and Codex in parallel), rewritten in English but adding nothing he did not say. |
 | 3 | **Logbook** | Latest 3 posts from `writing`, link to `/writing`. Hidden automatically if there are no posts; when hidden, Ground control becomes §3 so the numbering stays contiguous. |
 | 4 | **Ground control** | Contact and social: "Open to internships and junior roles." Email `nicomg60@gmail.com` (accent), GitHub `mugar123`, `papertok.app`, and a link to the native CV page `/cv`. Only networks the owner actually lists; no LinkedIn until he has one. |
 | — | footer | `SALAMANCA · 40.96° N, 5.67° W · CET` · `LAST UPDATED <build date>` |
 
-Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a full-width 16:9 band on top (the scene container is 16:9 on every viewport so the SVG fallback and its labels share one frame) and text stacks below: the headline is within the first viewport and both CTAs within the first 1.5 viewports; the launch interaction works with touch. The toy is also keyboard-operable (focus the scene: arrow keys aim and set speed, Enter launches) and announces outcomes through a `role="status"` label.
+Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a full-width 16:9 band on top (the scene container is 16:9 on every viewport so the SVG fallback and its labels share one frame) and text stacks below: the headline is within the first viewport and both CTAs within the first 1.5 viewports. The scene takes no pointer or keyboard input and is not in the tab order; assistive technology gets one image, named and described like the SVG fallback.
 
 ### 5.2 Other pages
 
@@ -96,7 +95,7 @@ Hero behaviour: text is server-rendered and visible immediately; the scene mount
 - `/writing` — all posts, newest first. `/writing/<slug>` — post page, same type rules, 65–70 ch measure.
 - `/about` — longer bio, the Salamanca/physics story, his working method in his own words, link to `/cv`.
 - `/cv` — the CV rendered natively, not a PDF, designed as a **mission dossier**: typed data in `src/data/cv.ts` (education, projects, skills, activities, achievements — without the two facts the owner keeps private); huge serif name, mono contact row, sections numbered `§1 EDUCATION`…, each entry a row with a mono date column and a leader line that lights up in the accent on hover. The page has a **live background**: the graph paper drifts slowly and three dashed orbit rings rotate behind the content at low opacity (CSS only, no JavaScript, frozen under reduced motion). A "Print / save as PDF" button uses a print stylesheet (no nav, footer, cursor or background; black on white, 11 pt). No phone number. The Ground control CV link points here.
-- **Custom cursor (site-wide):** on fine-pointer devices a small accent dot plus an ink ring that follows the pointer with inertia; the ring grows and fills over links and buttons and shows the mono word `LAUNCH` over the orbit scene. Off on touch devices and under reduced motion; the native cursor stays available for text inputs. Under 1.5 KB of JavaScript.
+- **Custom cursor (site-wide):** on fine-pointer devices a small accent dot plus an ink ring that follows the pointer with inertia; the ring grows and fills over links and buttons. Off on touch devices and under reduced motion; the native cursor stays available for text inputs. Under 1.5 KB of JavaScript.
 - `/rss.xml`, `/sitemap-index.xml`, `robots.txt`, Open Graph image (static, graph paper + title).
 - `404` — a suborbital joke: "Trajectory decayed." with a link home.
 
@@ -126,15 +125,14 @@ Validated with Zod via content collections. Invalid frontmatter fails the build.
 
 | module | responsibility | depends on |
 |---|---|---|
-| `src/lib/orbit.ts` | Pure functions. `simulate({angle, speed, steps})` → trajectory points and outcome (`suborbital` / `orbit` / `escape`); `escapeSpeed(r)`, `circularSpeed(r)`. Normalized units (planet radius = 1, GM = 1). No DOM, no Three. | nothing |
-| `src/scene/OrbitScene.astro` + `scene.ts` | Builds the Three.js scene from props: planet, dashed orbit rings per band, satellites placed on their ring and animated along it, labels (CSS2D or sprites). Pointer/touch drag → calls `orbit.ts`, draws the trajectory, spawns a visitor satellite on success. Resizes, pauses when off-screen. | `orbit.ts`, three |
+| `src/lib/orbit.ts` | Pure functions: `circularPosition(r, phase)` and `angularSpeed(r)` (Kepler's third law). Normalized units (planet radius = 1, GM = 1). No DOM, no Three. | nothing |
+| `src/scene/OrbitScene.astro` + `scene.ts` | Builds the Three.js scene from props: planet, dashed orbit rings per band, satellites placed on their ring and animated along it, mono DOM labels placed every frame. Resizes, pauses when off-screen. No input handling. | `orbit.ts`, three |
 | `src/scene/fallback.astro` | Static SVG of the same scene (planet, rings, satellites). Shown when WebGL is unavailable, `prefers-reduced-motion` is set, or `saveData`/low-end heuristics trigger. Always present in HTML as `<noscript>`/pre-hydration content. | content |
-| `src/lib/visitorSatellites.ts` | Read/write the visitor's successful launches to `localStorage` (cap 3, try/catch, no PII). | nothing |
 | layouts & components | `Base.astro` (head, fonts, grid background, nav, footer), `Section.astro` (§ number + title), `SatelliteCard.astro`, `MissionSpecs.astro`, `PostList.astro`. | content |
 
 ### 6.4 3D assets
 
-Planet, rings and satellites are **code-built primitives** (sphere with `MeshStandardMaterial` flat-ish shading, `LineDashedMaterial` rings, small icosahedra). The visitor's ship is sourced from an open repository (Poly Pizza, Kenney, Quaternius; CC0 or CC-BY) **only if it matches the matte low-poly diagram look**; otherwise it is a code-built capsule. Every external asset is listed with license and source in `public/models/CREDITS.md`. Models are glTF, Draco-compressed, ≤ 150 KB each.
+Planet, rings and satellites are **code-built primitives** (sphere with `MeshStandardMaterial` flat-ish shading, `LineDashedMaterial` rings, small icosahedra). Any external model comes from an open repository (Poly Pizza, Kenney, Quaternius; CC0 or CC-BY) and is used **only if it matches the matte low-poly diagram look**. Every external asset is listed with license and source in `public/models/CREDITS.md`. Models are glTF, Draco-compressed, ≤ 150 KB each.
 
 ### 6.5 Performance and fallbacks
 
@@ -149,8 +147,8 @@ GitHub repo `mugar123/mugar123.github.io`, branch `main`. GitHub Actions workflo
 
 ### 6.7 Quality
 
-- **Vitest**: `orbit.ts` (circular speed yields orbit, below yields suborbital, above escape yields escape; energy conservation within tolerance), `visitorSatellites.ts`, content schema fixtures.
-- **Playwright** smoke: home renders hero text with JS disabled; canvas mounts with JS; drag produces a trajectory; nav works; each content page renders.
+- **Vitest**: `orbit.ts` (circular positions, Kepler rates), the scene's lifecycle and label placement, content schema fixtures.
+- **Playwright** smoke: home renders hero text with JS disabled; canvas mounts with JS; the scene is one named image outside the tab order; nav works; each content page renders.
 - **CI**: typecheck, tests, build, Lighthouse CI against budgets, axe accessibility scan on home and one post.
 - Manual checklist before launch: real device test on iPhone and a low-end Android, keyboard navigation, reduced-motion mode.
 
@@ -166,21 +164,21 @@ Notes taken from Inspora for implementation, not changing any decision:
 
 - Matte, light-on-light 3D objects with a single colored detail validate the "physics diagram" style — keep the planet untextured and let the accent do the work.
 - A huge serif name as the opening line of §0 (paper-title scale, above the scene) is a composition option to try alongside the approved headline.
-- HUD-style mono panels (1 px border, small, no color except the accent) are the shape for *Mission specs* and the launch outcome labels.
+- HUD-style mono panels (1 px border, small, no color except the accent) are the shape for *Mission specs*.
 
 ## 8. Open items after implementation (2026-10-15)
 
 - Owner to review the copy marked `<!-- REVIEW -->` in `src/content/work/*.md` and `src/pages/about.astro`, and the launch months (`launched:` in both work entries are placeholders).
 - PaperTok screenshots (optional); the `work` schema has no `cover` field yet — add it with the first image.
 - Done: CV content rendered at `/cv` from `src/data/cv.ts`; contact email, GitHub and papertok.app; working-method text in the owner's words; neural-networks course (BISITE/USAL) in the CV.
-- Visitor ship: code-built octahedron; no external 3D model is used (`public/models/CREDITS.md` is empty by design).
+- No external 3D model is used (`public/models/CREDITS.md` is empty by design).
 - Deployment: workflows committed; the GitHub repository `mugar123/mugar123.github.io` and the first push are the owner's call; after the first deploy, set Pages → Source to GitHub Actions.
 - Custom domain: later — `site` in `astro.config.mjs` plus a `CNAME` file.
 
 ## 8.1 Implementation outcomes that refined this spec
 
 - Astro 7.x (not 5); TypeScript 5.x (`@astrojs/check` peer); Latin Modern from the DTP package (the web package lacks typographic punctuation).
-- Launch pad at r = 1.05 and tangent snapping (§3); conic-based outcome rules in `orbit.ts` (grazing orbits and truncated paths are classified analytically).
+- The drag-to-launch toy (launch pad at r = 1.05 with tangent snapping, RK4 trajectories with conic-based outcomes, up to three visitor satellites in `localStorage`) shipped and was removed on 2026-10-16 (§9); its code is in the git history before that date.
 - `--ink-2` darkened to `#6A6F69` for AA at 12 px; the accent never carries small text (borders, dots, underlines and fills only).
 - The scene container is always 16:9; satellite labels are hidden in scenes narrower than 480 px; the SVG fallback uses HTML labels at a real 12 px.
 - Rings start at staggered base phases so satellites on different rings never line up.
@@ -196,8 +194,8 @@ Notes taken from Inspora for implementation, not changing any decision:
 | Direction | calm base + one 3D object (reference pattern) | neo-brutalist (misclick) |
 | Metaphor | escape velocity, planet + satellites | chalkboard, lab notebook |
 | 3D style | physics diagram (matte, dashed, mono labels) | glossy, pixel, realistic |
-| Story mapping | projects as satellites; visitor launches join low orbit | milestones on one trajectory |
-| Interaction | drag to set launch; real physics | scroll-driven, orbit camera only |
+| Story mapping | projects as satellites | milestones on one trajectory; visitor launches joining low orbit (shipped, removed 2026-10-16) |
+| Interaction | none: an ambient scene (owner, 2026-10-16) | drag to set a launch with real physics (shipped, then removed: it did not read as intended), scroll-driven, orbit camera only |
 | Palette | graph paper + vermilion | warm paper + blue, lab white + orange |
 | Type | Latin Modern + JetBrains Mono | Geist + mono, Instrument Serif + Inter |
 | Hero | full-bleed scene, text bottom-left | split |

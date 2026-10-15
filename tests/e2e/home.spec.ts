@@ -22,19 +22,16 @@ async function webglAvailable(page: Page) {
 }
 
 /**
- * For the interaction tests: skips only when the runner has no WebGL. Otherwise the scene must have
- * mounted and drawn — a fallback here means the island failed (import, mount or runtime error), and
- * that is a failure, not a reason to skip.
+ * For the tests that need the live scene: skips only when the runner has no WebGL. Otherwise the scene
+ * must have mounted and drawn — a fallback here means the island failed (import, mount or runtime
+ * error), and that is a failure, not a reason to skip.
  */
 async function requireMountedScene(page: Page) {
-  test.skip(!(await webglAvailable(page)), 'WebGL unavailable in this runner — run locally for the interaction tests');
+  test.skip(!(await webglAvailable(page)), 'WebGL unavailable in this runner — run locally for the live-scene tests');
   const scene = page.locator('#orbit-scene');
   await expect(scene).toHaveAttribute('data-state', 'webgl', { timeout: 10_000 });
   await expect(scene).toHaveAttribute('data-ready', 'true', { timeout: 10_000 });
 }
-
-/** The launch HUD, located by test id and by its live-region role, so dropping role="status" fails. */
-const launchStatus = (page: Page) => page.getByTestId('launch-status').and(page.getByRole('status'));
 
 const opacity = (loc: Locator) => loc.evaluate((el) => getComputedStyle(el).opacity);
 
@@ -97,34 +94,6 @@ test.describe('home', () => {
     await expect(scene).not.toHaveAttribute('tabindex');
     await expect(page.getByTestId('launch-pad')).toHaveCount(0);
     await expect(page.getByText(/drag to launch/i)).toHaveCount(0);
-  });
-
-  test('a drag from the pad produces a trajectory outcome; a click does not', async ({ page, javaScriptEnabled }) => {
-    test.skip(!javaScriptEnabled, 'needs JS');
-    await page.goto('/');
-    await requireMountedScene(page);
-    const pad = (await page.getByTestId('launch-pad').boundingBox())!;
-    const status = launchStatus(page);
-    const cx = pad.x + pad.width / 2, cy = pad.y + pad.height / 2;
-    // A stationary click is not a launch.
-    await page.mouse.click(cx, cy);
-    await expect(status).toHaveText(/DRAG TO LAUNCH/);
-    // A drag is.
-    await page.mouse.move(cx, cy); await page.mouse.down();
-    await page.mouse.move(cx + 80, cy - 25, { steps: 8 });
-    await page.mouse.up();
-    await expect(status).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
-  });
-
-  test('the toy is keyboard operable', async ({ page, javaScriptEnabled }) => {
-    test.skip(!javaScriptEnabled, 'needs JS');
-    await page.goto('/');
-    await requireMountedScene(page);
-    await page.locator('#orbit-scene').focus();
-    await page.keyboard.press('ArrowUp');
-    await page.keyboard.press('ArrowUp');
-    await page.keyboard.press('Enter');
-    await expect(launchStatus(page)).toContainText(/v₀ · (ORBIT ACHIEVED|SUBORBITAL|ESCAPE)/);
   });
 
   test('losing the WebGL context restores the SVG fallback', async ({ page, javaScriptEnabled }) => {

@@ -5,7 +5,6 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { circularPosition, type Point } from '@/lib/orbit';
 
 export const INK = '#121412';
-export const INK_2 = '#6A6F69';
 export const ACCENT = '#E2401C';
 
 /** Simulation plane (x, y) → Three (x, 0, −y). */
@@ -18,8 +17,6 @@ export interface TraceStyle {
   /** Dash and gap lengths in scene units; omit `dash` for a solid line. */
   dash?: number;
   gap?: number;
-  /** Fading traces need blending; static ones stay opaque. */
-  transparent?: boolean;
 }
 
 /**
@@ -57,7 +54,6 @@ export class Trace {
       dashed,
       dashSize: style.dash ?? 1,
       gapSize: style.gap ?? style.dash ?? 1,
-      transparent: style.transparent ?? false,
     });
     this.line = new Line2(this.geometry, this.material);
     this.line.frustumCulled = false; // the bounding volume would be stale between rewrites
@@ -90,8 +86,6 @@ export class Trace {
     this.distBuf.needsUpdate = true;
     this.geometry.instanceCount = segments;
   }
-
-  clear(): void { this.geometry.instanceCount = 0; }
 
   dispose(): void {
     this.line.removeFromParent();

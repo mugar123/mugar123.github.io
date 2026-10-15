@@ -2,7 +2,7 @@
 ---
 <div class="cursor" aria-hidden="true" hidden>
   <span class="cursor__dot"></span>
-  <span class="cursor__ring"><span class="cursor__label mono">LAUNCH</span></span>
+  <span class="cursor__ring"></span>
 </div>
 
 <script>
@@ -30,8 +30,6 @@
       dot.style.transform = `translate(${x}px, ${y}px)`;
       const t = e.target as Element | null;
       root.classList.toggle('is-link', Boolean(t?.closest('a, button, [role="button"]')));
-      // Only the launch pad itself gets the launch state; the rest of the scene keeps the plain ring.
-      root.classList.toggle('is-launch', Boolean(t?.closest('.orbit-pad')));
       root.classList.toggle('is-text', Boolean(t?.closest('input, textarea, [contenteditable]')));
       if (!raf) raf = requestAnimationFrame(tick);
     };
@@ -64,28 +62,15 @@
 </script>
 
 <style is:global>
-  /* .orbit-scene .orbit-pad outranks the scene's own grab/grabbing rules (src/scene/OrbitScene.astro). */
-  html.has-cursor, html.has-cursor a, html.has-cursor button, html.has-cursor .orbit-scene .orbit-pad { cursor: none; }
+  html.has-cursor, html.has-cursor a, html.has-cursor button { cursor: none; }
   html.has-cursor input, html.has-cursor textarea, html.has-cursor [contenteditable] { cursor: auto; }
   .cursor { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
   .cursor[hidden] { display: none; }
   .cursor__dot, .cursor__ring { position: absolute; top: 0; left: 0; border-radius: 50%; will-change: transform; }
   .cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--accent); }
-  .cursor__ring { width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 1px solid var(--ink); display: grid; place-items: center;
+  .cursor__ring { width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 1px solid var(--ink);
     transition: width var(--dur) var(--ease), height var(--dur) var(--ease), margin var(--dur) var(--ease), background-color var(--dur) var(--ease), border-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
-  .cursor .cursor__label { font-size: 12px; color: var(--ink); background: var(--paper); padding: 0 0.3em; border-radius: 2px; opacity: 0; transition: opacity var(--dur) var(--ease); }
   .cursor.is-link .cursor__ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; background: rgba(226, 64, 28, 0.12); border-color: var(--accent); }
-  /* Over the launch pad: a wider dashed accent ring with crosshair ticks at N/E/S/W and the LAUNCH label. */
-  .cursor.is-launch .cursor__ring { width: 56px; height: 56px; margin: -28px 0 0 -28px; border-style: dashed; border-color: var(--accent); }
-  .cursor__ring::before {
-    content: ''; position: absolute; inset: -9px; opacity: 0; transition: opacity var(--dur) var(--ease);
-    background:
-      linear-gradient(var(--accent), var(--accent)) top center / 1px 8px no-repeat,
-      linear-gradient(var(--accent), var(--accent)) bottom center / 1px 8px no-repeat,
-      linear-gradient(var(--accent), var(--accent)) left center / 8px 1px no-repeat,
-      linear-gradient(var(--accent), var(--accent)) right center / 8px 1px no-repeat;
-  }
-  .cursor.is-launch .cursor__ring::before, .cursor.is-launch .cursor__label { opacity: 1; }
   .cursor.is-text .cursor__ring, .cursor.is-text .cursor__dot, .cursor.is-out .cursor__ring, .cursor.is-out .cursor__dot { opacity: 0; }
   @media print { .cursor { display: none; } }
 </style>
