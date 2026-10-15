@@ -35,8 +35,10 @@ The site tells one story: **the student who is already leaving the classroom's g
 
 | id | name | orbit | status | one-liner |
 |---|---|---|---|---|
-| `papertok` | PaperTok | high | active | Study app born from how he studies himself. |
-| `notes-to-latex` | Notes → LaTeX pipeline | mid | active | Handwritten notes transcribed to compiled LaTeX automatically, combining open-source and closed models. |
+| `papertok` | PaperTok | high | active | A short-form, swipeable feed for discovering arXiv papers (papertok.app, github.com/mugar123/papertok; React, Vite, Firebase, KaTeX, Transformers.js, Python; ~100 users). |
+| `notes-to-latex` | Notes → LaTeX pipeline | mid | active | Handwritten lecture notes transcribed into compiled LaTeX automatically, mixing open-source and closed models. Grew out of hand-typeset course notes; code not public. |
+
+Facts that must never appear on the site: the a-private-grant mini-grant and the a private application application (owner's decision). No phone number anywhere.
 
 Visitor launches that reach orbit occupy the **low** orbit band and are visually smaller and lighter than real satellites.
 
@@ -81,9 +83,9 @@ Rules: exactly one accent, used only for what is "alive" (PaperTok/active status
 |---|---|---|
 | 0 | **Abstract / hero** — full-bleed | 3D scene fills the hero width, planet offset right. Bottom-left: headline *"Physics student at Salamanca. Already in orbit."* (final copy TBD in implementation, same shape), one sentence, two CTAs: `SEE WHAT'S IN ORBIT` (secondary) and `CONTACT` (accent). Bottom-right: compact Mission specs in mono. Hint label `drag to launch ↗` near the planet. |
 | 1 | **In orbit** | One card per satellite from the `work` collection: `SAT-0n · ORBIT · STATUS`, name, one-liner, stack tags in mono, link to its page. |
-| 2 | **Mission specs** | The five strengths as short items, plus one paragraph on how he works with AI coding agents. |
+| 2 | **Mission specs** | The five strengths as short items, plus the owner's own account of how he works (needs → ranking → validating the top three → UI inspiration first → build and test → Claude Code and Codex in parallel), rewritten in English but adding nothing he did not say. |
 | 3 | **Logbook** | Latest 3 posts from `writing`, link to `/writing`. Hidden automatically if there are no posts; when hidden, Ground control becomes §3 so the numbering stays contiguous. |
-| 4 | **Ground control** | "Open to internships and junior roles." Email (accent), LinkedIn, GitHub, CV (PDF). |
+| 4 | **Ground control** | Contact and social: "Open to internships and junior roles." Email `nicomg60@gmail.com` (accent), GitHub `mugar123`, `papertok.app`, and a link to the native CV page `/cv`. Only networks the owner actually lists; no LinkedIn until he has one. |
 | — | footer | `SALAMANCA · 40.96° N, 5.67° W · CET` · `LAST UPDATED <build date>` |
 
 Hero behaviour: text is server-rendered and visible immediately; the scene mounts afterwards on top. On viewports < 768 px the scene becomes a shorter top band (≈ 45 vh) and text stacks below: the headline is within the first viewport and both CTAs within the first 1.5 viewports; the launch interaction works with touch. The toy is also keyboard-operable (focus the scene: arrow keys aim and set speed, Enter launches) and announces outcomes through a `role="status"` label.
@@ -92,7 +94,8 @@ Hero behaviour: text is server-rendered and visible immediately; the scene mount
 
 - `/work/<slug>` — one page per satellite: problem, what was built, stack, outcome, screenshots/links. Rendered from `work` Markdown.
 - `/writing` — all posts, newest first. `/writing/<slug>` — post page, same type rules, 65–70 ch measure.
-- `/about` — longer bio, the Salamanca/physics story, how he works with AI tools, CV link.
+- `/about` — longer bio, the Salamanca/physics story, his working method in his own words, link to `/cv`.
+- `/cv` — the CV rendered natively, not a PDF: typed data in `src/data/cv.ts` (education, projects, skills, activities, achievements — without the grant), laid out in the site's visual language (mono date column, serif body, section labels), with a "Print / save as PDF" action that uses a print stylesheet (no nav, footer or grid; black on white). No phone number. The Ground control CV link points here.
 - `/rss.xml`, `/sitemap-index.xml`, `robots.txt`, Open Graph image (static, graph paper + title).
 - `404` — a suborbital joke: "Trajectory decayed." with a link home.
 
@@ -166,9 +169,9 @@ Notes taken from Inspora for implementation, not changing any decision:
 
 ## 8. Open items for the implementation plan
 
-- Final headline and one-liner copy.
-- PaperTok and pipeline assets (screenshots, App Store link, repo links if public).
-- CV PDF and social links.
+- Final headline and one-liner copy (owner reviews).
+- PaperTok screenshots (optional); launch months for both projects (placeholders marked REVIEW).
+- Done: CV content supplied (rendered at `/cv`), contact email, social links (GitHub, papertok.app), working-method text.
 - Whether the visitor ship comes from a repository or code (decided during implementation per §6.4).
 
 ## 9. Decisions log

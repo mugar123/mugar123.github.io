@@ -24,6 +24,7 @@
 - No React, no Tailwind, no analytics, no backend in v1.
 - Every commit message ends with the implementing agent's attribution line (see `AGENTS.md`): `Co-Authored-By: Codex <noreply@openai.com>` for Codex, `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` or the Claude model actually used for Claude. The `git commit -m` lines in the tasks omit the trailer; add yours.
 - The launch pad sits at `LAUNCH_RADIUS = 1.05` planet radii; aims within 3° of the horizontal snap to tangential (spec §3).
+- Owner facts: public email `nicomg60@gmail.com`; GitHub `mugar123`; site `papertok.app`; no phone number anywhere; never mention the a-private-grant grant or a private application; PaperTok is a swipeable discovery feed for arXiv papers (not a study app); the notes→LaTeX pipeline is private (no links). The CV is rendered natively at `/cv`, never shipped as a PDF file.
 
 ## Review Focus
 
@@ -2210,10 +2211,10 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
     <div class="hero__copy container rise">
       <p class="mono">§0 · Abstract</p>
       <h1 id="hero-title">Physics student at Salamanca.<br /><em>Already in orbit.</em></h1>
-      <p class="hero__lede">I build products from my own problems: a study app with real users, and a pipeline that turns my handwritten notes into LaTeX. Second year, still building.</p>
+      <p class="hero__lede">I build products from my own problems: a swipeable feed for discovering arXiv papers, with real users, and a pipeline that turns my handwritten notes into LaTeX. Second year, still building.</p>
       <p class="hero__cta">
         <a class="btn" href="#in-orbit">See what's in orbit</a>
-        <a class="btn btn--accent" href="mailto:nicolas@papertok.app">Contact</a>
+        <a class="btn btn--accent" href="mailto:nicomg60@gmail.com">Contact</a>
       </p>
     </div>
     <aside class="hero__specs container" aria-label="Mission specs"><MissionSpecs compact /></aside>
@@ -2225,7 +2226,10 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 
   <Section num="2" id="mission-specs" label="Mission specs" title="What I bring aboard.">
     <MissionSpecs />
-    <p class="specs__note">I work with AI coding agents every day — Cursor, Codex and Claude Code — the way a physicist works with a good lab partner: I set the problem, check the derivation, and keep the parts that survive. It makes me ship faster without shipping things I do not understand.</p>
+    <div class="specs__note">
+      <p>My way of working is simple. First I look for a need: while I work on other projects or on my degree, I run into plenty of needs nobody is covering. I write them down and ask who else has them. I rank the list from most to least pressing and look hard at the top three: do other people really have this need? Is it really uncovered, or is it covered and I just didn't know?</p>
+      <p>If it is real, and I don't like the alternatives out there, I start the project and give it my time. I begin by looking for UI inspiration, then I build. I spend hours programming, but just as many testing and checking that the result is really what I wanted. Then I work with Claude Code and Codex in parallel.</p>
+    </div>
   </Section>
 
   {posts.length > 0 && (
@@ -2236,12 +2240,12 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   )}
 
   <Section num={posts.length > 0 ? '4' : '3'} id="ground-control" label="Ground control" title="Open to internships and junior roles.">
-    <p class="mono links">
-      <a class="accent" href="mailto:nicolas@papertok.app">Email</a> ·
-      <a href="https://www.linkedin.com/in/REVIEW">LinkedIn</a> ·
-      <a href="https://github.com/mugar123">GitHub</a> ·
-      <a href="/cv.pdf">CV (PDF)</a>
-    </p>
+    <ul class="links mono" aria-label="Contact and social">
+      <li><span>Email</span><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
+      <li><span>GitHub</span><a href="https://github.com/mugar123" rel="me">github.com/mugar123</a></li>
+      <li><span>Building</span><a href="https://papertok.app" rel="me">papertok.app</a></li>
+      <li><span>CV</span><a href="/cv">Read it on this site →</a></li>
+    </ul>
   </Section>
 </Base>
 
@@ -2260,7 +2264,9 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
   .specs__note { margin-top: var(--space-4); }
-  .links a { font-size: var(--text-small); }
+  .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
+  .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
   @media (max-width: 767px) {
     .hero { min-height: 0; display: block; }
     .hero__scene { position: static; display: block; }
@@ -2271,7 +2277,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 </style>
 ```
 
-Replace `REVIEW` in the LinkedIn URL with the real handle when Nicolás provides it (tracked in spec §8).
+The two `specs__note` paragraphs are the owner's own account of his method, translated; do not add to them.
 
 - [ ] **Step 5: Verify**
 
@@ -2407,13 +2413,14 @@ import MissionSpecs from '@/components/MissionSpecs.astro';
   <article class="container prose">
     <p class="mono">About</p>
     <h1>Nicolás Muñoz García.</h1>
-    <!-- REVIEW: Nicolás to edit the bio. -->
-    <p>I am a second-year physics student at the Universidad de Salamanca. I started building software because the tools I wanted for studying did not exist: PaperTok, a study app, and a pipeline that turns my handwritten notes into LaTeX.</p>
-    <p>I care about product as much as code. I design what I build, I ship it, and I keep what people actually use.</p>
-    <p>I work with AI coding agents — Cursor, Codex and Claude Code — every day, and I treat them the way a physicist treats a derivation: useful only once I have checked it.</p>
+    <!-- REVIEW: Nicolás to edit the bio. Facts below come from his CV; the method paragraphs are his own words, translated. -->
+    <p>I am a second-year physics student at the Universidad de Salamanca (BSc, 2025–2029). I build software around needs I run into myself: PaperTok, a swipeable feed for discovering arXiv papers that about a hundred people use, and a pipeline that turns my handwritten lecture notes into compiled LaTeX.</p>
+    <h2>How I work</h2>
+    <p>My way of working is simple. First I look for a need: while I work on other projects or on my degree, I run into plenty of needs nobody is covering. I write them down and ask who else has them. I rank the list from most to least pressing and look hard at the top three: do other people really have this need? Is it really uncovered, or is it covered and I just didn't know?</p>
+    <p>If it is real, and I don't like the alternatives out there, I start the project and give it my time. I begin by looking for UI inspiration, then I build. I spend hours programming, but just as many testing and checking that the result is really what I wanted. Then I work with Claude Code and Codex in parallel.</p>
     <h2>Mission specs</h2>
     <MissionSpecs />
-    <p class="mono"><a class="accent" href="mailto:nicolas@papertok.app">Email</a> · <a href="/cv.pdf">CV (PDF)</a></p>
+    <p class="mono"><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a> · <a href="https://github.com/mugar123">GitHub</a> · <a href="/cv">CV</a></p>
   </article>
 </Base>
 <style>.prose { padding-block: var(--space-5) var(--space-6); } .prose h2 { margin-top: var(--space-5); }</style>
@@ -2680,7 +2687,7 @@ test.describe('home', () => {
 ```ts
 import { test, expect } from '@playwright/test';
 
-for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/about']) {
+for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/about', '/cv']) {
   test(`${path} renders with a heading and ships no Three`, async ({ page }) => {
     const scripts: string[] = [];
     page.on('request', (r) => { if (r.resourceType() === 'script') scripts.push(r.url()); });
@@ -2691,6 +2698,16 @@ for (const path of ['/work/papertok', '/work/notes-to-latex', '/writing', '/abou
     expect(scripts.filter((u) => /three|scene/i.test(u))).toEqual([]);
   });
 }
+
+test('cv page: no phone number, no grant, print action present', async ({ page }) => {
+  await page.goto('/cv');
+  const text = await page.locator('main').innerText();
+  expect(text).not.toMatch(/\+34|623 ?409 ?632/);
+  expect(text.toLowerCase()).not.toContain('a-private-grant');
+  expect(text.toLowerCase()).not.toContain('application');
+  await expect(page.getByRole('button', { name: /print|save as pdf/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Nicolás Muñoz García');
+});
 
 test('writing index shows the empty state while every post is a draft, and draft routes do not exist', async ({ page }) => {
   await page.goto('/writing');
