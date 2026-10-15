@@ -44,7 +44,7 @@ Visitor launches that reach orbit occupy the **low** orbit band and are visually
 
 ### 3.2 Mission specs (strengths to highlight)
 
-Building things · Product design · Python · Neural networks · Advanced use of AI coding tools (Cursor, Codex, Claude Code). The AI-tooling point also gets one explicit sentence in prose, not just a label — it is a differentiator for recruiters right now.
+Building things · Product design · Python · Neural networks · LaTeX (advanced) · MATLAB (intermediate) · Advanced use of AI coding tools (Cursor, Codex, Claude Code). The AI-tooling point also gets one explicit sentence in prose, not just a label — it is a differentiator for recruiters right now.
 
 ## 4. Visual direction
 

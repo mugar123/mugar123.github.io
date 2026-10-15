@@ -2143,6 +2143,7 @@ const specs = [
   { k: 'Guidance', v: 'Product design' },
   { k: 'Core', v: 'Python' },
   { k: 'Payload', v: 'Neural networks' },
+  { k: 'Instruments', v: 'LaTeX (advanced) · MATLAB (intermediate)' },
   { k: 'Tooling', v: 'Cursor · Codex · Claude Code' },
 ];
 ---
@@ -2609,7 +2610,7 @@ export const cv = {
     },
   ] satisfies CvSection[],
   skills: [
-    { label: 'Programming languages', items: ['Python', 'MATLAB', 'JavaScript'] },
+    { label: 'Programming languages', items: ['Python', 'MATLAB (intermediate)', 'JavaScript'] },
     { label: 'Frameworks and libraries', items: ['React', 'Vite', 'Transformers.js', 'KaTeX'] },
     { label: 'Cloud and databases', items: ['Firebase (Firestore, Authentication, Hosting)'] },
     { label: 'Developer tools', items: ['Git', 'GitHub', 'VS Code', 'LaTeX (advanced)', 'TikZ', 'macOS', 'Claude Code', 'Codex', 'Cursor'] },
