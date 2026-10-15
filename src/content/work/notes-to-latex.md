@@ -8,8 +8,6 @@ stack: [Python, Open + closed models, LaTeX, TikZ]
 order: 2
 ---
 
-<!-- REVIEW: confirm launch month -->
-
 ## Problem
 
 My physics notes live on paper. Typing them into LaTeX by hand costs more than the notes are worth.
@@ -18,8 +16,8 @@ My physics notes live on paper. Typing them into LaTeX by hand costs more than t
 
 It started as hand-typeset course notes on multivariable integration, linear transformations and determinants, with original TikZ figures, shared with classmates.
 
-It became a Python pipeline that photographs a page, runs it through a mix of open-source and closed models, and emits LaTeX that compiles. Open models handle layout and segmentation; closed models handle the hard transcription cases.
+It became a Python pipeline that photographs a page, runs it through a mix of open-source and closed models, and emits LaTeX that compiles.
 
 ## Outcome
 
-My own notes, compiled and searchable. The code is private for now.
+My own notes, compiled. The code is private for now.

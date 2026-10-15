@@ -13,8 +13,6 @@ links:
 order: 1
 ---
 
-<!-- REVIEW: confirm launch month -->
-
 ## Problem
 
 Students and researchers rarely discover literature outside their existing reading habits.

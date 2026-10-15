@@ -13,7 +13,7 @@ const { title, orbit, status, launched, oneLiner, stack, links } = entry.data;
 ---
 <Base title={`${title} — Nicolás Muñoz`} description={oneLiner}>
   <article class="container prose">
-    <p class="mono">Satellite · {orbit} orbit · <Hud accent={status === 'active'}>{status}</Hud> · launched {launched.toISOString().slice(0, 10)}</p>
+    <p class="mono">Satellite · {orbit} orbit · <Hud accent={status === 'active'}>{status}</Hud> · launched {launched.toISOString().slice(0, 7)}</p>
     <h1>{title}</h1>
     <p class="lede">{oneLiner}</p>
     <p class="mono">Stack · {stack.join(' · ')}</p>

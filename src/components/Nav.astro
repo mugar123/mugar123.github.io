@@ -1,8 +1,13 @@
 ---
+import { getCollection } from 'astro:content';
+import { publishedPosts } from '@/lib/posts';
+
 const path = Astro.url.pathname;
+// Writing joins the nav with its first published entry; until then /writing only holds the empty state.
+const hasPosts = publishedPosts(await getCollection('writing')).length > 0;
 const items = [
   { href: '/#in-orbit', label: 'Work' },
-  { href: '/writing', label: 'Writing' },
+  ...(hasPosts ? [{ href: '/writing', label: 'Writing' }] : []),
   { href: '/about', label: 'About' },
   { href: '/cv', label: 'CV' },
 ];

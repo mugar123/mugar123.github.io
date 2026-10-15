@@ -25,7 +25,7 @@ export const cv = {
       id: 'projects', label: 'Projects',
       entries: [
         {
-          title: 'PaperTok — papertok.app', subtitle: 'Founder and sole developer of a short-form discovery feed for arXiv papers', period: '2025 – present', href: 'https://github.com/mugar123/papertok',
+          title: 'PaperTok — papertok.app', subtitle: 'Founder and sole developer of a short-form discovery feed for arXiv papers', period: '2025 – present', href: 'https://papertok.app',
           bullets: [
             'Built and shipped a full web application that reformats arXiv preprints into a swipeable, TikTok-style feed, so that students and researchers discover relevant literature outside their existing reading habits; around 100 users since launch.',
             'React, Vite, Firebase (authentication, Firestore, hosting), KaTeX for in-browser mathematical notation, Transformers.js (Xenova) for client-side embeddings, and a Python proxy service for the arXiv API.',

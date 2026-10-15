@@ -4,10 +4,22 @@ import '@/styles/print.css';
 import Nav from '@/components/Nav.astro';
 import Footer from '@/components/Footer.astro';
 import Cursor from '@/components/Cursor.astro';
+import { getCollection } from 'astro:content';
+import { publishedPosts } from '@/lib/posts';
 
-interface Props { title: string; description?: string; ogImage?: string }
-const { title, description = 'Physics student at Salamanca who already ships products.', ogImage = '/og.png' } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site);
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  /** Keeps the page out of search indexes (and drops the canonical link), e.g. the 404 page. */
+  noindex?: boolean;
+  /** Overrides the canonical URL; defaults to this page's path on the site. Ignored with `noindex`. */
+  canonical?: string | URL;
+}
+const { title, description = 'Physics student at Salamanca who already ships products.', ogImage = '/og.png', noindex = false } = Astro.props;
+const canonical = noindex ? undefined : new URL(Astro.props.canonical ?? Astro.url.pathname, Astro.site);
+// The feed is only advertised once it has an entry.
+const hasPosts = publishedPosts(await getCollection('writing')).length > 0;
 const buildDate = new Date().toISOString().slice(0, 10);
 ---
 <!doctype html>
@@ -17,9 +29,10 @@ const buildDate = new Date().toISOString().slice(0, 10);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate" type="application/rss+xml" title="Nicolás Muñoz — Logbook" href="/rss.xml" />
+    {hasPosts && <link rel="alternate" type="application/rss+xml" title="Nicolás Muñoz — Logbook" href="/rss.xml" />}
     <link rel="preload" href="/fonts/lmroman-400.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:title" content={title} />

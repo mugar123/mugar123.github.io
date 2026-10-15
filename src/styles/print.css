@@ -8,6 +8,7 @@
   main { padding: 0; }
   a { color: #000; text-decoration: none; }
   a[href^='http']::after { content: ' (' attr(href) ')'; font-size: 0.85em; color: #444; }
+  .cv__contacts a::after { content: none; } /* the contact row's link text already is the URL */
   .mono { color: #333; }
   h1 { font-size: 22pt !important; } h2 { font-size: 14pt; margin-top: 10pt; } h3 { font-size: 11.5pt !important; }
   .entry { break-inside: avoid; }

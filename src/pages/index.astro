@@ -4,6 +4,7 @@ import Base from '@/layouts/Base.astro';
 import Section from '@/components/Section.astro';
 import SatelliteCard from '@/components/SatelliteCard.astro';
 import MissionSpecs from '@/components/MissionSpecs.astro';
+import HowIWork from '@/components/HowIWork.astro';
 import PostList from '@/components/PostList.astro';
 import OrbitScene from '@/scene/OrbitScene.astro';
 import { toSceneSatellites } from '@/lib/satellites';
@@ -11,6 +12,11 @@ import { publishedPosts } from '@/lib/posts';
 
 const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
 const satellites = toSceneSatellites(work);
+const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+const count = WORDS[work.length] ?? String(work.length);
+const inOrbitTitle = work.length === 1
+  ? 'One satellite, launched from the classroom.'
+  : `${count} satellites, ${work.length === 2 ? 'both' : 'all'} launched from the classroom.`;
 const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 ---
 <Base title="Nicolás Muñoz — Physics student at Salamanca, already in orbit">
@@ -28,15 +34,14 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
     <aside class="hero__specs container" aria-label="Mission specs"><MissionSpecs compact /></aside>
   </section>
 
-  <Section num="1" id="in-orbit" label="In orbit" title="Two satellites, both launched from the classroom.">
+  <Section num="1" id="in-orbit" label="In orbit" title={inOrbitTitle}>
     <div class="grid-2">{work.map((e, i) => <SatelliteCard entry={e} index={i} />)}</div>
   </Section>
 
   <Section num="2" id="mission-specs" label="Mission specs" title="What I bring aboard.">
     <MissionSpecs />
     <div class="specs__note">
-      <p>My way of working is simple. First I look for a need: while I work on other projects or on my degree, I run into plenty of needs nobody is covering. I write them down and ask who else has them. I rank the list from most to least pressing and look hard at the top three: do other people really have this need? Is it really uncovered, or is it covered and I just didn't know?</p>
-      <p>If it is real, and I don't like the alternatives out there, I start the project and give it my time. I begin by looking for UI inspiration, then I build. I spend hours programming, but just as many testing and checking that the result is really what I wanted. Then I work with Claude Code and Codex in parallel.</p>
+      <HowIWork />
     </div>
   </Section>
 
@@ -72,15 +77,16 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .btn:hover { background: var(--ink); color: var(--paper); }
   .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
-  /* 768–1239px: the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); §2 repeats them in full. Phones keep them in the stack below the copy. */
-  @media (min-width: 768px) and (max-width: 1239px) { .hero__specs { display: none; } }
+  /* 1024–1239px: the compact specs would sit on the scene's launch hint (measured: it covers spec text at 1100–1220px); §2 repeats them in full. Below 1024px the hero stacks and keeps them below the copy. */
+  @media (min-width: 1024px) and (max-width: 1239px) { .hero__specs { display: none; } }
   .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
   .specs__note { margin-top: var(--space-4); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
   .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
   .links__primary { color: var(--ink); text-decoration-color: var(--accent); text-decoration-thickness: 2px; } /* accent as underline, text stays ink (AA) */
-  @media (max-width: 767px) {
+  /* Below 1024px (phones and portrait tablets) the side-by-side hero collides, so it stacks: scene, copy, specs. */
+  @media (max-width: 1023px) {
     .hero { min-height: 0; display: block; }
     .hero__scene { position: static; display: block; }
     .hero__scene :global(.orbit-scene) { width: 100%; }
