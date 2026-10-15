@@ -840,8 +840,10 @@ const { accent = false, as: Tag = 'span' } = Astro.props;
 ---
 <Tag class:list={['hud', 'mono', { 'hud--accent': accent }]}><slot /></Tag>
 <style>
-  .hud { display: inline-block; padding: 0.2em 0.6em; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); }
-  .hud--accent { border-color: var(--accent); color: var(--accent); }
+  .hud { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.2em 0.6em; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); }
+  /* Accent as a live dot and the border; the 12px text stays ink for AA contrast. */
+  .hud--accent { border-color: var(--accent); }
+  .hud--accent::before { content: ''; width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); }
 </style>
 ```
 
@@ -2084,7 +2086,7 @@ const { satellites } = Astro.props;
   .scene-label::before { content: ''; position: absolute; left: -12px; top: 50%; width: 10px; border-top: 1px solid var(--ink-2); }
   .scene-label--hint { border: 1px solid var(--ink); color: var(--ink); background: var(--surface); padding: 0.2em 0.6em; }
   .scene-label--hint::before { display: none; }
-  .scene-label--accent { border-color: var(--accent); color: var(--accent); }
+  .scene-label--accent { border-color: var(--accent); border-width: 2px; color: var(--ink); } /* accent border, ink text: 12px accent text fails AA */
   .scene-pad { width: 22px; height: 22px; border: 1px solid var(--ink); border-radius: 50%; background: transparent; }
   /* The scene stays 16:9 on every viewport: the SVG fallback and its HTML labels share this exact frame. */
 </style>
@@ -2283,7 +2285,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
 
   <Section num={posts.length > 0 ? '4' : '3'} id="ground-control" label="Ground control" title="Open to internships and junior roles.">
     <ul class="links mono" aria-label="Contact and social">
-      <li><span>Email</span><a class="accent" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
+      <li><span>Email</span><a class="links__primary" href="mailto:nicomg60@gmail.com">nicomg60@gmail.com</a></li>
       <li><span>GitHub</span><a href="https://github.com/mugar123" rel="me">github.com/mugar123</a></li>
       <li><span>Building</span><a href="https://papertok.app" rel="me">papertok.app</a></li>
       <li><span>CV</span><a href="/cv">Read it on this site →</a></li>
@@ -2301,17 +2303,19 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
   .hero__lede { font-size: var(--text-body); }
   .hero__cta { display: flex; gap: var(--space-3); flex-wrap: wrap; }
   .btn { font-family: var(--font-mono); font-size: var(--text-label); text-transform: uppercase; letter-spacing: 0.04em; text-decoration: none; border: 1px solid var(--ink); padding: 0.6em 1em; background: var(--surface); }
-  .btn--accent { border-color: var(--accent); color: var(--accent); }
+  /* Accent never carries 12px text (4.2:1 on white fails AA): it marks the border, text stays ink. */
+  .btn--accent { border-color: var(--accent); border-width: 2px; color: var(--ink); }
   .btn:hover { background: var(--ink); color: var(--paper); }
-  .btn--accent:hover { background: var(--accent); color: var(--paper); }
+  .btn--accent:hover { background: var(--ink); color: var(--paper); border-color: var(--accent); }
   .hero__specs { position: absolute; right: 0; bottom: var(--space-5); width: auto; margin-right: max(var(--space-4), calc((100% - var(--content-max)) / 2)); }
   /* Below 1100px the compact specs would sit on the scene's launch hint; §2 repeats them in full anyway. */
   @media (max-width: 1099px) { .hero__specs { display: none; } }
-  .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+  .grid-2 { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
   .specs__note { margin-top: var(--space-4); }
   .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   .links li { display: grid; grid-template-columns: 6rem 1fr; gap: var(--space-3); align-items: baseline; }
   .links a { font-size: var(--text-small); text-transform: none; letter-spacing: 0; }
+  .links__primary { text-decoration-color: var(--accent); text-decoration-thickness: 2px; } /* accent as underline, text stays ink (AA) */
   @media (max-width: 767px) {
     .hero { min-height: 0; display: block; }
     .hero__scene { position: static; display: block; }
