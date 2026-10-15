@@ -15,7 +15,7 @@
 - Site URL is `https://mugar123.github.io`, repo `mugar123/mugar123.github.io`, branch `main`, **no `base` path**.
 - English only. Headlines sentence case; mono labels UPPERCASE. Sections numbered `§0`–`§4`.
 - Exactly one accent color `#E2401C`; used only for active status, primary CTA, and the visitor's successful launch.
-- Body text 18–19 px, line-height ≥ 1.6, color `#121412`; `#6E736D` only for mono labels ≥ 12 px.
+- Body text 18–19 px, line-height ≥ 1.6, color `#121412`; `#6A6F69` only for mono labels ≥ 12 px.
 - Fonts self-hosted: Latin Modern Roman (GUST Font License) and JetBrains Mono (OFL). No Google Fonts requests.
 - Home total JS ≤ 200 KB gzip including Three; other pages ship no Three.
 - Hero text server-rendered and visible with JS disabled; CLS = 0 (fixed-aspect scene container).
@@ -1762,7 +1762,7 @@ export type SatelliteKind = 'active' | 'muted' | 'visitor';
 export function createSatelliteMesh(kind: SatelliteKind): Mesh {
   const size = kind === 'visitor' ? 0.07 : 0.11;
   const geo = kind === 'visitor' ? new OctahedronGeometry(size) : new IcosahedronGeometry(size, 0);
-  const color = kind === 'active' ? '#E2401C' : kind === 'muted' ? '#121412' : '#6E736D';
+  const color = kind === 'active' ? '#E2401C' : kind === 'muted' ? '#121412' : '#6A6F69';
   const mesh = new Mesh(geo, new MeshLambertMaterial({ color: new Color(color), flatShading: true }));
   mesh.name = `satellite-${kind}`;
   return mesh;
@@ -1858,7 +1858,7 @@ export function mountOrbitScene(container: HTMLElement, opts: MountOptions): { d
     const sim = simulate(p);
     if (sim.outcome !== 'orbit') return;
     const g = new Group();
-    g.add(createPath(sim.points, '#6E736D'));
+    g.add(createPath(sim.points, '#6A6F69'));
     const mesh = createSatelliteMesh('visitor'); g.add(mesh);
     scene.add(g);
     const n = sim.points.length; const period = sim.period ?? 6;
@@ -2952,7 +2952,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <text x="80" y="300" font-family="serif" font-size="64" fill="#121412">Nicolás Muñoz</text>
   <text x="80" y="360" font-family="serif" font-size="34" fill="#121412">Physics student at Salamanca.</text>
   <text x="80" y="404" font-family="serif" font-style="italic" font-size="34" fill="#121412">Already in orbit.</text>
-  <text x="80" y="560" font-family="monospace" font-size="18" fill="#6E736D" letter-spacing="2">MUGAR123.GITHUB.IO · §0 ABSTRACT</text>
+  <text x="80" y="560" font-family="monospace" font-size="18" fill="#6A6F69" letter-spacing="2">MUGAR123.GITHUB.IO · §0 ABSTRACT</text>
 </svg>`;
 await writeFile('public/og.png', await sharp(Buffer.from(svg)).png().toBuffer());
 console.log('wrote public/og.png');
