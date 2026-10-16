@@ -43,7 +43,7 @@ test.describe('home', () => {
     await expect(hero.getByRole('link', { name: /see what's in orbit/i })).toBeVisible();
     await expect(hero.getByRole('link', { name: /^contact$/i })).toBeVisible();
     await expect(page.locator('#in-orbit')).toBeVisible();
-    await expect(page.locator('#mission-specs')).toBeVisible();
+    await expect(page.locator('#how-i-work')).toBeVisible();
     await expect(page.locator('#ground-control')).toBeVisible();
   });
 

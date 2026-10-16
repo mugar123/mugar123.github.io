@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import Base from '@/layouts/Base.astro';
 import Section from '@/components/Section.astro';
 import MissionConsole from '@/components/MissionConsole.astro';
-import HowIWork from '@/components/HowIWork.astro';
+import WorkProcedure from '@/components/WorkProcedure.astro';
 import PostList from '@/components/PostList.astro';
 import OrbitScene from '@/scene/OrbitScene.astro';
 import { toSceneSatellites } from '@/lib/satellites';
@@ -35,9 +35,7 @@ const posts = publishedPosts(await getCollection('writing')).slice(0, 3);
     <MissionConsole work={work} />
   </Section>
 
-  <Section id="mission-specs" title="How I work.">
-    <HowIWork />
-  </Section>
+  <WorkProcedure />
 
   {posts.length > 0 && (
     <Section id="logbook" title="Latest entries.">

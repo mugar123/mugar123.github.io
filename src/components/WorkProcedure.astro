@@ -1,0 +1,285 @@
+---
+/**
+ * "How I work" on the home page: the owner's method as a pre-launch procedure that counts down as the
+ * reader scrolls. A step is reached when its marker crosses the reading line (src/lib/procedure.ts): the
+ * pinned readout shows it, the rail is drawn down to it (dashed until the GO gate, solid after) and the
+ * reached steps fill in; scrolling back undoes it. Every sentence is the owner's own, condensed from
+ * HowIWork (which /about keeps in full). Without JS or under reduced motion it is the finished procedure.
+ */
+interface Step { t: string; verb: string; body: string; checks?: string[]; extra?: 'hours' | 'crew' }
+const STEPS: Step[] = [
+  { t: 'T−6', verb: 'Find', body: 'Needs nobody is covering. I run into plenty of them while I work on other projects or on my degree.' },
+  { t: 'T−5', verb: 'Log', body: 'I write them down and ask who else has them.' },
+  { t: 'T−4', verb: 'Rank', body: 'From most to least pressing.' },
+  { t: 'T−3', verb: 'Validate', body: 'I look hard at the top three:', checks: ['Do other people really have this need?', "Is it really uncovered, or is it covered and I just didn't know?"] },
+  { t: 'T−2', verb: 'Go', body: "If it is real, and I don't like the alternatives out there, I start the project and give it my time." },
+  { t: 'T−1', verb: 'Inspire', body: 'I begin by looking for UI inspiration.' },
+  { t: 'T−0', verb: 'Build ⇄ test', body: 'I spend hours programming, but just as many testing and checking that the result is really what I wanted.', extra: 'hours' },
+  { t: 'T+', verb: 'Crew', body: 'Then I work with Claude Code and Codex in parallel.', extra: 'crew' },
+];
+const GATE = STEPS.findIndex((s) => s.verb === 'Go');
+const last = STEPS.length;
+---
+<work-procedure data-gate={GATE}>
+  <section class="hiw container reveal" id="how-i-work" aria-labelledby="how-i-work-title">
+    <div class="hiw__grid">
+      <div class="hiw__side">
+        <div class="hiw__pin">
+          <h2 id="how-i-work-title">How I work.</h2>
+          <p class="mono hiw__doc"><span>Pre-launch procedure</span><span aria-hidden="true">·</span><span>Every project</span></p>
+          <p class="lede">My way of working is simple.</p>
+          <div class="count" aria-hidden="true">
+            <div class="count__stage">
+              {STEPS.map((s, i) => (
+                <div class="count__item">
+                  <span class="count__t">{s.t}</span>
+                  <span class="count__verb mono">{i === GATE ? <><b>Go</b>/ no-go</> : s.verb}</span>
+                </div>
+              ))}
+            </div>
+            <div class="count__meta mono"><span class="count__step">Step {last} / {last}</span><span>Liftoff ↑</span></div>
+            <div class="count__track"><i></i></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="proc-wrap">
+        <ol class="proc" aria-label="Pre-launch procedure">
+          {STEPS.map((s, i) => (
+            <li class:list={['step', { 'step--committed': i >= GATE, 'step--gate': i === GATE }]}>
+              <span class="step__t mono">{s.t}</span>
+              <i class:list={['marker', { 'marker--gate': i === GATE, 'marker--crew': s.extra === 'crew' }]} aria-hidden="true"></i>
+              <span class:list={['step__verb', 'mono', { go: i === GATE }]}>{i === GATE ? <><b>Go</b>/ no-go</> : s.verb}</span>
+              <div class="step__body">
+                <p>{s.body}</p>
+                {s.checks && (
+                  <ul class="checks">
+                    {s.checks.map((c) => <li><i class="box" aria-hidden="true"></i><span>{c}</span></li>)}
+                  </ul>
+                )}
+                {s.extra === 'hours' && (
+                  <div class="hours" aria-hidden="true">
+                    <span class="mono">Programming</span><i class="bar"></i>
+                    <span class="mono">Testing</span><i class="bar"></i>
+                  </div>
+                )}
+                {s.extra === 'crew' && (
+                  <div class="crew" aria-hidden="true">
+                    <span class="track"><span class="mono">Claude Code</span><i></i></span>
+                    <span class="crew__par">∥</span>
+                    <span class="track"><span class="mono">Codex</span><i></i></span>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+        <i class="fill fill--explore" aria-hidden="true"></i>
+        <i class="fill fill--commit" aria-hidden="true"></i>
+      </div>
+    </div>
+  </section>
+</work-procedure>
+
+<script>
+  import { READING_LINE, reachedStep, railFill } from '@/lib/procedure';
+
+  /** Counts the procedure down with the reader's scroll; listens only while the section is near the viewport. */
+  class WorkProcedure extends HTMLElement {
+    #raf = 0;
+    #shown = -2;
+    #io?: IntersectionObserver;
+    #motion = matchMedia('(prefers-reduced-motion: reduce)');
+    #onScroll = () => { this.#raf ||= requestAnimationFrame(() => this.#update()); };
+    #onMotion = () => (this.#motion.matches ? this.#stop() : this.#start());
+
+    connectedCallback() {
+      this.#motion.addEventListener('change', this.#onMotion);
+      if (!this.#motion.matches) this.#start();
+    }
+
+    disconnectedCallback() {
+      this.#motion.removeEventListener('change', this.#onMotion);
+      this.#stop();
+    }
+
+    get #steps() { return [...this.querySelectorAll<HTMLElement>('.step')]; }
+
+    #listen(on: boolean) {
+      if (on) {
+        addEventListener('scroll', this.#onScroll, { passive: true });
+        addEventListener('resize', this.#onScroll);
+      } else {
+        removeEventListener('scroll', this.#onScroll);
+        removeEventListener('resize', this.#onScroll);
+      }
+    }
+
+    #start() {
+      this.classList.add('is-live');
+      this.#shown = -2;
+      this.#update();
+      this.#io = new IntersectionObserver(([entry]) => {
+        this.#listen(!!entry?.isIntersecting);
+        if (entry?.isIntersecting) this.#onScroll();
+      }, { rootMargin: '25% 0px' });
+      this.#io.observe(this);
+    }
+
+    #stop() {
+      this.#io?.disconnect();
+      this.#listen(false);
+      cancelAnimationFrame(this.#raf);
+      this.#raf = 0;
+      this.classList.remove('is-live');
+      for (const s of this.#steps) { s.removeAttribute('data-reached'); s.classList.remove('step--current'); }
+      this.querySelectorAll('.count__item').forEach((it) => it.classList.remove('is-current', 'is-past'));
+      const steps = this.#steps.length;
+      this.querySelector('.count__step')!.textContent = `Step ${steps} / ${steps}`;
+      this.querySelector<HTMLElement>('.count__track i')!.style.removeProperty('--p');
+    }
+
+    #update() {
+      this.#raf = 0;
+      const steps = this.#steps;
+      const wrap = this.querySelector<HTMLElement>('.proc-wrap')!;
+      const box = wrap.getBoundingClientRect();
+      const markers = steps.map((s) => s.querySelector('.marker')!.getBoundingClientRect());
+      const centres = markers.map((m) => m.top + m.height / 2);
+      const line = innerHeight * READING_LINE;
+
+      const { explore, commit } = railFill(centres, Number(this.dataset.gate), line);
+      const x = markers[0]!.left + markers[0]!.width / 2 - box.left;
+      const [ex, co] = wrap.querySelectorAll<HTMLElement>('.fill');
+      Object.assign(ex!.style, { left: `${x - 0.5}px`, top: `${explore.top - box.top}px`, height: `${explore.height}px` });
+      Object.assign(co!.style, { left: `${x - 1}px`, top: `${commit.top - box.top}px`, height: `${commit.height}px` });
+
+      const reached = reachedStep(centres, line);
+      if (reached === this.#shown) return;
+      this.#shown = reached;
+      steps.forEach((s, i) => { s.toggleAttribute('data-reached', i <= reached); s.classList.toggle('step--current', i === reached); });
+      const current = Math.max(reached, 0);
+      this.querySelectorAll('.count__item').forEach((it, i) => { it.classList.toggle('is-current', i === current); it.classList.toggle('is-past', i < current); });
+      this.querySelector('.count__step')!.textContent = `Step ${current + 1} / ${steps.length}`;
+      this.querySelector<HTMLElement>('.count__track i')!.style.setProperty('--p', String((reached + 1) / steps.length));
+    }
+  }
+  if (!customElements.get('work-procedure')) customElements.define('work-procedure', WorkProcedure);
+</script>
+
+<style>
+  work-procedure { display: block; }
+  .hiw { padding-block: var(--space-6); }
+  .hiw__grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-5); align-items: stretch; }
+  .hiw__pin { position: sticky; top: var(--space-5); }
+  .hiw__doc { display: flex; gap: 1.5ch; flex-wrap: wrap; margin: 0; }
+  .lede { font-style: italic; font-size: 1.375rem; line-height: 1.4; margin: var(--space-4) 0 0; }
+
+  /* The countdown readout: decoration; the list is the content. Without JS it rests on the last step. */
+  .count { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--ink); }
+  .count__stage { position: relative; height: 6.5rem; overflow: clip; }
+  .count__item { position: absolute; inset: 0; display: grid; align-content: start; gap: var(--space-1); }
+  .count__item:not(:last-child) { visibility: hidden; }
+  .count__t { font-family: var(--font-mono); font-size: clamp(3.5rem, 2rem + 3vw, 5rem); line-height: 1; letter-spacing: -0.04em; color: var(--ink); }
+  .count__verb { display: flex; gap: 0.6ch; align-items: center; }
+  .count__verb b, .go b { font-weight: 400; color: var(--ink); border: 2px solid var(--accent); padding: 0.05em 0.45em; }
+  .count__meta { display: flex; justify-content: space-between; margin-top: var(--space-3); }
+  .count__track { height: 2px; background: var(--grid); margin-top: var(--space-2); }
+  .count__track i { display: block; height: 100%; background: var(--ink); transform-origin: left; transform: scaleX(var(--p, 1)); transition: transform var(--dur) var(--ease); }
+
+  .proc-wrap { position: relative; }
+  .proc { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--grid); }
+  .step {
+    --rail: 2.25rem;
+    --pad: var(--space-4);
+    position: relative; display: grid;
+    grid-template-columns: 4.5ch var(--rail) 10ch minmax(0, 1fr);
+    column-gap: var(--space-3); align-items: start;
+    padding: var(--pad); border-top: 1px solid var(--grid);
+    transition: background-color var(--dur) var(--ease);
+  }
+  .step:first-child { border-top: 0; }
+  .step__t, .step__verb { padding-top: 0.2em; }
+  .step__t { color: var(--ink-2); }
+  .step__verb { color: var(--ink); }
+  .step__body { font-size: var(--text-small); line-height: 1.55; }
+  .step__body p { margin: 0; }
+  .go { display: inline-flex; gap: 0.5ch; align-items: center; }
+
+  /* The rail through every marker: dashed while exploring, solid from the GO gate on. */
+  .step::before, .step--gate::after {
+    content: ''; position: absolute;
+    left: calc(var(--pad) + 4.5ch + var(--space-3) + var(--rail) / 2 - 0.5px);
+    border-left: 1px dashed var(--ink-2);
+  }
+  .step::before { top: 0; bottom: 0; }
+  .step:first-child::before, .step--gate::before { top: calc(var(--pad) + 0.75em); }
+  .step:last-child::before { bottom: calc(100% - var(--pad) - 0.75em); }
+  .step--committed::before { border-left: 2px solid var(--ink); margin-left: -0.5px; }
+  .step--gate::after { top: 0; height: calc(var(--pad) + 0.75em); }
+
+  .marker { justify-self: center; position: relative; z-index: 2; width: 11px; height: 11px; margin-top: 0.45em; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--ink); transition: background-color 200ms var(--ease); }
+  .marker--gate { width: 15px; height: 15px; margin-top: 0.3em; border-radius: 0; transform: rotate(45deg); border-color: var(--accent); background: var(--accent); }
+  .marker--crew { border-radius: 2px; }
+
+  .checks { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: var(--space-1); }
+  .checks li { display: grid; grid-template-columns: 1.1rem minmax(0, 1fr); gap: 0.6rem; align-items: start; }
+  .box { position: relative; width: 1rem; height: 1rem; margin-top: 0.25em; border: 1.5px solid var(--ink); background: var(--surface); }
+  .box::after { content: ''; position: absolute; left: 3px; top: 0; width: 5px; height: 9px; border: solid var(--ink); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: clip-path 180ms steps(4, end); }
+
+  /* Build ⇄ test: two equal bars, because the hours are equal. */
+  .hours { display: grid; grid-template-columns: 10ch minmax(0, 1fr); gap: 0.35rem 1rem; align-items: center; margin-top: var(--space-2); }
+  .bar { height: 7px; background: var(--ink); transform-origin: left; transition: transform 700ms var(--ease); }
+  /* Crew: two tracks side by side. */
+  .crew { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center; margin-top: var(--space-2); }
+  .track { display: grid; gap: 0.3rem; }
+  .track i { display: block; height: 2px; background: var(--ink); transform-origin: left; transition: transform 500ms var(--ease); }
+  .crew__par { font-family: var(--font-mono); font-size: 1rem; color: var(--ink-2); }
+
+  /* The rail drawn by the scroll position; the component sets top and height in px. */
+  .fill { position: absolute; z-index: 1; display: none; pointer-events: none; }
+  .fill--explore { border-left: 1px dashed var(--ink); }
+  .fill--commit { border-left: 2px solid var(--ink); }
+
+  /* Live: steps not yet reached wait in outline; reached ones fill in. */
+  .is-live .fill { display: block; }
+  .is-live .step::before, .is-live .step--gate::after { border-left: 1px dashed var(--grid); margin-left: 0; }
+  .is-live .marker { background: var(--surface); }
+  .is-live .box::after { clip-path: inset(0 0 100% 0); }
+  .is-live .bar, .is-live .track i { transform: scaleX(0); }
+  .is-live .step--current { background-color: color-mix(in srgb, var(--paper) 55%, var(--surface)); }
+  .is-live .step[data-reached] .marker { background: var(--ink); animation: pop 320ms var(--ease); }
+  .is-live .step[data-reached] .marker--gate { background: var(--accent); animation: gate 520ms var(--ease); }
+  .is-live .step[data-reached] .box::after { clip-path: inset(0); }
+  .is-live .step[data-reached] .checks li:nth-child(2) .box::after { transition-delay: 160ms; }
+  .is-live .step[data-reached] .bar, .is-live .step[data-reached] .track i { transform: none; }
+  .is-live .count__item { visibility: visible; transform: translateY(70%); opacity: 0; transition: transform 380ms var(--ease), opacity 260ms var(--ease); }
+  .is-live .count__item.is-past { transform: translateY(-70%); }
+  .is-live .count__item.is-current { transform: none; opacity: 1; }
+  @keyframes pop { 50% { transform: scale(1.5); } }
+  @keyframes gate { 50% { transform: rotate(45deg) scale(1.6); } }
+
+  /* Below 900px: one column; the readout becomes a slim bar pinned to the top while the list scrolls. */
+  @media (max-width: 899px) {
+    .hiw__grid { display: block; }
+    .hiw__side, .hiw__pin { display: contents; }
+    .count { position: sticky; top: 0; z-index: 5; margin-top: var(--space-4); padding: var(--space-2) var(--space-3); background: var(--paper); border: 1px solid var(--ink); border-bottom: 0; }
+    .count__stage { height: 3rem; }
+    .count__item { grid-template-columns: auto 1fr; align-items: center; align-content: center; gap: var(--space-3); }
+    .count__t { font-size: 2.25rem; }
+    .count__meta { margin-top: var(--space-1); }
+  }
+  @media (max-width: 599px) {
+    .step { --rail: 1.25rem; --pad: var(--space-3); grid-template-columns: var(--rail) minmax(0, 1fr); }
+    .step::before, .step--gate::after { left: calc(var(--pad) + var(--rail) / 2 - 0.5px); }
+    .marker { grid-row: 1 / span 3; grid-column: 1; }
+    .step__t, .step__verb, .step__body { grid-column: 2; }
+    .step__t, .step__verb { padding-top: 0; }
+    .step__verb { margin-bottom: var(--space-1); }
+    .hours { grid-template-columns: 9ch minmax(0, 1fr); }
+  }
+
+  @media print {
+    .count, .fill { display: none; }
+  }
+</style>
