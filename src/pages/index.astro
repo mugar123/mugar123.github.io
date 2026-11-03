@@ -24,6 +24,12 @@ const daily = [55, 50, 21, 30, 28, 30, 430, 1061, 166, 87, 87, 98, 46, 49, 146, 
 const sparkPath = daily
   .map((v, i) => `${i === 0 ? 'M' : 'L'}${((i / (daily.length - 1)) * 190).toFixed(1)} ${(38.7 - (Math.log1p(v) / Math.log1p(1061)) * 36).toFixed(1)}`)
   .join(' ');
+// Commits per day on PaperTok's main branch (GitHub, weeks from 14 June to 1 November 2026, Sunday first),
+// drawn as GitHub draws its contribution graph: four greens by quartile of the busy days.
+const activity = [[34, 52, 71, 43, 27, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [3, 0, 0, 0, 1, 15, 39], [20, 13, 22, 16, 18, 3, 5], [0, 18, 0, 6, 7, 0, 0], [12, 22, 17, 8, 0, 0, 4], [2, 0, 0, 0, 0, 0, 1], [1, 0, 7, 2, 4, 2, 0], [0, 0, 0, 17, 16, 15, 26], [21, 18, 1, 4, 3, 54, 56], [2, 5, 19, 48, 74, 39, 51], [30, 27, 5, 5, 19, 109, 40], [1, 0, 1, 13, 25, 59, 1], [0, 6, 11, 8, 27, 10, 2], [0, 0, 0, 1, 4, 0, 3], [0, 0, 2, 2, 3, 4, 0], [7, 0, 10, 11, 31, 25, 19], [7, 16, 56, 48, 19, 13, 31], [41, 31, 9, 11, 0, 7, 5], [1, 2, 13, 0, 0, 0, 0]];
+const busy = activity.flat().filter((n) => n > 0).sort((a, b) => a - b);
+const q = (f: number) => busy[Math.min(busy.length - 1, Math.floor(busy.length * f))]!;
+const level = (n: number) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
 const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log1p(1061)) * 36).toFixed(1)}`;
 // PaperTok figures, as of 3 November 2026: people from PostHog (last 30 days, internal accounts excluded),
 // commits from GitHub (main, 3 November 2026), libraries and sources from the 0.3 release notes and the README.
@@ -154,6 +160,11 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 </article>
 
           <article class="tile tile--stat">
+  <svg class="trail" viewBox={`0 0 ${activity.length * 13 - 3} 88`} role="img" aria-label="Commits per day since June 2026, one square per day, greener the busier.">
+    {activity.map((week, w) => week.map((n, day) => (
+      <rect class={`trail__day trail__day--${level(n)}`} x={w * 13} y={day * 13} width="10" height="10" rx="2" />
+    )))}
+  </svg>
   <div class="stat">
     <p class="stat__num">1,898</p>
     <p class="stat__label"><svg class="stat__mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>Commits on GitHub</p>
@@ -763,8 +774,14 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   }
 
   /* ---- widget: commits ---- */
-  /* One figure, set low in the tile: the commits on PaperTok's main branch, as of 3 November 2026. */
-  .tile--stat { justify-content: flex-end; gap: 2rem; }
+  /* GitHub's contribution graph for PaperTok since June 2026, then the figure: the commits on main as of 3 November 2026. */
+  .tile--stat { justify-content: space-between; gap: 2rem; }
+  .trail { display: block; width: 100%; height: auto; }
+  .trail__day--0 { fill: #ebedf0; }
+  .trail__day--1 { fill: #9be9a8; }
+  .trail__day--2 { fill: #40c463; }
+  .trail__day--3 { fill: #30a14e; }
+  .trail__day--4 { fill: #216e39; }
   .stat { display: grid; gap: 0.75rem; }
   .stat__num { font-size: 4.5rem; line-height: 0.85; font-weight: 600; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; margin-left: -0.04em; }
   .stat__label { display: flex; align-items: center; gap: 0.5rem; font-size: 1.0625rem; line-height: 1.2; color: var(--ink-2); }
