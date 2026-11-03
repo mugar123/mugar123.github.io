@@ -26,7 +26,7 @@ const sparkPath = daily
   .join(' ');
 const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log1p(1061)) * 36).toFixed(1)}`;
 // PaperTok figures, as of 3 November 2026: people from PostHog (last 30 days, internal accounts excluded),
-// stars from GitHub, libraries and sources from the 0.3 release notes and the README.
+// commits from GitHub (main, 3 November 2026), libraries and sources from the 0.3 release notes and the README.
 ---
 <!doctype html>
 <html lang="en">
@@ -154,17 +154,9 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 </article>
 
           <article class="tile tile--stat">
-  <svg class="stat__grid stat__grid--wide" viewBox="0 0 120 110" aria-hidden="true">
-    <defs><pattern id="stars-wide" width="10" height="10" patternUnits="userSpaceOnUse"><path transform="translate(0.92 1.02) scale(0.34)" d="M12 3L14.6 9.03L21.13 9.63L16.2 13.96L17.64 20.37L12 17.02L6.36 20.37L7.8 13.96L2.87 9.63L9.4 9.03Z" /></pattern></defs>
-    <rect width="120" height="100" fill="url(#stars-wide)" /><rect y="100" width="30" height="10" fill="url(#stars-wide)" />
-  </svg>
-  <svg class="stat__grid stat__grid--narrow" viewBox="0 0 80 160" aria-hidden="true">
-    <defs><pattern id="stars-narrow" width="10" height="10" patternUnits="userSpaceOnUse"><path transform="translate(0.92 1.02) scale(0.34)" d="M12 3L14.6 9.03L21.13 9.63L16.2 13.96L17.64 20.37L12 17.02L6.36 20.37L7.8 13.96L2.87 9.63L9.4 9.03Z" /></pattern></defs>
-    <rect width="80" height="150" fill="url(#stars-narrow)" /><rect y="150" width="30" height="10" fill="url(#stars-narrow)" />
-  </svg>
   <div class="stat">
-    <p class="stat__num">123</p>
-    <p class="stat__label"><svg class="stat__mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>GitHub stars</p>
+    <p class="stat__num">1,898</p>
+    <p class="stat__label"><svg class="stat__mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>Commits on GitHub</p>
   </div>
 </article>
           <article class="tile tile--key">
@@ -770,23 +762,16 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .tile--unis .marquee { margin: 0; }
   }
 
-  /* ---- widget: stars ---- */
-  /* The stars tile is one figure: every star drawn, then the count. */
-  .tile--stat { justify-content: space-between; gap: 2rem; }
-  .stat__grid { display: block; width: 100%; height: auto; }
-  .stat__grid path { fill: #d2d2d7; stroke: #d2d2d7; stroke-width: 2; stroke-linejoin: round; }
-  .stat__grid--narrow { display: none; }
-  .stat { display: flex; flex-direction: column; gap: 0.75rem; }
+  /* ---- widget: commits ---- */
+  /* One figure, set low in the tile: the commits on PaperTok's main branch, as of 3 November 2026. */
+  .tile--stat { justify-content: flex-end; gap: 2rem; }
+  .stat { display: grid; gap: 0.75rem; }
   .stat__num { font-size: 4.5rem; line-height: 0.85; font-weight: 600; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; margin-left: -0.04em; }
   .stat__label { display: flex; align-items: center; gap: 0.5rem; font-size: 1.0625rem; line-height: 1.2; color: var(--ink-2); }
   .stat__mark { flex: none; width: 1.0625rem; height: 1.0625rem; fill: currentColor; }
-
   @media (max-width: 620px) {
-    .tile--stat { min-height: 0; gap: 1.5rem; justify-content: space-between; }
-    .stat__grid--wide { display: none; }
-    .stat__grid--narrow { display: block; }
-    .stat { gap: 0.5rem; }
-    .stat__num { font-size: 3.5rem; }
+    .tile--stat { min-height: 0; }
+    .stat__num { font-size: 3rem; }
     .stat__label { gap: 0.375rem; font-size: 0.9375rem; }
     .stat__mark { width: 0.9375rem; height: 0.9375rem; }
   }
