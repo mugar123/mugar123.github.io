@@ -34,9 +34,13 @@ const links = [
     width: var(--w); height: var(--h); border-radius: var(--r);
     background: #000;
     color: var(--on-dark);
-    transition: width 380ms var(--back), height 380ms var(--back), border-radius 380ms var(--back);
+    /* A soft shadow lifts it on the light pages. Over the black ones the script adds .is-on-dark: the
+       island steps up to the dark-tile grey with a hairline ring, so it never melts into the page. */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    transition: width 380ms var(--back), height 380ms var(--back), border-radius 380ms var(--back), background-color 200ms ease, box-shadow 200ms ease;
     will-change: width, height;
   }
+  .island.is-on-dark { background: var(--dark-tile); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
   .island__hit { position: absolute; inset: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
   .island__hit:focus-visible { outline-offset: 3px; }
   /* The front camera, as it shows through the glass: a dark lens with a faint ring, on the right. */
@@ -122,6 +126,36 @@ const links = [
     };
     measure();
     addEventListener('resize', measure);
+    // What is under the island: the nearest painted background just below it decides whether the
+    // island is on a dark page, where it needs its ring and a step of grey to stay visible.
+    const dark = () => {
+      const r = island.getBoundingClientRect();
+      const x = Math.min(innerWidth - 1, r.left + r.width / 2);
+      const y = Math.min(innerHeight - 1, r.bottom + 6);
+      for (const el of document.elementsFromPoint(x, y)) {
+        if (island.contains(el)) continue;
+        const m = getComputedStyle(el).backgroundColor.match(/\d+(\.\d+)?/g);
+        if (!m || (m.length > 3 && Number(m[3]) === 0)) continue;
+        const [cr, cg, cb] = m.map(Number);
+        return (0.2126 * cr + 0.7152 * cg + 0.0722 * cb) < 80;
+      }
+      return false;
+    };
+    let ticking = false;
+    let settle: number | undefined;
+    const sense = () => {
+      // Once per frame while scrolling, and once more when the scroll has settled (a smooth scroll
+      // can end after its last scroll event has been sampled).
+      clearTimeout(settle);
+      settle = window.setTimeout(() => island.classList.toggle('is-on-dark', dark()), 120);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { island.classList.toggle('is-on-dark', dark()); ticking = false; });
+    };
+    sense();
+    addEventListener('scroll', sense, { passive: true });
+    addEventListener('scrollend', sense);
+    addEventListener('resize', sense);
     // Fine pointers: hover opens, leaving closes. Touch: tap toggles.
     island.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && fine.matches) set(true); });
     island.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && fine.matches) set(false); });

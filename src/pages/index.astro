@@ -5,7 +5,7 @@ import Island from '@/components/Island.astro';
 import { helloStrokes, helloStrokeWidth, helloViewBox } from '@/data/hello';
 import { sources, universities } from '@/data/papertok';
 
-const title = 'Nicolás Muñoz García — Physics student, product builder';
+const title = 'Nicolás Muñoz García';
 const description = 'Second-year physics student at the Universidad de Salamanca who ships software: PaperTok, a swipeable feed for arXiv papers, and a pipeline that turns handwritten notes into LaTeX.';
 const email = 'nicomg60@gmail.com';
 
@@ -39,6 +39,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script is:inline>document.documentElement.classList.add('js');</script>
   </head>
   <body>
@@ -452,6 +453,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
     <script>
       import '@/scripts/scroll';
+      import '@/scripts/goto';
       import { initWaves } from '@/scripts/waves';
       import { playHello } from '@/scripts/hello';
       const hello = document.querySelector<SVGSVGElement>('[data-hello]');
