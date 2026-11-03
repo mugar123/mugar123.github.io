@@ -1,0 +1,133 @@
+:root {
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --bg: #fff;
+  --bg-alt: #f5f5f7;
+  --dark: #000;
+  --dark-tile: #161617;
+  --on-dark: #f5f5f7;
+  --on-dark-2: #86868b;
+  --link: #0066cc;
+  --link-on-dark: #2997ff;
+  --blue: #0071e3;
+  --blue-hover: #0077ed;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --nav-h: 0px; /* the navigation floats as an island; nothing is reserved for it */
+  --gutter: max(1rem, 4vw);
+  --content: 980px;
+  --wide: 1200px;
+
+  --font: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', sans-serif;
+  --serif: ui-serif, 'New York', 'Iowan Old Style', Georgia, serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --math: 'STIX Two Math', 'Latin Modern Math', 'Cambria Math', math, serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-padding-top: 4rem; /* clear of the island */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+body {
+  margin: 0;
+  font: 400 1.0625rem/1.47 var(--font);
+  color: var(--ink);
+  background: var(--dark);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: clip;
+}
+
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; }
+img, svg { display: block; }
+button { font: inherit; color: inherit; }
+math { font-family: var(--math); }
+
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 4px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+.container { width: min(100% - 2 * var(--gutter), var(--content)); margin-inline: auto; }
+.container--wide { width: min(100% - 2 * var(--gutter), var(--wide)); margin-inline: auto; }
+
+/* Type. Tracking tightens as size grows; leading tightens with it. */
+.eyebrow {
+  font-size: clamp(1.1875rem, 1.6vw, 1.5rem);
+  line-height: 1.17;
+  font-weight: 600;
+  letter-spacing: 0.009em;
+}
+.headline {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.lede {
+  font-size: clamp(1.1875rem, 1.7vw, 1.5rem);
+  line-height: 1.33;
+  font-weight: 500;
+  letter-spacing: 0.006em;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.section { padding-block: clamp(5rem, 11vw, 10rem); }
+.section--alt { background: var(--bg-alt); }
+.section--dark { background: var(--dark); color: var(--on-dark); }
+.section--dark .lede { color: var(--on-dark-2); }
+.section--dark .lede strong { color: var(--on-dark); }
+
+/* Buttons and links: feedback lives on the press. */
+.pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 2.75rem; padding: 0.75rem 1.5rem;
+  border: 0; border-radius: 980px;
+  background: var(--blue); color: #fff;
+  font-size: 1.0625rem; font-weight: 400;
+  text-decoration: none; cursor: pointer;
+  transition: transform 120ms var(--ease-out), background-color 200ms ease;
+}
+.pill:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .pill:hover { background: var(--blue-hover); }
+}
+/* Secondary action over an image: a light material instead of a second blue button. */
+.pill--glass {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .pill--glass:hover { background: rgba(255, 255, 255, 0.22); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .pill--glass { background: #3a3a3c; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+.more {
+  display: inline-flex; align-items: center; gap: 0.25em;
+  color: var(--link); text-decoration: none;
+  font-size: 1.0625rem;
+}
+.section--dark .more, .hero .more { color: var(--link-on-dark); }
+.more::after { content: '›'; font-size: 1.15em; line-height: 1; transform: translateY(-0.04em); }
+@media (hover: hover) and (pointer: fine) {
+  .more:hover { text-decoration: underline; }
+}
