@@ -266,8 +266,17 @@ import '@fontsource/caveat/latin-500.css';
 
   /* Narrower desktops: the legend joins the story, as an ordinary list. */
   @media (max-width: 1080px) {
-    .lc__stage { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head sheet" "legend sheet"; align-content: center; row-gap: 2rem; }
-    .lc__head { align-self: end; }
+    /* Two columns: the story and the legend stack beside the page. Only what fits a screen stays:
+       the brand, the headline and the three steps; the lede and the note come back without the
+       script or under reduced motion, where nothing is pinned. */
+    .lc__stage { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head sheet" "legend sheet"; align-content: center; row-gap: 1.5rem; padding-block: 4rem 2rem; }
+    .lc__head { align-self: end; gap: 0.75rem; }
+    .lc__head .lede, .lc__note { display: none; }
+    .lc-brand { font-size: 1.375rem; gap: 0.75rem; }
+    .lc-brand img { width: 2.75rem; height: 2.75rem; }
+    .lc__head .headline { font-size: clamp(1.75rem, 3.4vw, 2.25rem); }
+    .lc-sheet { --h: min(37rem, 100svh - 10rem); }
+    .lc-legend { --lh: min(37rem, 100svh - 10rem); }
     .lc-beam { right: -1.25rem; }
     .lc-legend { align-self: start; display: grid; }
     .lc-legend li { position: static; transform: none; padding-block: 0.625rem; border-top: 1px solid rgba(255, 255, 255, 0.12); grid-template-columns: 1.5rem 1fr; }
