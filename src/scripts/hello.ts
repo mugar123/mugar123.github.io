@@ -28,9 +28,10 @@ export function playHello(svg: SVGSVGElement, after: HTMLElement[]) {
     end = Math.max(end, delay + duration);
   });
 
-  // Name first, as the pen lifts off the "o", then the lede and the buttons: each materialises from a blur.
+  // Name first, as the pen lifts off the "o", then the lede and each button: a fade and a short rise,
+  // opacity and transform only (a blur on text over the live canvas shimmered), staggered by 90ms.
   after.forEach((el, i) => el.animate(
-    [{ opacity: 0, transform: 'translateY(1rem)', filter: 'blur(8px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
-    { duration: 900, delay: end - 300 + i * 120, easing: ARRIVE_EASE, fill: 'both' },
+    [{ opacity: 0, transform: 'translateY(0.75rem)' }, { opacity: 1, transform: 'none' }],
+    { duration: 700, delay: end - 300 + i * 90, easing: ARRIVE_EASE, fill: 'both' },
   ));
 }
