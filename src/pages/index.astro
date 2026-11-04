@@ -645,7 +645,9 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     mask-image: linear-gradient(90deg, transparent, #000 2rem, #000 calc(100% - 2rem), transparent);
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 2rem, #000 calc(100% - 2rem), transparent);
   }
-  .marquee__track { display: flex; width: max-content; list-style: none; margin: 0; padding: 0 0 0 2rem; animation: marquee 90s linear infinite; }
+  /* The inset before the first pill is a margin, outside the track: translateX(-50%) is half the track's own
+     width, so with it as padding each loop ended half the inset too far and the row jumped back by it. */
+  .marquee__track { display: flex; width: max-content; list-style: none; margin: 0 0 0 2rem; padding: 0; animation: marquee 90s linear infinite; }
   .marquee--slow .marquee__track { animation-duration: 60s; }
   .marquee--slow .marquee__row2 { animation-delay: -20s; }
   .marquee--slow .marquee__row3 { animation-delay: -40s; }
@@ -669,7 +671,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .devices { gap: 1rem; }
     .device { width: 47%; }
     .marquee { margin-inline: -1.5rem; }
-    .marquee__track { padding-left: 1.5rem; }
+    .marquee__track { margin-left: 1.5rem; }
   }
 
   .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0; }
@@ -958,9 +960,15 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .cites__edges .cites__go { stroke: var(--ink-2); }
   /* The trail draws itself once the map is on screen: where you came from, through the paper, to the next
      one, which then appears. That sequence is the one thing the still drawing cannot say. */
-  .cites__came, .cites__go { vector-effect: none; stroke-width: 1.4; }
-  /* A gap longer than the path: with a gap of exactly 1, rounding let the next dash peek out at the ends. */
-  :global(html.js:not(.reduce)) [data-trail] .cites__came, :global(html.js:not(.reduce)) [data-trail] .cites__go { stroke-dasharray: 1 3; stroke-dashoffset: 1; }
+  /* Its dash is measured in the drawing's own units (pathLength="1"), so while it draws, its stroke has to
+     scale with the drawing. A non-scaling stroke lays the dash out in screen pixels instead: on a phone,
+     where the drawing is scaled up 1.3×, the dash ran out at 77% of the path and the line never reached
+     the next paper. --unit (one screen pixel in drawing units, set by scripts/scroll.ts) brings the width
+     back to the 1.25px of the other edges. The gap of three lengths keeps the next dash clear of the end. */
+  :global(html.js:not(.reduce)) [data-trail] .cites__came, :global(html.js:not(.reduce)) [data-trail] .cites__go {
+    vector-effect: none; stroke-width: calc(1.25px * var(--unit, 1));
+    stroke-dasharray: 1 3; stroke-dashoffset: 1;
+  }
   :global(html.js:not(.reduce)) [data-trail] .cites__next { opacity: 0; transform: scale(0.9); transform-box: fill-box; transform-origin: center; }
   :global(html.js:not(.reduce)) [data-trail].is-in .cites__came { animation: trail-draw 500ms var(--ease-out) 200ms forwards; }
   :global(html.js:not(.reduce)) [data-trail].is-in .cites__go { animation: trail-draw 500ms var(--ease-out) 600ms forwards; }
@@ -1018,10 +1026,11 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   }
 
   /* ---- Studies: the timeline. ---- */
-  /* Rail: dates | line | content. The line fills top to bottom with --p (0 → 1 = "Now"), set by
-     scripts/scroll.ts straight from the scroll position: it is the reader's own motion, so it is never
-     eased and can be stopped or reversed at any instant. Lighting a milestone is the state change that
-     motion causes: its colours cross over in 200ms, nothing moves. */
+  /* Rail: dates | line | content. The line fills top to bottom (0 → 1 = "Now") straight from the scroll
+     position: it is the reader's own motion, so it is never eased and can be stopped or reversed at any
+     instant. --p is its value without the script or under reduced motion (full); with the script, the
+     browser (below) or scripts/scroll.ts sets the fill's own transform. Lighting a milestone is the state
+     change that motion causes: its colours cross over in 200ms, nothing moves. */
   .tl {
     --p: 0;
     --t: clamp(1.3125rem, 2vw, 1.75rem);        /* milestone title size */
@@ -1052,6 +1061,25 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     background: var(--ink);
     transform: scaleY(var(--p));
     transform-origin: top;
+  }
+  /* Where an animation can be tied to the scroll itself, the browser draws the fill; Chrome and Safari
+     (from 26.4) then run it on the scrolling thread, in step with the page, instead of a frame behind it
+     from the script, which on phones made its tip wobble against the reading line. Same range as the script's: from
+     the first dot on the reading line, 60% down the screen, to the "Now" dot on it. The script lights the
+     milestones from this animation's own progress, so the two always agree. */
+  @supports (animation-timeline: view()) {
+    /* Inset 0: by default the timeline's window leaves out the page's scroll-padding (4rem at the top),
+       which ran the fill 64px ahead of the dots it lights. */
+    .tl__rail { view-timeline-name: --tl-rail; view-timeline-axis: block; view-timeline-inset: 0; }
+    :global(html.js:not(.reduce)) .tl__fill { animation: tl-fill linear both; }
+    /* The timeline in a rule of its own, which outranks the shorthand (the shorthand resets it): in the
+       same rule the CSS minifier folds it into the shorthand, a form no browser accepts. */
+    :global(html.js:not(.reduce)) .tl__rail > .tl__fill {
+      animation-duration: auto;
+      animation-timeline: --tl-rail;
+      animation-range: cover 40dvh cover calc(100% - 60dvh);
+    }
+    @keyframes tl-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
   }
 
   .tl__list {

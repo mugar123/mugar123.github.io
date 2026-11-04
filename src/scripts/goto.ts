@@ -5,8 +5,15 @@
  * quick and a long one never drags. The reader owns the scroll: a wheel, a touch or a key stops the
  * trip where it is. Under reduced motion the jump is instant. The browser's own smooth scrolling stays
  * on for everything else.
+ *
+ * On a touch screen the page scrolls on a thread of its own, at the display's rate; a script that moves
+ * it frame by frame lands a frame behind and stutters, and a long trip outruns the painting of the page.
+ * There the browser's own smooth scroll makes the trip, and never more than a screen and a half of it:
+ * a farther target is first approached by a jump, so the reader still sees the page travel into place
+ * without flashing through every section on the way.
  */
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+const touch = matchMedia('(hover: none) and (pointer: coarse)');
 
 // cubic-bezier(0.77, 0, 0.175, 1), solved for x → y as the browser does it.
 function bezier(x1: number, y1: number, x2: number, y2: number) {
@@ -55,6 +62,13 @@ export function goTo(hash: string) {
   const distance = Math.abs(end - start);
   if (reduce.matches || distance < 2) {
     scrollTo({ top: end, behavior: 'instant' });
+    settle(target, hash);
+    return true;
+  }
+  if (touch.matches) {
+    const reach = innerHeight * 1.5;
+    if (distance > reach) scrollTo({ top: end - Math.sign(end - start) * reach, behavior: 'instant' });
+    scrollTo({ top: end, behavior: 'smooth' });
     settle(target, hash);
     return true;
   }

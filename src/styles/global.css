@@ -51,6 +51,9 @@ h1, h2, h3, p { margin: 0; }
 a { color: inherit; }
 img, svg { display: block; }
 button { font: inherit; color: inherit; }
+/* A tap on a control is never held back to see whether a double-tap zoom follows (quick taps on the
+   reading-level switch would otherwise zoom the page on iOS). Pinch zoom stays. */
+a, button { touch-action: manipulation; }
 math { font-family: var(--math); }
 
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 4px; }

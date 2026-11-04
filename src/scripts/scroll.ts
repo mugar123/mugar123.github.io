@@ -1,49 +1,61 @@
 /**
  * Scroll-linked pieces of the page, driven by one passive listener and one rAF per frame:
- * the statement that lights up word by word, the notes scan and the separation pages.
+ * the statement that lights up word by word, the notes scan, the separation pages and the timeline.
+ * Each frame reads every position first and only then writes, so the page is laid out once per frame,
+ * and a part that is off screen costs nothing.
+ *
+ * Progress through a pinned page is measured against the pinned element's own height (100svh), never
+ * innerHeight: on phones innerHeight grows when the browser's toolbar collapses, mid-scroll, which made
+ * the fills jump forward and finish before their page was released.
  */
 const root = document.documentElement;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 root.classList.toggle('reduce', reduce.matches);
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
+const onScreen = (r: DOMRect, vh: number) => r.bottom >= 0 && r.top <= vh;
+// Progress through a pinned hold: 0 when the pinned child reaches the top, 1 when the section starts to take it away.
+const held = (r: DOMRect, pinned: number) => clamp(-r.top / Math.max(1, r.height - pinned));
 
 // Statement: a slide held on screen while its words light up, one by one, as the section scrolls past.
 const statements = [...document.querySelectorAll<HTMLElement>('[data-statement]')].map((section) => {
   const el = section.querySelector<HTMLElement>('[data-words]')!;
   if (!reduce.matches) el.classList.add('is-armed');
-  return { section, el, words: [...el.querySelectorAll<HTMLElement>('.w')], lit: -1 };
+  return { section, el, pin: el.parentElement!, words: [...el.querySelectorAll<HTMLElement>('.w')], pinH: 0, lit: -1 };
 });
 
-function updateStatements(vh: number) {
-  for (const s of statements) {
+function writeStatements(rects: DOMRect[]) {
+  statements.forEach((s, i) => {
     s.el.classList.toggle('is-armed', !reduce.matches);
-    if (reduce.matches) continue;
-    const rect = s.section.getBoundingClientRect();
-    const p = clamp(-rect.top / (rect.height - vh));
+    if (reduce.matches) return;
     // Nothing is lit when the slide arrives; the last word lights before it leaves.
-    const lit = Math.round(clamp(p / 0.8) * s.words.length);
-    if (lit === s.lit) continue;
-    s.words.forEach((w, i) => w.classList.toggle('on', i < lit));
+    const lit = Math.round(clamp(held(rects[i]!, s.pinH) / 0.8) * s.words.length);
+    if (lit === s.lit) return;
+    s.words.forEach((w, j) => w.classList.toggle('on', j < lit));
     s.lit = lit;
-  }
+  });
 }
 
 // Notes scan: the compiled page is uncovered behind a beam as the section is scrolled.
 const scan = document.querySelector<HTMLElement>('[data-scan]');
+const scanStage = scan?.querySelector<HTMLElement>('.lc__stage');
 const sheet = scan?.querySelector<HTMLElement>('[data-sheet]');
 const tex = scan?.querySelector<HTMLElement>('[data-tex]');
 const beam = scan?.querySelector<HTMLElement>('[data-beam]');
 const steps = scan ? [...scan.querySelectorAll<HTMLElement>('[data-steps] li')] : [];
+let scanH = 0;
+let sheetH = 0;
+let scanned = -1;
 
-function updateScan(vh: number) {
-  if (!scan || !sheet || !tex || !beam) return;
+function writeScan(rect: DOMRect | undefined, vh: number) {
+  if (!scan || !sheet || !tex || !beam || !rect) return;
   if (reduce.matches) { sheet.classList.add('is-done'); return; } // shown compiled, no scrub
-  const rect = scan.getBoundingClientRect();
-  const p = clamp(-rect.top / (rect.height - vh));
-  const s = clamp((p - 0.18) / 0.62);
+  if (scanned !== -1 && !onScreen(rect, vh)) return;
+  const s = clamp((held(rect, scanH) - 0.18) / 0.62);
+  if (s === scanned) return;
+  scanned = s;
   tex.style.clipPath = `inset(0 0 ${(1 - s) * 100}% 0)`;
-  beam.style.transform = `translate3d(0, ${s * sheet.clientHeight}px, 0)`;
+  beam.style.transform = `translate3d(0, ${s * sheetH}px, 0)`;
   beam.style.opacity = s > 0 && s < 1 ? '1' : '0';
   sheet.classList.toggle('is-done', s >= 1);
   const step = s >= 1 ? 2 : s > 0 ? 1 : 0;
@@ -54,26 +66,32 @@ function updateScan(vh: number) {
 // then the line under it fades in. Set on the elements themselves, never inherited through a parent.
 const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => ({
   section,
+  pin: section.querySelector<HTMLElement>('.divider__pin')!,
   title: section.querySelector<HTMLElement>('.divider__title')!,
   sub: section.querySelector<HTMLElement>('.divider__sub')!,
+  pinH: 0,
+  fill: -1,
+  shown: -1,
 }));
 
-function updateDividers(vh: number) {
+function writeDividers(rects: DOMRect[], vh: number) {
   if (reduce.matches) return;
-  for (const d of dividers) {
-    const rect = d.section.getBoundingClientRect();
-    if (rect.bottom < 0 || rect.top > vh) continue;
-    // Progress through the hold: 0 when the page pins at the top, 1 when it starts to leave.
-    const hold = clamp(-rect.top / (rect.height - vh));
+  dividers.forEach((d, i) => {
+    const rect = rects[i]!;
+    if (!onScreen(rect, vh)) return;
+    const hold = held(rect, d.pinH);
     const fill = clamp(hold / 0.7);
-    d.title.style.backgroundPositionX = `${(1 - fill) * 100}%`;
-    d.sub.style.opacity = clamp((hold - 0.7) / 0.2).toFixed(3);
-  }
+    const shown = clamp((hold - 0.7) / 0.2);
+    if (fill !== d.fill) { d.title.style.backgroundPositionX = `${(1 - fill) * 100}%`; d.fill = fill; }
+    if (shown !== d.shown) { d.sub.style.opacity = shown.toFixed(3); d.shown = shown; }
+  });
 }
 
 // Studies: the timeline's line fills as the reader scrolls, and each milestone lights the moment the
 // fill reaches its dot. The fill follows the scroll exactly (no easing: it is the reader's own motion,
 // so it can be stopped or reversed at any instant); only the lit state itself transitions, in CSS.
+// Where the browser can tie an animation to the scroll (see .tl__fill), it draws the fill itself, on the
+// scrolling thread, and this script only reads that animation's progress to light the milestones.
 // Two layouts share the logic: a vertical rail, where the fill tracks a reading line 60% down the
 // viewport, and a pinned stage, where it tracks progress through the section's scroll length.
 const timeline = (() => {
@@ -89,7 +107,8 @@ const timeline = (() => {
   const now = dots.find((d) => d.ms.classList.contains('ms--now')) ?? dots[dots.length - 1]!;
   const stage = root.dataset.timeline === 'stage';
   const track = root.querySelector<HTMLElement>('[data-track]');
-  return { root, section, dots, now, stage, track, p: -1 };
+  const fill = root.querySelector<HTMLElement>('.tl__fill');
+  return { root, section, dots, now, stage, track, fill, p: -1 };
 })();
 
 // Each dot's place along the line, as a fraction of the way from the first dot to the "now" dot.
@@ -111,30 +130,54 @@ function measureTimeline() {
   timeline.p = -1;
 }
 
-function updateTimeline(vh: number) {
+// The browser's own scroll-driven fill, when it runs one.
+const cssFill = () => timeline?.fill?.getAnimations().find((a) => (a as CSSAnimation).animationName === 'tl-fill');
+
+function readTimeline(vh: number) {
+  if (!timeline || reduce.matches) return null;
+  const { section, dots, now, stage } = timeline;
+  const rect = section.getBoundingClientRect();
+  if (!onScreen(rect, vh)) return null;
+  if (stage) return { p: clamp(-rect.top / (rect.height - vh)), css: false };
+  const css = cssFill();
+  if (css) return { p: clamp(Number(css.effect?.getComputedTiming().progress ?? 0)), css: true };
+  const line = vh * 0.6;
+  const first = dots[0]!.dot.getBoundingClientRect();
+  const end = now.dot.getBoundingClientRect();
+  const a = first.top + first.height / 2;
+  const b = end.top + end.height / 2;
+  return { p: clamp((line - a) / (b - a)), css: false };
+}
+
+function writeTimeline(read: { p: number; css: boolean } | null) {
   if (!timeline) return;
-  const { root, section, dots, now, stage } = timeline;
+  const { root, dots, fill, stage } = timeline;
   if (reduce.matches) {
-    if (timeline.p !== 1) { root.style.removeProperty('--p'); dots.forEach((d) => d.ms.classList.toggle('is-reached', !d.next)); timeline.p = 1; }
+    if (timeline.p !== 1) {
+      root.style.removeProperty('--p');
+      fill?.style.removeProperty('transform');
+      dots.forEach((d) => d.ms.classList.toggle('is-reached', !d.next));
+      timeline.p = 1;
+    }
     return;
   }
-  const rect = section.getBoundingClientRect();
-  if (rect.bottom < 0 || rect.top > vh) return;
-  let p: number;
-  if (stage) {
-    p = clamp(-rect.top / (rect.height - vh));
-  } else {
-    const line = vh * 0.6;
-    const first = dots[0]!.dot.getBoundingClientRect();
-    const end = now.dot.getBoundingClientRect();
-    const a = first.top + first.height / 2;
-    const b = end.top + end.height / 2;
-    p = clamp((line - a) / (b - a));
-  }
-  if (p === timeline.p) return;
+  if (!read || read.p === timeline.p) return;
+  const { p, css } = read;
   timeline.p = p;
-  root.style.setProperty('--p', p.toFixed(4));
+  // The fill's own transform, never a variable its whole subtree would inherit and restyle every frame.
+  if (stage) root.style.setProperty('--p', p.toFixed(4));
+  else if (fill && !css) fill.style.transform = `scaleY(${p.toFixed(4)})`;
   for (const d of dots) d.ms.classList.toggle('is-reached', !d.next && d.at <= p + 1e-6);
+}
+
+// Heights the progress is measured against, read once per resize rather than every frame.
+function measure() {
+  for (const s of statements) { s.pinH = s.pin.offsetHeight; s.lit = -1; }
+  for (const d of dividers) { d.pinH = d.pin.offsetHeight; d.fill = -1; d.shown = -1; }
+  scanH = scanStage?.offsetHeight ?? 0;
+  sheetH = sheet?.clientHeight ?? 0;
+  scanned = -1;
+  measureTimeline();
 }
 
 // Drawings that play once, the first time they are mostly on screen (the 748 chart, the citation trail).
@@ -147,14 +190,31 @@ const once = new IntersectionObserver((entries) => {
 }, { threshold: 0.6 });
 document.querySelectorAll('[data-draw], [data-trail]').forEach((el) => once.observe(el));
 
+// The citation trail is dashed in its drawing's own units, so while it draws, its stroke scales with the
+// drawing; --unit is one screen pixel in those units, which keeps the line a hairline at any width.
+document.querySelectorAll<SVGSVGElement>('[data-trail] svg').forEach((svg) => {
+  new ResizeObserver(([entry]) => {
+    const w = entry?.contentRect.width ?? 0;
+    if (w > 0) svg.style.setProperty('--unit', (svg.viewBox.baseVal.width / w).toFixed(4));
+  }).observe(svg);
+});
+
 let queued = false;
+let dirty = true;
 function update() {
   queued = false;
+  if (dirty) { measure(); dirty = false; }
   const vh = innerHeight;
-  updateStatements(vh);
-  updateScan(vh);
-  updateDividers(vh);
-  updateTimeline(vh);
+  // Read...
+  const statementRects = statements.map((s) => s.section.getBoundingClientRect());
+  const scanRect = scan?.getBoundingClientRect();
+  const dividerRects = dividers.map((d) => d.section.getBoundingClientRect());
+  const tl = readTimeline(vh);
+  // ...then write.
+  writeStatements(statementRects);
+  writeScan(scanRect, vh);
+  writeDividers(dividerRects, vh);
+  writeTimeline(tl);
 }
 function queue() {
   if (queued) return;
@@ -162,13 +222,13 @@ function queue() {
   requestAnimationFrame(update);
 }
 addEventListener('scroll', queue, { passive: true });
-addEventListener('resize', () => { measureTimeline(); queue(); });
+addEventListener('resize', () => { dirty = true; queue(); });
 reduce.addEventListener('change', () => {
   root.classList.toggle('reduce', reduce.matches);
   if (reduce.matches && tex) tex.style.clipPath = '';
   if (reduce.matches) dividers.forEach((d) => { d.title.style.backgroundPositionX = ''; d.sub.style.opacity = ''; });
-  if (reduce.matches && timeline) timeline.p = -1;
+  if (timeline) timeline.p = -1;
+  dirty = true;
   queue();
 });
-measureTimeline();
 update();
