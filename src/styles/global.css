@@ -32,6 +32,12 @@ html {
   scroll-padding-top: 4rem; /* clear of the island */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* The page never pans sideways. Set here, the root's clip goes to the viewport and body's own clip
+     (below) stays on body, so nothing wider than the screen counts toward what a finger can scroll;
+     on body alone it went to the viewport, where iOS still lets a finger pan what overflows. */
+  overflow-x: clip;
+  /* No rubber band at either end: at the end of the page the bounce lifted "Say hi." under the island. */
+  overscroll-behavior-y: none;
 }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }

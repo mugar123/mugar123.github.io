@@ -1453,14 +1453,16 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .bubble--them { max-width: 82%; padding: 0; color: var(--ink); }
   .bubble__body { display: block; padding: 0.42em 0.8em; border-radius: 1.1em; background: var(--grey); text-wrap: pretty; }
   .bubble--me { background: var(--blue); color: #fff; overflow-wrap: anywhere; text-decoration: underline; text-decoration-thickness: 0.06em; text-underline-offset: 0.18em; transition: background-color 200ms ease; }
-  /* Tails: a bubble-coloured corner, then a page-coloured mask that carves it into a hook. */
+  /* Tails: a bubble-coloured corner, then a page-coloured mask that carves it into a hook. The mask is
+     only as wide as its curve: the tail sticks out 0.41em, and a wider mask, invisible on the page,
+     reached past the screen's edge on phones and let the page pan sideways. */
   .bubble::before, .bubble::after { content: ''; position: absolute; bottom: 0; height: var(--tail); }
   .bubble::before { width: var(--tail); background: inherit; }
-  .bubble::after { width: 1.53em; background: var(--bg); }
+  .bubble::after { width: 0.6em; background: var(--bg); }
   .bubble--them::before { left: -0.41em; border-bottom-right-radius: 0.94em 0.82em; background: var(--grey); }
-  .bubble--them::after { left: -1.53em; border-bottom-right-radius: 0.59em; }
+  .bubble--them::after { left: -0.6em; border-bottom-right-radius: 0.59em; }
   .bubble--me::before { right: -0.41em; border-bottom-left-radius: 0.94em 0.82em; }
-  .bubble--me::after { right: -1.53em; border-bottom-left-radius: 0.59em; }
+  .bubble--me::after { right: -0.6em; border-bottom-left-radius: 0.59em; }
   /* The reply is the action: it gives under the finger, anchored at its tail; an invisible slop takes
      the hit area past 44px while the bubble keeps its proportions. */
   .thread__reply { position: relative; display: block; max-width: 100%; border-radius: 1.1em; color: #fff; text-decoration: none; transform-origin: 100% 100%; transition: transform 140ms var(--ease-out); }

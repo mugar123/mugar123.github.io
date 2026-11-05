@@ -115,8 +115,11 @@ export function initContact(section: HTMLElement) {
   }).observe(section);
   greet.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { resting = true; schedule(); } });
   greet.addEventListener('pointerleave', () => { resting = false; schedule(); });
-  section.addEventListener('focusin', () => { resting = true; schedule(); });
-  section.addEventListener('focusout', (e) => { if (!section.contains(e.relatedTarget as Node | null)) { resting = false; schedule(); } });
+  // Focus on a control inside rests it; focus on the section itself is where the island and "Get in
+  // touch" leave the reader after the trip (scripts/goto.ts), and must not freeze it on "hi".
+  const within = (n: EventTarget | null) => n instanceof Node && n !== section && section.contains(n);
+  section.addEventListener('focusin', (e) => { if (within(e.target)) { resting = true; schedule(); } });
+  section.addEventListener('focusout', (e) => { if (!within(e.relatedTarget)) { resting = false; schedule(); } });
   document.addEventListener('visibilitychange', schedule);
   reduce.addEventListener('change', () => { if (reduce.matches) show(0, false); schedule(); });
 }
