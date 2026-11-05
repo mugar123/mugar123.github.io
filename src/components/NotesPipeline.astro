@@ -210,6 +210,46 @@ const steps = [
       });
     });
   }
+
+  // The damped oscillation keeps running once it has been drawn: x(t) = e^(−γt) cos(ωt − φ) with the phase φ
+  // advancing, so the swings travel right inside envelopes that stay put. One cycle every 2.8 s, eased in
+  // from rest; it rests while the figure is off screen, and never moves with reduced motion. Same constants
+  // as the drawing in the markup, so at φ = 0 the curve is exactly the one drawn there.
+  {
+    const wave = document.querySelector<SVGPathElement>('.lx-fig__wave');
+    const fig = wave?.closest<HTMLElement>('.lx-fig');
+    if (wave && fig) {
+      const N = 180, T = 5, g = 0.42, w = 2 * Math.PI * 0.9, x0 = 22, y0 = 60, sx = 262 / T, A = 44;
+      const ts = Array.from({ length: N + 1 }, (_, i) => (i * T) / N);
+      const xs = ts.map((t) => (x0 + t * sx).toFixed(1));
+      const amp = ts.map((t) => A * Math.exp(-g * t));
+      const SPEED = (2 * Math.PI) / 2800; // radians of phase per ms
+      const EASE_IN = 900; // ms from rest to full speed
+      let phase = 0, last = 0, since = 0, on = false, drawn = false, frame = 0;
+      const step = (now: number) => {
+        if (!on || still()) { frame = 0; return; }
+        const dt = last ? Math.min(now - last, 50) : 0;
+        last = now;
+        since += dt;
+        const k = Math.min(1, since / EASE_IN);
+        phase += SPEED * dt * k * k * (3 - 2 * k); // smoothstep: it starts moving the way a pendulum would
+        let d = '';
+        for (let i = 0; i <= N; i++) d += `${i ? ' L' : 'M'}${xs[i]} ${(y0 - amp[i]! * Math.cos(w * ts[i]! - phase)).toFixed(1)}`;
+        wave.setAttribute('d', d);
+        frame = requestAnimationFrame(step);
+      };
+      const start = () => {
+        if (!on || !drawn || frame || still()) return;
+        last = 0; since = 0;
+        frame = requestAnimationFrame(step);
+      };
+      wave.addEventListener('animationend', (e) => { if (e.animationName.includes('lx-pen')) { drawn = true; start(); } });
+      new IntersectionObserver(([entry]) => {
+        on = !!entry?.isIntersecting;
+        if (on) start(); else if (frame) { cancelAnimationFrame(frame); frame = 0; }
+      }).observe(fig);
+    }
+  }
 </script>
 
 <style>
