@@ -81,7 +81,7 @@ function writeScan(read: { s: number; css: boolean } | null) {
 }
 
 // Separation pages: the name fills with light from left to right while its page is held on screen,
-// then the line under it fades in. Where the browser runs this as a scroll-driven animation (see
+// and is lit before the page leaves. Where the browser runs this as a scroll-driven animation (see
 // .divider__lit), there is nothing to do here; otherwise the script moves the same two layers.
 // Set on the elements themselves, never inherited through a parent.
 const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => {
@@ -91,10 +91,8 @@ const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].m
     pin: section.querySelector<HTMLElement>('.divider__pin')!,
     lit,
     words: lit.firstElementChild as HTMLElement,
-    sub: section.querySelector<HTMLElement>('.divider__sub')!,
     pinH: 0,
     fill: -1,
-    shown: -1,
   };
 });
 const cssDividers = () => !!dividers[0]?.lit.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-window');
@@ -106,13 +104,11 @@ function writeDividers(rects: DOMRect[], vh: number, css: boolean) {
     if (!onScreen(rect, vh)) return;
     const hold = held(rect, d.pinH);
     const fill = clamp(hold / 0.7);
-    const shown = clamp((hold - 0.7) / 0.2);
     if (fill !== d.fill) {
       d.lit.style.transform = `translate3d(${(fill - 1) * 100}%, 0, 0)`;
       d.words.style.transform = `translate3d(${(1 - fill) * 125}%, 0, 0)`;
       d.fill = fill;
     }
-    if (shown !== d.shown) { d.sub.style.opacity = shown.toFixed(3); d.shown = shown; }
   });
 }
 
