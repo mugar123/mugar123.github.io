@@ -22,121 +22,182 @@ const steps = [
     <h2 class="lx-title" id="lx-title">How it works.</h2>
   </header>
 
+  <!-- Two columns that stack on their own: every tile is as tall as what it holds, so the seams fall at
+       different heights on each side. On narrow screens the columns dissolve and the tiles read in order. -->
   <div class="lx-bento container--wide">
-    <!-- The crew: one orchestrator above, three kinds of subagent below. -->
-    <article class="lx-tile lx-tile--half lx-tile--crew">
-      <h3 class="lx-tile__title">One Claude orchestrates. Subagents do the work.</h3>
-      <p class="lx-tile__text">The orchestrator reads every page, hands out the blocks and checks what comes back against the original. It never transcribes a line itself, and runs up to five subagents at once.</p>
-      <div class="lx-crew" data-draw>
-        <p class="lx-node lx-node--lead"><img src="/toolkit/claude.svg" alt="" width="64" height="64" /><span><b>Orchestrator</b><em>Opus 5</em></span></p>
-        <ul class="lx-crew__team" aria-label="Subagents">
-          <li class="lx-node"><b>Transcribers</b><em>Sonnet 5</em></li>
-          <li class="lx-node"><b>Figure drawers</b><em>Opus 5.5</em></li>
-          <li class="lx-node"><b>Compiler</b><em>pdflatex</em></li>
+    <div class="lx-col">
+      <!-- The crew: one orchestrator above, three kinds of subagent below. -->
+      <article class="lx-tile lx-tile--crew">
+        <h3 class="lx-tile__title">One Claude orchestrates. Subagents do the work.</h3>
+        <p class="lx-tile__text">The orchestrator reads every page, hands out the blocks and checks what comes back against the original. It never transcribes a line itself, and runs up to five subagents at once.</p>
+        <div class="lx-crew" data-draw data-crew>
+          <svg class="lx-threads" aria-hidden="true"><path class="lx-thread" pathLength="1" /><path class="lx-thread" pathLength="1" /><path class="lx-thread" pathLength="1" /><path class="lx-comet" pathLength="1" /><path class="lx-comet" pathLength="1" /><path class="lx-comet" pathLength="1" /></svg>
+          <p class="lx-node lx-node--lead"><img src="/toolkit/claude.svg" alt="" width="64" height="64" /><span><b>Orchestrator</b><em>Opus 5</em></span></p>
+          <ul class="lx-crew__team" aria-label="Subagents">
+            <li class="lx-node"><b>Transcribers</b><em>Sonnet 5</em></li>
+            <li class="lx-node"><b>Figure drawers</b><em>Opus 5.5</em></li>
+            <li class="lx-node"><b>Compiler</b><em>pdflatex</em></li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- The run: eight checks that tick, in order, the first time the list is on screen. -->
+      <article class="lx-tile lx-tile--run">
+        <h3 class="lx-tile__title">Eight steps. Each one can fail out loud.</h3>
+        <p class="lx-tile__text">A step is done when its check passes. The next one waits until it does.</p>
+        <ol class="lx-steps" data-draw>
+          {steps.map(([name, gist], i) => (
+            <li style={`--i: ${i}`}>
+              <span class="lx-check" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" /><path d="M6 10.4l2.6 2.6L14 7.6" pathLength="1" /></svg></span>
+              <b>{name}</b><span class="lx-steps__gist">{gist}</span>
+            </li>
+          ))}
+        </ol>
+      </article>
+
+      <!-- The figures: the converter's own figure, drawn once like a plotter pen. -->
+      <article class="lx-tile lx-tile--fig">
+        <h3 class="lx-tile__title">Every figure, redrawn in TikZ.</h3>
+        <p class="lx-tile__text">One agent per figure rebuilds it from measured coordinates, never pasted as an image. A graph is checked against its formula, not against how it looks.</p>
+        <figure class="lx-fig" data-draw>
+          <svg viewBox="0 0 300 120" role="img" aria-label="A damped oscillation: a cosine whose swings shrink inside two dashed exponential envelopes">
+            <path class="lx-fig__ax" d="M16 60 H290" pathLength="1" />
+            <path class="lx-fig__ax" d="M22 112 V6" pathLength="1" />
+            <path class="lx-fig__ax lx-fig__tip" d="M285 57 L290 60 L285 63 M19 11 L22 6 L25 11" />
+            <path class="lx-fig__env" d="M22.0 16.0 L28.6 18.3 L35.1 20.4 L41.6 22.4 L48.2 24.3 L54.8 26.2 L61.3 27.9 L67.8 29.5 L74.4 31.1 L80.9 32.6 L87.5 34.0 L94.0 35.3 L100.6 36.6 L107.1 37.8 L113.7 38.9 L120.2 40.0 L126.8 41.0 L133.3 42.0 L139.9 42.9 L146.4 43.8 L153.0 44.6 L159.5 45.4 L166.1 46.1 L172.7 46.8 L179.2 47.5 L185.8 48.2 L192.3 48.8 L198.8 49.3 L205.4 49.9 L211.9 50.4 L218.5 50.9 L225.0 51.4 L231.6 51.8 L238.2 52.2 L244.7 52.6 L251.2 53.0 L257.8 53.4 L264.4 53.7 L270.9 54.0 L277.4 54.3 L284.0 54.6" />
+            <path class="lx-fig__env" d="M22.0 104.0 L28.6 101.7 L35.1 99.6 L41.6 97.6 L48.2 95.7 L54.8 93.8 L61.3 92.1 L67.8 90.5 L74.4 88.9 L80.9 87.4 L87.5 86.0 L94.0 84.7 L100.6 83.4 L107.1 82.2 L113.7 81.1 L120.2 80.0 L126.8 79.0 L133.3 78.0 L139.9 77.1 L146.4 76.2 L153.0 75.4 L159.5 74.6 L166.1 73.9 L172.7 73.2 L179.2 72.5 L185.8 71.8 L192.3 71.2 L198.8 70.7 L205.4 70.1 L211.9 69.6 L218.5 69.1 L225.0 68.6 L231.6 68.2 L238.2 67.8 L244.7 67.4 L251.2 67.0 L257.8 66.6 L264.4 66.3 L270.9 66.0 L277.4 65.7 L284.0 65.4" />
+            <path class="lx-fig__wave" d="M22.0 16.0 L23.5 17.0 L24.9 19.1 L26.4 22.1 L27.8 26.0 L29.3 30.7 L30.7 35.9 L32.2 41.6 L33.6 47.6 L35.1 53.8 L36.6 60.0 L38.0 66.1 L39.5 71.8 L40.9 77.2 L42.4 82.0 L43.8 86.1 L45.3 89.5 L46.7 92.2 L48.2 93.9 L49.7 94.8 L51.1 94.8 L52.6 94.0 L54.0 92.4 L55.5 90.0 L56.9 86.9 L58.4 83.2 L59.8 79.1 L61.3 74.6 L62.8 69.8 L64.2 64.9 L65.7 60.0 L67.1 55.2 L68.6 50.6 L70.0 46.4 L71.5 42.6 L72.9 39.3 L74.4 36.6 L75.9 34.5 L77.3 33.1 L78.8 32.4 L80.2 32.4 L81.7 33.1 L83.1 34.4 L84.6 36.3 L86.0 38.7 L87.5 41.6 L89.0 44.9 L90.4 48.5 L91.9 52.2 L93.3 56.1 L94.8 60.0 L96.2 63.8 L97.7 67.4 L99.1 70.8 L100.6 73.8 L102.1 76.4 L103.5 78.5 L105.0 80.2 L106.4 81.3 L107.9 81.8 L109.3 81.8 L110.8 81.3 L112.2 80.3 L113.7 78.8 L115.2 76.9 L116.6 74.6 L118.1 72.0 L119.5 69.1 L121.0 66.2 L122.4 63.1 L123.9 60.0 L125.3 57.0 L126.8 54.1 L128.3 51.5 L129.7 49.1 L131.2 47.0 L132.6 45.3 L134.1 44.0 L135.5 43.2 L137.0 42.7 L138.4 42.7 L139.9 43.1 L141.4 43.9 L142.8 45.1 L144.3 46.6 L145.7 48.5 L147.2 50.5 L148.6 52.8 L150.1 55.1 L151.5 57.6 L153.0 60.0 L154.5 62.4 L155.9 64.6 L157.4 66.7 L158.8 68.6 L160.3 70.3 L161.7 71.6 L163.2 72.6 L164.6 73.3 L166.1 73.7 L167.6 73.7 L169.0 73.4 L170.5 72.7 L171.9 71.8 L173.4 70.6 L174.8 69.1 L176.3 67.5 L177.7 65.7 L179.2 63.9 L180.7 61.9 L182.1 60.0 L183.6 58.1 L185.0 56.3 L186.5 54.7 L187.9 53.2 L189.4 51.9 L190.8 50.8 L192.3 50.0 L193.8 49.4 L195.2 49.2 L196.7 49.1 L198.1 49.4 L199.6 49.9 L201.0 50.7 L202.5 51.6 L203.9 52.8 L205.4 54.1 L206.9 55.5 L208.3 56.9 L209.8 58.5 L211.2 60.0 L212.7 61.5 L214.1 62.9 L215.6 64.2 L217.0 65.4 L218.5 66.4 L220.0 67.3 L221.4 67.9 L222.9 68.4 L224.3 68.6 L225.8 68.6 L227.2 68.4 L228.7 68.0 L230.1 67.4 L231.6 66.6 L233.1 65.7 L234.5 64.7 L236.0 63.6 L237.4 62.4 L238.9 61.2 L240.3 60.0 L241.8 58.8 L243.2 57.7 L244.7 56.6 L246.2 55.7 L247.6 54.9 L249.1 54.2 L250.5 53.7 L252.0 53.4 L253.4 53.2 L254.9 53.2 L256.3 53.4 L257.8 53.7 L259.3 54.1 L260.7 54.7 L262.2 55.5 L263.6 56.3 L265.1 57.2 L266.5 58.1 L268.0 59.0 L269.4 60.0 L270.9 60.9 L272.4 61.8 L273.8 62.7 L275.3 63.4 L276.7 64.0 L278.2 64.6 L279.6 65.0 L281.1 65.2 L282.5 65.4 L284.0 65.4" pathLength="1" />
+            <g class="lx-fig__labels">
+              <text class="it" x="28" y="12">x</text><text class="it" x="284" y="74">t</text>
+              <text x="150" y="30"><tspan class="it">e</tspan><tspan dy="-5" font-size="9">−<tspan class="it">γt</tspan></tspan></text>
+            </g>
+          </svg>
+          <figcaption><b>Figure 2.</b> Damped oscillation, <math><mi>x</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>γ</mi><mi>t</mi></mrow></msup><mi>cos</mi><mspace width="0.17em" /><mi>ω</mi><mi>t</mi></math>.</figcaption>
+        </figure>
+      </article>
+    </div>
+    <div class="lx-col">
+      <!-- The numbers, on the dark tile, as PaperTok's 748. -->
+      <article class="lx-tile lx-tile--stat" data-counts>
+        <p class="lx-big"><span class="lx-count" data-count>969</span><span> pages</span></p>
+        <p class="lx-stat-text">compiled to LaTeX so far.</p>
+        <dl class="lx-minis">
+          <div><dt>figures in TikZ</dt><dd><span class="lx-count" data-count>624</span></dd></div>
+          <div><dt>chapters</dt><dd><span class="lx-count" data-count>27</span></dd></div>
+          <div><dt>compile errors</dt><dd>0</dd></div>
+        </dl>
+      </article>
+
+      <!-- The marks: one flag in the preamble, flipped by a segmented control (two native radios). -->
+      <article class="lx-tile lx-tile--marks">
+        <h3 class="lx-tile__title">Nothing is fixed in silence.</h3>
+        <p class="lx-tile__text">Every correction and every addition carries a mark and the page it came from. One flag hides them all for the clean copy.</p>
+        <ul class="lx-chips" aria-label="The four marks">
+          <li class="is-used"><code>\correction</code></li><li class="is-used"><code>\added</code></li><li><code>\review</code></li><li><code>\omitted</code></li>
         </ul>
-      </div>
-    </article>
-
-    <!-- The numbers, on the dark tile, as PaperTok's 748. -->
-    <article class="lx-tile lx-tile--half lx-tile--stat">
-      <p class="lx-big">969<span> pages</span></p>
-      <p class="lx-stat-text">compiled to LaTeX so far.</p>
-      <dl class="lx-minis">
-        <div><dt>figures in TikZ</dt><dd>624</dd></div>
-        <div><dt>chapters</dt><dd>27</dd></div>
-        <div><dt>compile errors</dt><dd>0</dd></div>
-      </dl>
-    </article>
-
-    <!-- The run: eight checks that tick, in order, the first time the list is on screen. -->
-    <article class="lx-tile lx-tile--half lx-tile--run">
-      <h3 class="lx-tile__title">Eight steps. Each one can fail out loud.</h3>
-      <p class="lx-tile__text">A step is done when its check passes. The next one waits until it does.</p>
-      <ol class="lx-steps" data-draw>
-        {steps.map(([name, gist], i) => (
-          <li style={`--i: ${i}`}>
-            <span class="lx-check" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" /><path d="M6 10.4l2.6 2.6L14 7.6" pathLength="1" /></svg></span>
-            <b>{name}</b><span class="lx-steps__gist">{gist}</span>
-          </li>
-        ))}
-      </ol>
-    </article>
-
-    <!-- The marks: one flag in the preamble, flipped by a segmented control (two native radios). -->
-    <article class="lx-tile lx-tile--half lx-tile--marks">
-      <h3 class="lx-tile__title">Nothing is fixed in silence.</h3>
-      <p class="lx-tile__text">Every correction and every addition carries a mark and the page it came from. One flag hides them all for the clean copy.</p>
-      <ul class="lx-chips" aria-label="The four marks">
-        <li class="is-used"><code>\correction</code></li><li class="is-used"><code>\added</code></li><li><code>\review</code></li><li><code>\omitted</code></li>
-      </ul>
-      <div class="lx-marks">
-        <input class="lx-radio lx-radio--review" type="radio" name="lx-mode" id="lx-review" checked />
-        <input class="lx-radio lx-radio--clean" type="radio" name="lx-mode" id="lx-clean" />
-        <div class="lx-seg" role="presentation"><span class="lx-seg__thumb" aria-hidden="true"></span><label class="lx-seg__opt lx-seg__opt--review" for="lx-review">Review</label><label class="lx-seg__opt lx-seg__opt--clean" for="lx-clean">Clean</label></div>
-        <p class="lx-pre"><code>\usepackage<span class="lx-pre__flag">[clean]</span>&#123;apuntes-nmg&#125;</code></p>
-        <div class="lx-paper" aria-label="A theorem as compiled, with its marks">
-          <div class="lx-paper__row">
-            <div class="lx-paper__text">
-              <p><b>Theorem 1</b> (Change of variables)<b>.</b></p>
-              <math display="block">
-                <msub><mo>∫</mo><mi>V</mi></msub><mi>f</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mspace width="0.17em" /><mi>d</mi><mi>y</mi>
-                <mo>=</mo>
-                <msub><mo>∫</mo><mi>U</mi></msub><mi>f</mi><mo stretchy="false">(</mo><mi>φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.17em" />
-                <mrow class="lx-fix"><mo form="prefix" stretchy="false">|</mo><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo form="postfix" stretchy="false">|</mo></mrow><mspace width="0.17em" /><mi>d</mi><mi>x</mi>
-              </math>
+        <div class="lx-marks">
+          <input class="lx-radio lx-radio--review" type="radio" name="lx-mode" id="lx-review" checked />
+          <input class="lx-radio lx-radio--clean" type="radio" name="lx-mode" id="lx-clean" />
+          <div class="lx-seg" role="presentation"><span class="lx-seg__thumb" aria-hidden="true"></span><label class="lx-seg__opt lx-seg__opt--review" for="lx-review">Review</label><label class="lx-seg__opt lx-seg__opt--clean" for="lx-clean">Clean</label></div>
+          <p class="lx-pre"><code>\usepackage<span class="lx-pre__flag">[clean]</span>&#123;apuntes-nmg&#125;</code></p>
+          <div class="lx-paper" aria-label="A theorem as compiled, with its marks">
+            <div class="lx-paper__row">
+              <div class="lx-paper__text">
+                <p><b>Theorem 4</b> (Work and energy)<b>.</b></p>
+                <math display="block">
+                  <mi>W</mi><mo>=</mo><msubsup><mo>∫</mo><mn>1</mn><mn>2</mn></msubsup><mi>𝐅</mi><mo>·</mo><mi>d</mi><mi>𝐫</mi><mo>=</mo><msub><mi>T</mi><mn>2</mn></msub><mo>−</mo><msub><mi>T</mi><mn>1</mn></msub><mo>,</mo>
+                </math>
+                <p>where <math><mi>T</mi><mo>=</mo><mrow class="lx-fix"><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup></math>.</p>
+              </div>
+              <p class="lx-paper__note"><code>\correction</code> the ½ was missing</p>
             </div>
-            <p class="lx-paper__note"><code>\correction</code> absolute value was missing</p>
+            <div class="lx-paper__row">
+              <p class="lx-paper__text lx-fix">Since <math><mi>𝐅</mi><mo>=</mo><mi>m</mi><mspace width="0.1em" /><mi>d</mi><mi>𝐯</mi><mo>/</mo><mi>d</mi><mi>t</mi></math>, each step adds <math><mi>𝐅</mi><mo>·</mo><mi>d</mi><mi>𝐫</mi><mo>=</mo><mi>d</mi><mo stretchy="false">(</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup><mo stretchy="false">)</mo></math>.</p>
+              <p class="lx-paper__note"><code>\added</code> step skipped in the notebook</p>
+            </div>
           </div>
-          <div class="lx-paper__row">
-            <p class="lx-paper__text lx-fix">Since <math><mi>φ</mi></math> is a diffeomorphism, <math><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo>≠</mo><mn>0</mn></math>.</p>
-            <p class="lx-paper__note"><code>\added</code> step skipped in the notebook</p>
+        </div>
+      </article>
+
+      <!-- The delivery: two PDFs side by side. -->
+      <article class="lx-tile lx-tile--pdfs">
+        <h3 class="lx-tile__title">Two PDFs. Zero errors, or it doesn’t ship.</h3>
+        <p class="lx-tile__text">A clean copy to study from, and one that lists every intervention with its page. Up to three rounds of compile, render and compare, then a human looks.</p>
+        <div class="lx-pdfs" aria-hidden="true">
+          <div class="lx-pdf">
+            <div class="lx-pdf__sheet"><i></i><i></i><i class="s"></i><i class="eq"></i><i></i><i class="s"></i><i></i><i class="m"></i></div>
+            <p class="lx-pdf__name">notes.pdf</p>
+          </div>
+          <div class="lx-pdf lx-pdf--review">
+            <div class="lx-pdf__sheet"><i></i><i class="b"></i><i class="s"></i><i class="eq b"></i><i></i><i class="s"></i><i class="tbl"></i><i class="tbl"></i><i class="tbl"></i></div>
+            <p class="lx-pdf__name">notes, marked.pdf</p>
           </div>
         </div>
-      </div>
-    </article>
-
-    <!-- The figures: the converter's own figure, drawn once like a plotter pen. -->
-    <article class="lx-tile lx-tile--half lx-tile--fig">
-      <h3 class="lx-tile__title">Every figure, redrawn in TikZ.</h3>
-      <p class="lx-tile__text">One agent per figure rebuilds it from measured coordinates, never pasted as an image. A graph is checked against its formula, not against how it looks.</p>
-      <figure class="lx-fig" data-draw>
-        <svg viewBox="0 0 300 120" role="img" aria-label="The rectangle U in the (r, θ) plane mapped by φ onto the disc V">
-          <path class="lx-fig__rg" d="M20 88 H84 V36 H20 Z" pathLength="1" />
-          <path class="lx-fig__ax" d="M12 104 H118" pathLength="1" />
-          <path class="lx-fig__ax" d="M20 110 V8" pathLength="1" />
-          <path class="lx-fig__ax lx-fig__tip" d="M114 101 L119 104 L114 107 M17 13 L20 8 L23 13" />
-          <path class="lx-fig__ax" d="M126 58 Q 154 44 182 58" pathLength="1" />
-          <path class="lx-fig__ax lx-fig__tip" d="M176 53.5 L183 58.5 L176 61.5" />
-          <circle class="lx-fig__rg" cx="244" cy="61" r="40" pathLength="1" />
-          <g class="lx-fig__labels">
-            <text class="it" x="45" y="67">U</text>
-            <text class="it" x="80" y="118">R</text><text x="0" y="40">2π</text>
-            <text class="it" x="112" y="118">r</text><text class="it" x="26" y="13">θ</text>
-            <text class="it" x="150" y="42">φ</text>
-            <text class="it" x="236" y="66">V</text>
-          </g>
-        </svg>
-        <figcaption><b>Figure 1.</b> Polar coordinates, <math><mi>φ</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></math>.</figcaption>
-      </figure>
-    </article>
-
-    <!-- The delivery: two PDFs side by side. -->
-    <article class="lx-tile lx-tile--half lx-tile--pdfs">
-      <h3 class="lx-tile__title">Two PDFs. Zero errors, or it doesn’t ship.</h3>
-      <p class="lx-tile__text">A clean copy to study from, and one that lists every intervention with its page. Up to three rounds of compile, render and compare, then a human looks.</p>
-      <div class="lx-pdfs" aria-hidden="true">
-        <div class="lx-pdf">
-          <div class="lx-pdf__sheet"><i></i><i></i><i class="s"></i><i class="eq"></i><i></i><i class="s"></i><i></i><i class="m"></i></div>
-          <p class="lx-pdf__name">notes.pdf</p>
-        </div>
-        <div class="lx-pdf lx-pdf--review">
-          <div class="lx-pdf__sheet"><i></i><i class="b"></i><i class="s"></i><i class="eq b"></i><i></i><i class="s"></i><i class="tbl"></i><i class="tbl"></i><i class="tbl"></i></div>
-          <p class="lx-pdf__name">notes, marked.pdf</p>
-        </div>
-      </div>
-    </article>
+      </article>
+    </div>
   </div>
 </section>
+
+<script>
+  // The crew's threads, laid out from where the pills really are, and redrawn when the tile resizes.
+  const R = 10; // corner radius of each elbow, in px
+  for (const crew of document.querySelectorAll<HTMLElement>('[data-crew]')) {
+    const svg = crew.querySelector<SVGSVGElement>('.lx-threads');
+    const lead = crew.querySelector<HTMLElement>('.lx-node--lead');
+    const team = [...crew.querySelectorAll<HTMLElement>('.lx-crew__team .lx-node')];
+    if (!svg || !lead) continue;
+    const threads = [...svg.querySelectorAll('.lx-thread')], comets = [...svg.querySelectorAll('.lx-comet')];
+    const layout = () => {
+      const box = crew.getBoundingClientRect(), l = lead.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+      const cx = l.left + l.width / 2 - box.left, y0 = l.bottom - box.top;
+      team.forEach((node, i) => {
+        const n = node.getBoundingClientRect();
+        const nx = n.left + n.width / 2 - box.left, y1 = n.top - box.top, m = (y0 + y1) / 2;
+        const dx = nx - cx, s = Math.sign(dx), r = Math.min(R, Math.abs(dx) / 2, (y1 - y0) / 2);
+        const d = Math.abs(dx) < 1
+          ? `M${cx} ${y0}V${y1}`
+          : `M${cx} ${y0}V${m - r}Q${cx} ${m} ${cx + s * r} ${m}H${nx - s * r}Q${nx} ${m} ${nx} ${m + r}V${y1}`;
+        threads[i]?.setAttribute('d', d);
+        comets[i]?.setAttribute('d', d);
+      });
+    };
+    new ResizeObserver(layout).observe(crew);
+  }
+
+  // The numbers count up once, the first time their tile is mostly on screen. Not with reduced motion,
+  // where they are simply there.
+  const root = document.documentElement;
+  const still = () => root.classList.contains('reduce') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const tiles = document.querySelectorAll<HTMLElement>('[data-counts]');
+  if (!still()) {
+    const count = (el: HTMLElement) => {
+      const to = Number(el.dataset.to);
+      const t0 = performance.now(), ms = 1400;
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - t0) / ms);
+        el.textContent = String(Math.round(to * (1 - (1 - t) ** 4))); // ease-out: fast, then settles
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    const seen = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        seen.unobserve(entry.target);
+        entry.target.querySelectorAll<HTMLElement>('[data-count]').forEach(count);
+      }
+    }, { threshold: 0.6 });
+    tiles.forEach((tile) => {
+      tile.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => {
+        el.dataset.to = el.textContent ?? '0';
+        el.style.minWidth = `${el.getBoundingClientRect().width}px`; // the final width, kept while it counts
+        el.textContent = '0';
+      });
+      seen.observe(tile);
+    });
+  }
+</script>
 
 <style>
   /* ===== theme ===== */
@@ -155,20 +216,37 @@ const steps = [
   .lx-intro { margin-bottom: clamp(2rem, 4vw, 3rem); }
   .lx-title { font-size: clamp(2.25rem, 4.4vw, 3.5rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.02em; }
 
-  .lx-bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
+  /* Two unequal columns: the crew, the steps and the figure a little wider than the numbers, the marks and
+     the PDFs, which also brings the two stacks to nearly the same height. */
+  .lx-bento { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 1.25rem; }
+  .lx-col { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+  /* Whichever column comes out shorter, its last tile takes up the difference, so both end level. */
+  .lx-col > .lx-tile:last-child { flex-grow: 1; }
   .lx-tile {
     display: flex; flex-direction: column; gap: 0.75rem;
     min-width: 0; padding: 2rem;
     border-radius: 1.75rem;
     background: var(--lx-tile);
   }
-  .lx-tile--half { grid-column: span 2; }
   .lx-tile__title { font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
   .lx-tile__text { max-width: 32rem; font-size: 1.0625rem; line-height: 1.47; color: var(--lx-ink-2); text-wrap: pretty; }
 
   /* ===== crew ===== */
   /* The structure is the diagram: the lead above, a stem, a bus, a drop into each of the three. */
-  .lx-crew { --gap: 0.75rem; margin-top: auto; padding-top: 1.5rem; display: grid; justify-items: center; }
+  .lx-crew { --gap: 0.75rem; position: relative; margin-top: auto; padding-top: 1.5rem; display: grid; justify-items: center; }
+  /* The threads: one per subagent, from the foot of the orchestrator's pill to the head of the subagent's,
+     laid out by the script below from where the pills really are. */
+  .lx-threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .lx-thread, .lx-comet { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .lx-thread { stroke: rgba(255, 255, 255, 0.24); stroke-width: 1; }
+  .lx-comet { stroke: var(--lx-accent); stroke-width: 1.5; opacity: 0; }
+  /* The glow a pill takes when it sends or receives. */
+  .lx-node::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--lx-accent);
+    background: rgba(41, 151, 255, 0.12);
+    opacity: 0; pointer-events: none;
+  }
   .lx-node {
     display: grid; gap: 0.125rem; justify-items: center; text-align: center;
     padding: 0.75rem 0.875rem;
@@ -181,8 +259,7 @@ const steps = [
   .lx-node--lead span { display: grid; gap: 0.125rem; }
   .lx-node--lead img { width: 2rem; height: 2rem; }
   .lx-node--lead b { font-size: 1.0625rem; }
-  /* The stem. */
-  .lx-node--lead::after {
+  :global(html:not(.js)) .lx-node--lead::after {
     content: ''; position: absolute; left: 50%; top: 100%;
     width: 1px; height: 1.25rem; background: var(--lx-line);
   }
@@ -191,15 +268,15 @@ const steps = [
     list-style: none; margin: 1.25rem 0 0; padding: 1.25rem 0 0;
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap);
   }
-  /* The bus: from the first column's centre to the last's. */
-  .lx-crew__team::before {
+  /* Without the script, hairlines draw the tree: the stem, the bus from the first column's centre to the
+     last's, and a drop into each. With it, the threads below take their place. */
+  :global(html:not(.js)) .lx-crew__team::before {
     content: ''; position: absolute; top: 0;
     left: calc((100% - 2 * var(--gap)) / 6); right: calc((100% - 2 * var(--gap)) / 6);
     height: 1px; background: var(--lx-line);
   }
   .lx-crew__team .lx-node { position: relative; }
-  /* Each drop. */
-  .lx-crew__team .lx-node::before {
+  :global(html:not(.js)) .lx-crew__team .lx-node::before {
     content: ''; position: absolute; left: 50%; bottom: 100%;
     width: 1px; height: 1.25rem; background: var(--lx-line);
   }
@@ -207,7 +284,7 @@ const steps = [
   /* ===== numbers ===== */
   .lx-tile--stat { gap: 0; }
   .lx-big { font-size: clamp(5rem, 10vw, 7.5rem); line-height: 0.9; font-weight: 600; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
-  .lx-big span { font-size: 0.3em; letter-spacing: -0.005em; color: var(--on-dark-2); }
+  .lx-big > span:last-child { font-size: 0.3em; letter-spacing: -0.005em; color: var(--on-dark-2); }
   .lx-stat-text { margin-top: 0.75rem; font-size: 1.1875rem; line-height: 1.32; font-weight: 500; color: var(--on-dark-2); }
   .lx-minis {
     margin: auto 0 0; padding-top: 2rem;
@@ -216,6 +293,8 @@ const steps = [
   .lx-minis div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 0.375rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.14); }
   .lx-minis dd { margin: 0; font-size: clamp(2rem, 3.4vw, 2.75rem); line-height: 1; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
   .lx-minis dt { font-size: 0.875rem; line-height: 1.3; color: var(--on-dark-2); }
+  /* While a figure counts up its box keeps the final width, so nothing beside it moves. */
+  .lx-count { display: inline-block; text-align: right; }
 
   /* ===== run ===== */
   .lx-steps { list-style: none; margin: auto 0 0; padding: 1.25rem 0 0; display: grid; }
@@ -308,8 +387,9 @@ const steps = [
   .lx-fig { margin: auto 0 0; padding-top: 1.5rem; display: grid; gap: 1rem; }
   .lx-fig svg { width: 100%; max-width: 30rem; height: auto; margin-inline: auto; overflow: visible; }
   .lx-fig path, .lx-fig circle { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
-  .lx-fig .lx-fig__rg { fill: var(--lx-well); stroke-width: 1.1; }
   .lx-fig .lx-fig__ax { stroke-width: 0.9; }
+  .lx-fig .lx-fig__wave { stroke-width: 1.4; }
+  .lx-fig .lx-fig__env { stroke-width: 0.8; stroke-dasharray: 3 3; color: var(--lx-ink-2); }
   .lx-fig text { font-family: var(--math); font-size: 13px; fill: currentColor; stroke: none; }
   .lx-fig .it { font-style: italic; }
   .lx-fig figcaption { font: 400 0.9375rem/1.4 var(--math); text-align: center; color: var(--lx-ink-2); }
@@ -337,9 +417,7 @@ const steps = [
 
   /* ===== smaller screens ===== */
   @media (max-width: 1080px) {
-    /* Two by two: each tile takes one of the two columns. */
-    .lx-bento { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .lx-tile--half { grid-column: span 1; }
+    /* Narrower columns: tighter tiles. */
     .lx-tile { padding: 1.75rem; }
     .lx-crew { --gap: 0.5rem; }
     .lx-node { padding: 0.625rem 0.375rem; }
@@ -351,7 +429,11 @@ const steps = [
     .lx-steps__gist { grid-column: 2; justify-self: start; text-align: left; font-size: 0.875rem; }
   }
   @media (max-width: 900px) {
-    .lx-tile--half { grid-column: 1 / -1; }
+    /* One column: the two dissolve and the tiles take their reading order back. */
+    .lx-bento { display: flex; flex-direction: column; }
+    .lx-col { display: contents; }
+    .lx-tile--crew { order: 1; } .lx-tile--stat { order: 2; } .lx-tile--run { order: 3; }
+    .lx-tile--marks { order: 4; } .lx-tile--fig { order: 5; } .lx-tile--pdfs { order: 6; }
     .lx-steps li { grid-template-columns: 1.375rem auto minmax(0, 1fr); }
     .lx-steps__gist { grid-column: auto; justify-self: end; text-align: right; font-size: 0.9375rem; }
   }
@@ -377,14 +459,18 @@ const steps = [
   /* Once, the first time each widget is mostly on screen (scripts/scroll.ts adds .is-in to [data-draw]).
      Transforms, opacity and dash offsets only. Without the script, or with reduced motion, everything is
      simply there. */
-  /* The crew: the stem drops, the bus runs across, each drop lands. */
-  :global(html.js:not(.reduce)) .lx-crew .lx-node--lead::after { transform: scaleY(0); transform-origin: top; }
-  :global(html.js:not(.reduce)) .lx-crew .lx-crew__team::before { transform: scaleX(0); }
-  :global(html.js:not(.reduce)) .lx-crew .lx-crew__team .lx-node::before { transform: scaleY(0); transform-origin: top; }
-  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-node--lead::after { animation: lx-draw 200ms var(--ease-out) forwards; }
-  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-crew__team::before { animation: lx-draw 400ms var(--ease-out) 150ms forwards; }
-  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-crew__team .lx-node::before { animation: lx-draw 200ms var(--ease-out) 450ms forwards; }
-  @keyframes lx-draw { to { transform: none; } }
+  /* The crew: the orchestrator lights up and sends; three threads leave its pill together, split, and run
+     down to the three subagents, a blue spark at each one's head; each pill lights up as its spark lands,
+     then settles. With reduced motion the threads are simply there. */
+  :global(html.js:not(.reduce)) .lx-crew .lx-thread { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+  :global(html.js:not(.reduce)) .lx-crew .lx-comet { stroke-dasharray: 0.16 2; stroke-dashoffset: 0.16; opacity: 1; }
+  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-node--lead::after { animation: lx-glow 900ms ease-out forwards; }
+  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-thread { animation: lx-pen 850ms var(--ease-in-out) 200ms forwards; }
+  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-comet { animation: lx-run 850ms var(--ease-in-out) 200ms forwards, lx-out 250ms ease 1000ms forwards; }
+  :global(html.js:not(.reduce)) .lx-crew.is-in .lx-crew__team .lx-node::after { animation: lx-glow 1000ms ease-out 980ms forwards; }
+  @keyframes lx-run { to { stroke-dashoffset: -0.84; } }
+  @keyframes lx-out { to { opacity: 0; } }
+  @keyframes lx-glow { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
 
   /* The run: each check fills and ticks, one after the other, like a build log going green. */
   :global(html.js:not(.reduce)) .lx-steps .lx-check circle { transform: scale(0.35); transform-origin: center; transform-box: fill-box; opacity: 0; }
@@ -396,13 +482,14 @@ const steps = [
 
   /* The figure: drawn like a plotter pen, the labels settle in after. */
   :global(html.js:not(.reduce)) .lx-fig [pathLength] { stroke-dasharray: 1; stroke-dashoffset: 1; }
-  :global(html.js:not(.reduce)) .lx-fig .lx-fig__rg { fill-opacity: 0; }
-  :global(html.js:not(.reduce)) .lx-fig .lx-fig__tip, :global(html.js:not(.reduce)) .lx-fig .lx-fig__labels { opacity: 0; }
-  :global(html.js:not(.reduce)) .lx-fig.is-in [pathLength] { animation: lx-pen 900ms var(--ease-in-out) forwards; }
-  :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__rg { animation: lx-pen 900ms var(--ease-in-out) forwards, lx-fill 400ms ease 900ms forwards; }
-  :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__tip, :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__labels { animation: lx-in 400ms ease 900ms forwards; }
+  :global(html.js:not(.reduce)) .lx-fig .lx-fig__tip, :global(html.js:not(.reduce)) .lx-fig .lx-fig__labels, :global(html.js:not(.reduce)) .lx-fig .lx-fig__env { opacity: 0; }
+  /* The axes first, then the curve at a plotter's even pace; the envelopes it lives inside and the labels
+     settle in once it is done. */
+  :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__ax { animation: lx-pen 500ms var(--ease-out) forwards; }
+  :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__wave { animation: lx-pen 1600ms linear 350ms forwards; }
+  :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__tip { animation: lx-in 300ms ease 450ms forwards; }
+  :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__env, :global(html.js:not(.reduce)) .lx-fig.is-in .lx-fig__labels { animation: lx-in 500ms ease 1900ms forwards; }
   @keyframes lx-pen { to { stroke-dashoffset: 0; } }
-  @keyframes lx-fill { to { fill-opacity: 1; } }
   @keyframes lx-in { to { opacity: 1; } }
 
   @media (prefers-reduced-motion: reduce) {
