@@ -303,7 +303,9 @@ import '@fontsource/caveat/latin-500.css';
        so the sheet gets nearly the whole screen, close to a real page, instead of the strip left over
        under a pinned headline (13rem on an iPhone, which cut the compiled page off at the bottom). */
     .lc__stage { position: relative; height: 100%; display: flex; flex-direction: column; padding-block: 4rem 0; }
-    .lc__run { display: block; flex: 1; margin-top: 2rem; }
+    /* The run takes the stage's full width: the stage centres its children (align-items, from the wide
+       layout), which shrank the run, and the sheet with it, to its content (246px on an iPhone 15 Pro). */
+    .lc__run { display: block; flex: 1; width: 100%; margin-top: 2rem; }
     .lc__pin {
       position: sticky; top: 0;
       height: 100svh;
@@ -316,7 +318,8 @@ import '@fontsource/caveat/latin-500.css';
     .lc-brand img { width: 2.5rem; height: 2.5rem; }
     .lc__head .headline { font-size: clamp(1.875rem, 8.7vw, 2.125rem); }
     .lc__head .lede, .lc__note { display: none; }
-    .lc-sheet { --h: max(15rem, min(100svh - 13.5rem, 141vw)); width: 100%; }
+    /* A little shorter than before, on the full width: about 1.15 to 1 on an iPhone, not a strip. */
+    .lc-sheet { --h: max(15rem, min(100svh - 15rem, 118vw)); width: 100%; }
     .lc-beam { left: -0.5rem; right: -0.5rem; }
     .lc-file { display: none; }
     .hand { font-size: min(5cqi, 4.4cqh); padding-left: calc(3.25rem + 2cqi); }
