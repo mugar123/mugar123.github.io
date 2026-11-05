@@ -1,0 +1,771 @@
+---
+/**
+ * Inside the LaTeX converter: what follows the scanning stage. Four parts under the same dark roof:
+ * the crew (one orchestrator, its subagents and their models), the run (the eight steps), the fidelity
+ * marks, and the numbers so far. Facts from the pipeline's own skill files and the two book manifests
+ * (5 November 2026). The parts were designed one by one and are composed here; the motion that
+ * brings them in is at the end of the style block.
+ */
+---
+<section class="lcx-section section--dark" aria-label="Inside the LaTeX converter" data-lcx>
+  <div class="container--wide lcx-stack">
+  <div class="lcx lcx-crew">
+    <header class="lcx-crew-head">
+      <p class="lcx-crew-eyebrow">The crew</p>
+      <h3 class="lcx-crew-title"><span>One orchestrator.</span> <span>A crew of subagents.</span></h3>
+      <p class="lcx-crew-intro">The orchestrator never transcribes a line. It reads every page, splits the work into blocks, hands each block to a subagent running its own model, compiles what comes back and keeps the state on disk, so a 600-page book advances one chapter at a time and can resume where it stopped.</p>
+    </header>
+
+    <div class="lcx-crew-tree">
+      <article class="lcx-crew-lead" data-draw aria-labelledby="lcx-crew-r1">
+        <div class="lcx-crew-id">
+          <h4 class="lcx-crew-role" id="lcx-crew-r1">Orchestrator</h4>
+          <p class="lcx-crew-model">Claude Opus&nbsp;5</p>
+        </div>
+        <p class="lcx-crew-does">Reads every page first and fixes the section hierarchy. Routes the work, compiles, and does the final cross-check against the original.</p>
+        <p class="lcx-crew-detail">Up to 5&nbsp;subagents at once.</p>
+      </article>
+
+      <ol class="lcx-crew-list" aria-label="Subagents">
+        <li class="lcx-crew-card">
+          <h4 class="lcx-crew-role">Transcribers</h4>
+          <p class="lcx-crew-model">Claude Sonnet&nbsp;5</p>
+          <div class="lcx-crew-body">
+            <p class="lcx-crew-does">One per block of pages, in two passes with two different prompts: a literal transcript first, then the formatted LaTeX.</p>
+            <p class="lcx-crew-detail">The literal is kept. It is what the format pass is audited against.</p>
+          </div>
+        </li>
+        <li class="lcx-crew-card">
+          <h4 class="lcx-crew-role">Figure drawers</h4>
+          <p class="lcx-crew-model">Claude Opus&nbsp;5.5</p>
+          <div class="lcx-crew-body">
+            <p class="lcx-crew-does">One figure per agent. Each diagram is rebuilt in TikZ from measured coordinates and the formula it illustrates, never pasted in as an image.</p>
+            <p class="lcx-crew-detail">When Sonnet drew them, 7 of 13&nbsp;figures in one chapter came back wrong. Every one compiled.</p>
+          </div>
+        </li>
+        <li class="lcx-crew-card">
+          <h4 class="lcx-crew-role">Verifier</h4>
+          <p class="lcx-crew-model">The orchestrator. Never the transcriber.</p>
+          <div class="lcx-crew-body">
+            <p class="lcx-crew-does">A model that audits its own work is not an audit. Figures are checked by eye in two passes: content against the original, then overlaps, one figure per page.</p>
+            <p class="lcx-crew-detail">Up to 3&nbsp;rounds of compile, render, diff. Then a human looks.</p>
+          </div>
+        </li>
+        <li class="lcx-crew-card">
+          <h4 class="lcx-crew-role">Compiler</h4>
+          <p class="lcx-crew-model">pdflatex and a lint script. No model.</p>
+          <div class="lcx-crew-body">
+            <p class="lcx-crew-does">The lint catches what pdflatex cannot: an empty review note, an orphan figure, a page without its source.</p>
+            <p class="lcx-crew-detail">Zero errors, or it does not ship.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <p class="lcx-crew-foot">The orchestrator never needs to see a page, so an open-weights model can take that seat. GLM&nbsp;5.3 is wired in as the free option.</p>
+  </div>
+
+  <div class="lcx lcx-run">
+    <header class="lcx-run-head">
+      <div class="lcx-run-heading">
+        <p class="lcx-run-eyebrow">The run</p>
+        <h3 class="lcx-run-title" id="run-title">Eight steps. Every one can fail out loud.</h3>
+      </div>
+      <p class="lcx-run-intro">A check that cannot fail out loud is not a check. Each step has a condition for being done, and the next does not start until it is met.</p>
+    </header>
+
+    <ol class="lcx-run-steps" aria-labelledby="run-title">
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Triage</h4>
+        <p class="lcx-run-text">A script decides the route. A PDF with a text layer is extracted with pdftotext, exact and free; a scan or a photo is read by a vision model.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Index</h4>
+        <p class="lcx-run-text">The chapter plan is written to a manifest before anything is transcribed. Every page ends up in a chapter or listed as skipped, with a reason.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Literal</h4>
+        <p class="lcx-run-text">Page by page: the text as it is, the maths in LaTeX, each figure described in one line. An error on the paper is transcribed as an error.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Format</h4>
+        <p class="lcx-run-text">The literal becomes LaTeX in my own style: theorem environments, notation, the density of the prose. Each page opens with a <code class="lcx-run-code">% PÁGINA N</code> marker, so anything can be traced back.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Figures</h4>
+        <p class="lcx-run-text">Every diagram is redrawn in TikZ. A graph is verified against its formula, not against how it looks.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Lint and compile</h4>
+        <p class="lcx-run-text">A lint script, then two passes of pdflatex. The errors are counted with Python, after a shell quirk once reported zero three times in a row.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Review</h4>
+        <p class="lcx-run-text">The orchestrator rereads the result with the original in front of it: signs, subscripts, limits of integration, steps that do not follow.</p>
+      </li>
+      <li class="lcx-run-step">
+        <h4 class="lcx-run-name">Deliver</h4>
+        <p class="lcx-run-text">Two PDFs: a clean one to study from, and one that lists every intervention with its page. The original is never overwritten.</p>
+      </li>
+    </ol>
+  </div>
+
+  <div class="lcx lcx-marks">
+    <header class="lcx-marks-head">
+      <p class="lcx-marks-eyebrow">Fidelity</p>
+      <h3 class="lcx-marks-title" id="lcx-marks-title">Nothing is fixed in silence.</h3>
+      <p class="lcx-marks-intro">The paper decides the content; my template decides the form. When the pipeline touches the maths, it leaves a mark, and every mark ends up in a table at the end of the document with the page it came from. One flag in the preamble hides them all for the clean copy.</p>
+    </header>
+
+    <div class="lcx-marks-body">
+      <!-- The switch: two native radios, visually hidden, drawn as the segmented control below. -->
+      <input class="lcx-marks-radio lcx-marks-radio--review" type="radio" name="lcx-marks-mode" id="lcx-marks-review" checked />
+      <input class="lcx-marks-radio lcx-marks-radio--clean" type="radio" name="lcx-marks-mode" id="lcx-marks-clean" />
+
+      <dl class="lcx-marks-list">
+        <div class="lcx-marks-item lcx-marks-item--used">
+          <dt><code><span class="lcx-marks-cmd">\correccion</span><span class="lcx-marks-arg">[what was wrong]&#123;…&#125;</span></code></dt>
+          <dd>The paper was wrong and this is the fix. Inverted limits, a bad Jacobian, a hypothesis with the wrong sign.</dd>
+        </div>
+        <div class="lcx-marks-item lcx-marks-item--used">
+          <dt><code><span class="lcx-marks-cmd">\anadido</span><span class="lcx-marks-arg">[what was added]&#123;…&#125;</span></code></dt>
+          <dd>This was not on the paper: a skipped step, a definition the lecturer took for granted.</dd>
+        </div>
+        <div class="lcx-marks-item">
+          <dt><code><span class="lcx-marks-cmd">\revisar</span></code></dt>
+          <dd>A doubt the model could not settle. Someone has to look.</dd>
+        </div>
+        <div class="lcx-marks-item">
+          <dt><code><span class="lcx-marks-cmd">\omitido</span></code></dt>
+          <dd>Left out on purpose, and said so. Never in silence.</dd>
+        </div>
+      </dl>
+
+      <figure class="lcx-marks-demo">
+        <div class="lcx-marks-seg"><span class="lcx-marks-thumb" aria-hidden="true"></span><label class="lcx-marks-opt lcx-marks-opt--review" for="lcx-marks-review">Review</label><label class="lcx-marks-opt lcx-marks-opt--clean" for="lcx-marks-clean">Clean</label></div>
+
+        <div class="lcx-marks-tile">
+          <pre class="lcx-marks-code"><code><span class="lcx-marks-ln"><span class="lcx-marks-kw">\usepackage</span><span class="lcx-marks-flag">[entrega]</span>&#123;apuntes-nmg&#125;</span>
+  <span class="lcx-marks-ln"> </span>
+  <span class="lcx-marks-ln"><span class="lcx-marks-kw">\begin</span>&#123;teorema&#125;[Cambio de variable]</span>
+  <span class="lcx-marks-ln">  \[ \int_V f(y)\,dy</span>
+  <span class="lcx-marks-ln">     = \int_U f(\varphi(x))\,<span class="lcx-marks-mk"><span class="lcx-marks-mk-cmd">\correccion</span><span class="lcx-marks-mk-note">[faltaba el valor absoluto]</span>&#123;</span>\lvert\det D\varphi(x)\rvert<span class="lcx-marks-mk">&#125;</span>\,dx \]</span>
+  <span class="lcx-marks-ln"><span class="lcx-marks-kw">\end</span>&#123;teorema&#125;</span>
+  <span class="lcx-marks-ln"><span class="lcx-marks-mk"><span class="lcx-marks-mk-cmd">\anadido</span><span class="lcx-marks-mk-note">[paso omitido en el cuaderno]</span>&#123;</span>Como $\varphi$ es un difeomorfismo, $\det D\varphi \neq 0$.<span class="lcx-marks-mk">&#125;</span></span></code></pre>
+
+          <div class="lcx-marks-page" aria-label="The same lines, compiled">
+            <div class="lcx-marks-row">
+              <div class="lcx-marks-text">
+                <p><b>Teorema 1</b> (Cambio de variable)<b>.</b></p>
+                <math display="block">
+                  <msub><mo>∫</mo><mi>V</mi></msub><mi>f</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mspace width="0.17em" /><mi>d</mi><mi>y</mi>
+                  <mo>=</mo>
+                  <msub><mo>∫</mo><mi>U</mi></msub><mi>f</mi><mo stretchy="false">(</mo><mi>φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo stretchy="false">)</mo><mspace width="0.17em" />
+                  <mrow class="lcx-marks-fix"><mo form="prefix" stretchy="false">|</mo><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo form="postfix" stretchy="false">|</mo></mrow><mspace width="0.17em" /><mi>d</mi><mi>x</mi>
+                </math>
+              </div>
+              <p class="lcx-marks-note">faltaba el valor absoluto</p>
+            </div>
+            <div class="lcx-marks-row">
+              <p class="lcx-marks-text lcx-marks-add">Como <math><mi>φ</mi></math> es un difeomorfismo, <math><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo>≠</mo><mn>0</mn></math>.</p>
+              <p class="lcx-marks-note">paso omitido en el cuaderno</p>
+            </div>
+          </div>
+        </div>
+
+        <figcaption class="lcx-marks-cap">
+          <span class="lcx-marks-cap--review"><code>\usepackage&#123;apuntes-nmg&#125;</code> shows the marks and the table.</span>
+          <span class="lcx-marks-cap--clean"><code>\usepackage[entrega]&#123;apuntes-nmg&#125;</code> hides them: the clean copy.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="lcx lcx-numbers">
+    <h3 class="lcx-numbers-title">So far</h3>
+    <dl class="lcx-numbers-row">
+      <div class="lcx-numbers-stat"><dt class="lcx-numbers-label">pages compiled</dt><dd class="lcx-numbers-value">969</dd></div>
+      <div class="lcx-numbers-stat"><dt class="lcx-numbers-label">figures redrawn in TikZ</dt><dd class="lcx-numbers-value">624</dd></div>
+      <div class="lcx-numbers-stat"><dt class="lcx-numbers-label">chapters, plus appendices</dt><dd class="lcx-numbers-value">27</dd></div>
+      <div class="lcx-numbers-stat"><dt class="lcx-numbers-label">compile errors at delivery</dt><dd class="lcx-numbers-value">0</dd></div>
+    </dl>
+    <p class="lcx-numbers-caption">Marion, <cite>Classical Dynamics of Particles and Systems</cite>, 15 chapters. Griffiths, <cite>Introduction to Electrodynamics</cite>, 12 chapters and three appendices. Personal study copies of my own books.</p>
+  </div>
+  </div>
+</section>
+
+<style>
+  .lcx-section { padding-block: clamp(3rem, 6vw, 5rem) clamp(5rem, 11vw, 10rem); }
+  .lcx-stack { display: grid; gap: clamp(5rem, 9vw, 8rem); }
+  .lcx-crew { padding-block: 0; }
+
+  /* ===== crew ===== */
+  /* The crew: one row above, four below, joined by hairlines. The structure is the diagram. */
+  .lcx-crew {
+    --lcx-crew-gap: clamp(1.5rem, 2.6vw, 2.5rem);
+    --lcx-crew-line: rgba(255, 255, 255, 0.12);
+    --lcx-crew-drop: 2.5rem;
+    padding-block: clamp(4rem, 8vw, 7rem);
+    color: var(--on-dark);
+  }
+
+  /* Header */
+  .lcx-crew-head { display: grid; gap: 0.75rem; max-width: 40rem; margin-bottom: clamp(3rem, 5vw, 4.5rem); }
+  .lcx-crew-eyebrow {
+    font-size: clamp(1.1875rem, 1.6vw, 1.5rem); line-height: 1.17; font-weight: 600; letter-spacing: 0.009em;
+    color: var(--on-dark-2);
+  }
+  .lcx-crew-title {
+    font-size: clamp(2rem, 3vw, 2.75rem); line-height: 1.06; font-weight: 600; letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .lcx-crew-title span { white-space: nowrap; }
+  .lcx-crew-intro {
+    margin-top: 0.5rem;
+    font-size: 1.0625rem; line-height: 1.47; letter-spacing: 0;
+    color: var(--on-dark-2); text-wrap: pretty;
+  }
+
+  /* Shared card type */
+  .lcx-crew-role {
+    margin: 0;
+    font-size: 1.1875rem; line-height: 1.21; font-weight: 600; letter-spacing: 0.009em;
+  }
+  .lcx-crew-model {
+    margin-top: 0.375rem;
+    font: 400 0.8125rem/1.38 var(--mono); letter-spacing: 0;
+    color: var(--on-dark-2);
+  }
+  .lcx-crew-does {
+    margin-top: 1rem;
+    font-size: 0.9375rem; line-height: 1.4; letter-spacing: 0.005em;
+    text-wrap: pretty;
+  }
+  .lcx-crew-detail {
+    margin-top: 0.75rem;
+    font-size: 0.875rem; line-height: 1.43; letter-spacing: 0.01em;
+    color: var(--on-dark-2); text-wrap: pretty;
+  }
+
+  /* The orchestrator: spans the width, on the same four-column grid as the crew below. */
+  .lcx-crew-lead {
+    position: relative;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lcx-crew-gap);
+    align-items: baseline;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--link-on-dark);
+  }
+  .lcx-crew-lead .lcx-crew-id { grid-column: 1; }
+  .lcx-crew-lead .lcx-crew-role { font-size: 1.5rem; line-height: 1.17; letter-spacing: -0.005em; }
+  .lcx-crew-lead .lcx-crew-does { grid-column: 2 / span 2; margin-top: 0; font-size: 1.0625rem; line-height: 1.47; letter-spacing: 0; }
+  .lcx-crew-lead .lcx-crew-detail { grid-column: 4; margin-top: 0; }
+  /* The stem: from the orchestrator down to the bus. */
+  .lcx-crew-lead::after {
+    content: '';
+    position: absolute; left: 0; top: calc(100% + 0.75rem);
+    width: 1px; height: calc(var(--lcx-crew-drop) - 0.75rem);
+    background: var(--lcx-crew-line);
+  }
+
+  /* The crew */
+  .lcx-crew-list {
+    position: relative;
+    list-style: none; margin: var(--lcx-crew-drop) 0 0; padding: 0;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--lcx-crew-gap);
+    grid-auto-rows: auto;
+  }
+  /* The bus: from the stem to the last column. */
+  .lcx-crew-list::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    right: calc((100% - 3 * var(--lcx-crew-gap)) / 4);
+    height: 1px;
+    background: var(--lcx-crew-line);
+  }
+  .lcx-crew-card {
+    position: relative; padding-top: 1.75rem;
+    /* Role, model, body line up across the columns: a model that wraps pushes every card's body down together. */
+    display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; align-content: start;
+  }
+  /* Each drop: from the bus into the card. */
+  .lcx-crew-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0;
+    width: 1px; height: 1rem;
+    background: var(--lcx-crew-line);
+  }
+
+  .lcx-crew-foot {
+    margin-top: clamp(3rem, 5vw, 4.5rem);
+    font-size: 0.875rem; line-height: 1.43; letter-spacing: 0.01em;
+    color: var(--on-dark-2); text-wrap: pretty;
+  }
+
+  /* Narrower desktops: the crew goes two by two; the orchestrator keeps the width. */
+  @media (max-width: 1080px) {
+    .lcx-crew-lead { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1rem; }
+    .lcx-crew-lead .lcx-crew-id { grid-column: 1 / -1; }
+    .lcx-crew-lead .lcx-crew-does { grid-column: 1; }
+    .lcx-crew-lead .lcx-crew-detail { grid-column: 2; }
+    .lcx-crew-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lcx-crew-card:nth-child(n + 3) { margin-top: 2.5rem; padding-top: 0; }
+    .lcx-crew-card:nth-child(n + 3)::before { display: none; }
+    .lcx-crew-list::before { right: calc((100% - var(--lcx-crew-gap)) / 2); }
+  }
+
+  /* Phones: one column, the hairline runs down the left and ticks out to each role. */
+  @media (max-width: 620px) {
+    .lcx-crew { --lcx-crew-drop: 1.5rem; }
+    .lcx-crew-lead { display: block; padding-top: 1rem; }
+    .lcx-crew-lead .lcx-crew-role { font-size: 1.3125rem; }
+    .lcx-crew-lead .lcx-crew-does { margin-top: 1rem; font-size: 0.9375rem; line-height: 1.4; letter-spacing: 0.005em; }
+    .lcx-crew-lead .lcx-crew-detail { margin-top: 0.75rem; }
+    .lcx-crew-list { display: block; margin-top: 0; padding-top: var(--lcx-crew-drop); }
+    .lcx-crew-list::before { display: none; }
+    .lcx-crew-lead::after { display: none; }
+    /* The spine: each card carries its own stretch of it; the last one stops at its tick. */
+    .lcx-crew-card, .lcx-crew-card:nth-child(n + 3) { display: block; margin-top: 0; padding: 0 0 2.25rem 1.5rem; }
+    .lcx-crew-card:last-child { padding-bottom: 0; }
+    .lcx-crew-card::before, .lcx-crew-card:nth-child(n + 3)::before { display: block; top: 0.6875rem; width: 1rem; height: 1px; }
+    .lcx-crew-card::after {
+      content: ''; position: absolute; left: 0; top: calc(0.75rem - var(--lcx-crew-drop)); bottom: 0;
+      width: 1px; background: var(--lcx-crew-line);
+    }
+    .lcx-crew-card + .lcx-crew-card::after { top: 0; }
+    .lcx-crew-card:last-child::after { bottom: auto; height: calc(var(--lcx-crew-drop) - 0.0625rem); }
+    .lcx-crew-card + .lcx-crew-card:last-child::after { height: 0.75rem; }
+  }
+
+  /* ===== run ===== */
+  /* The run: the long form of the stage's legend. Same hairline, same mono counter, same two greys;
+     each step gains a name and its done-condition. */
+  .lcx-run {
+    display: grid;
+    gap: clamp(2.5rem, 4.5vw, 4rem);
+  }
+
+  /* Head: on the same two columns as the steps, so the intro sits over steps 5 to 8. */
+  .lcx-run-head {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(2rem, 5vw, 5rem);
+    align-items: end;
+  }
+  .lcx-run-heading { display: grid; gap: 0.75rem; }
+  .lcx-run-eyebrow {
+    font-size: 1.1875rem; line-height: 1.17; font-weight: 600; letter-spacing: 0.009em;
+    color: var(--on-dark-2);
+  }
+  .lcx-run-title {
+    margin: 0;
+    font-size: clamp(2rem, 3vw, 2.75rem); line-height: 1.06; font-weight: 600; letter-spacing: -0.02em;
+    color: var(--on-dark);
+    text-wrap: balance;
+  }
+  .lcx-run-intro {
+    max-width: 32rem;
+    font-size: 1.0625rem; line-height: 1.47; letter-spacing: 0;
+    color: var(--on-dark-2);
+    text-wrap: pretty;
+  }
+
+  /* Steps: 1 to 4 run down the left column, 5 to 8 down the right; rows are shared, so the numbers
+     line up across. */
+  .lcx-run-steps {
+    list-style: none; margin: 0; padding: 0;
+    counter-reset: lcx-run;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(4, auto);
+    grid-auto-flow: column;
+    column-gap: clamp(2rem, 5vw, 5rem);
+  }
+  .lcx-run-step {
+    counter-increment: lcx-run;
+    display: grid;
+    grid-template-columns: 1.5rem 1.25rem minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    align-items: baseline;
+    row-gap: 0.25rem;
+    padding-block: 2rem 0;
+  }
+  .lcx-run-step:nth-child(1), .lcx-run-step:nth-child(5) { padding-top: 2rem; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+  .lcx-run-step::before {
+    content: '';
+    grid-column: 1; grid-row: 1; align-self: center;
+    width: 1rem; height: 1px;
+    background: rgba(255, 255, 255, 0.24);
+  }
+  .lcx-run-step::after {
+    content: counter(lcx-run);
+    grid-column: 2; grid-row: 1;
+    font: 400 0.8125rem/1 var(--mono);
+    color: var(--on-dark-2);
+  }
+  .lcx-run-name {
+    grid-column: 3; grid-row: 1;
+    margin: 0;
+    font-size: 1.1875rem; line-height: 1.21; font-weight: 600; letter-spacing: -0.01em;
+    color: var(--on-dark);
+  }
+  .lcx-run-text {
+    grid-column: 3; grid-row: 2;
+    max-width: 32rem;
+    font-size: 0.9375rem; line-height: 1.4; letter-spacing: 0.005em;
+    color: var(--on-dark-2);
+    text-wrap: pretty;
+  }
+  .lcx-run-code {
+    font-family: var(--mono); font-size: 0.875em; letter-spacing: 0;
+    color: var(--on-dark);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1080px) {
+    .lcx-run-head, .lcx-run-steps { column-gap: 2.5rem; }
+  }
+
+  /* Phones: one column, 1 to 8 in reading order; the hairline goes, as in the legend, and the counter
+     takes its place. */
+  @media (max-width: 620px) {
+    .lcx-run { gap: 2rem; }
+    .lcx-run-head { grid-template-columns: minmax(0, 1fr); row-gap: 1rem; }
+    .lcx-run-eyebrow { font-size: 1.0625rem; }
+    .lcx-run-title { font-size: clamp(1.875rem, 8.2vw, 2.125rem); }
+    .lcx-run-steps { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
+    .lcx-run-step { grid-template-columns: 1.5rem minmax(0, 1fr); padding-block: 1rem 1.125rem; }
+    .lcx-run-step { border-top: 1px solid rgba(255, 255, 255, 0.12); }
+    .lcx-run-step:nth-child(1), .lcx-run-step:nth-child(5) { padding-top: 1rem; }
+    .lcx-run-step:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+    .lcx-run-name { font-size: 1.0625rem; line-height: 1.29; }
+    .lcx-run-step::before { display: none; }
+    .lcx-run-step::after { grid-column: 1; }
+    .lcx-run-name, .lcx-run-text { grid-column: 2; }
+  }
+
+  /* ===== marks ===== */
+  /* Part `marks`: the fidelity marks. One list of the four marks, one sample where two of them are used,
+     and one flag that hides them all. The switch is two native radios drawn as a segmented control. */
+
+  .lcx-marks { color: var(--on-dark); }
+
+  /* The story. */
+  .lcx-marks-head {
+    display: grid; gap: 0.75rem;
+    max-width: 40rem;
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+  .lcx-marks-eyebrow {
+    font-size: clamp(1.1875rem, 1.6vw, 1.5rem); line-height: 1.17; font-weight: 600; letter-spacing: 0.009em;
+    color: var(--on-dark-2);
+  }
+  .lcx-marks-title {
+    margin: 0;
+    font-size: clamp(2rem, 3vw, 2.75rem); line-height: 1.06; font-weight: 600; letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .lcx-marks-intro {
+    margin-top: 0.5rem;
+    font-size: 1.0625rem; line-height: 1.47; letter-spacing: 0;
+    color: var(--on-dark-2);
+    text-wrap: pretty;
+  }
+
+  .lcx-marks-body {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: clamp(2.5rem, 5vw, 5rem);
+    align-items: start;
+  }
+
+  /* The radios stay in the page (keyboard, screen readers) but are drawn by the labels. */
+  .lcx-marks-radio {
+    position: absolute; top: 0; left: 0;
+    width: 1px; height: 1px; margin: 0;
+    opacity: 0; clip-path: inset(50%);
+  }
+
+  /* The four marks. The list starts level with the code tile, under the switch. */
+  .lcx-marks-list { margin: 3rem 0 0; }
+  .lcx-marks-item {
+    position: relative;
+    padding-block: 1.125rem 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .lcx-marks-item:last-child { border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+  /* The two marks the sample uses: a stretch of their hairline lights up while the marks are on. */
+  .lcx-marks-item--used::before {
+    content: '';
+    position: absolute; top: -1px; left: 0;
+    width: 2.5rem; height: 1px;
+    background: var(--link-on-dark);
+  }
+  .lcx-marks-item dt { margin: 0; }
+  .lcx-marks-item code {
+    font: 400 0.875rem/1.43 var(--mono); letter-spacing: 0;
+  }
+  .lcx-marks-cmd { color: var(--on-dark); }
+  .lcx-marks-arg { color: var(--on-dark-2); }
+  .lcx-marks-item dd {
+    margin: 0.375rem 0 0;
+    font-size: 0.9375rem; line-height: 1.4; letter-spacing: 0.005em;
+    color: var(--on-dark-2);
+    text-wrap: pretty;
+  }
+
+  /* The switch: the site's segmented control, on dark. */
+  .lcx-marks-demo { margin: 0; display: grid; gap: 1rem; }
+  .lcx-marks-seg {
+    position: relative;
+    display: grid; grid-template-columns: 1fr 1fr;
+    width: 12rem; height: 2rem; padding: 0.125rem;
+    border-radius: 0.5625rem;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .lcx-marks-thumb {
+    position: absolute; top: 0.125rem; bottom: 0.125rem; left: 0.125rem;
+    width: calc((100% - 0.25rem) / 2);
+    border-radius: 0.4375rem;
+    background: rgba(255, 255, 255, 0.22);
+  }
+  .lcx-marks-opt {
+    position: relative; z-index: 1;
+    display: grid; place-items: center;
+    border-radius: 0.4375rem;
+    font: 500 0.8125rem/1 var(--font); letter-spacing: 0.01em;
+    color: var(--on-dark-2);
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    transition: transform 120ms var(--ease-out), color 120ms var(--ease-out);
+  }
+  /* 44px to hit, 32px to see. */
+  .lcx-marks-opt::after { content: ''; position: absolute; inset: -0.375rem 0; }
+  .lcx-marks-opt:active { transform: scale(0.97); }
+  @media (hover: hover) and (pointer: fine) {
+    .lcx-marks-opt:hover { color: var(--on-dark); }
+  }
+  .lcx-marks-radio--review:checked ~ .lcx-marks-demo .lcx-marks-opt--review,
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-opt--clean { color: var(--on-dark); }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-thumb { transform: translateX(100%); }
+  .lcx-marks-radio--review:focus-visible ~ .lcx-marks-demo .lcx-marks-opt--review,
+  .lcx-marks-radio--clean:focus-visible ~ .lcx-marks-demo .lcx-marks-opt--clean { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+  /* The tile: the source above, the same lines compiled below. */
+  .lcx-marks-tile {
+    border-radius: 1.125rem;
+    background: var(--dark-tile);
+    padding: 1.5rem 1.75rem 1.75rem;
+  }
+  .lcx-marks-code {
+    margin: 0;
+    white-space: normal;
+    font: 400 0.8125rem/1.62 var(--mono); letter-spacing: 0;
+    color: var(--on-dark);
+  }
+  .lcx-marks-code code { font: inherit; }
+  /* One line of source per span; a long line wraps under itself, indented. */
+  .lcx-marks-ln {
+    display: block;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    padding-left: 6ch; text-indent: -6ch;
+  }
+  .lcx-marks-flag { display: none; color: var(--link-on-dark); }
+  .lcx-marks-mk { color: var(--on-dark-2); }
+  .lcx-marks-mk-cmd { color: var(--link-on-dark); }
+  .lcx-marks-mk-note { color: var(--on-dark-2); }
+
+  /* The compiled page: the converter's white page, a margin for the notes. */
+  .lcx-marks-page {
+    display: grid; gap: 0.875rem;
+    margin-top: 1.5rem;
+    padding: 1.5rem 1.5rem 1.625rem 1.75rem;
+    border-radius: 0.25rem;
+    background: #fff; color: #111;
+    font: 400 1rem/1.45 var(--math); letter-spacing: 0;
+  }
+  .lcx-marks-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem; column-gap: 1.25rem;
+    align-items: center;
+  }
+  .lcx-marks-text { display: grid; gap: 0.5rem; }
+  p.lcx-marks-text { display: block; }
+  .lcx-marks-text p, p.lcx-marks-text { margin: 0; text-wrap: pretty; }
+  .lcx-marks-page b { font-weight: 700; }
+  .lcx-marks-page math { font-size: 1.06em; }
+  .lcx-marks-page math[display="block"] { margin: 0.1em 0; overflow-x: auto; overflow-y: hidden; }
+  .lcx-marks-fix, .lcx-marks-add { color: var(--link); }
+  .lcx-marks-note {
+    margin: 0;
+    padding-left: 0.625rem;
+    border-left: 1px solid var(--link);
+    font: 400 0.75rem/1.33 var(--font); letter-spacing: 0.01em;
+    color: var(--link);
+    text-wrap: balance;
+  }
+
+  .lcx-marks-cap {
+    font-size: 0.875rem; line-height: 1.43; letter-spacing: 0.01em;
+    color: var(--on-dark-2);
+    text-wrap: pretty;
+  }
+  .lcx-marks-cap code { font: 400 0.8125rem/1 var(--mono); letter-spacing: 0; color: var(--on-dark); }
+  .lcx-marks-cap--clean { display: none; }
+
+  /* Clean: the flag appears in the preamble, the marks go quiet in the source and leave the page. */
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-flag { display: inline; }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-mk-cmd { color: var(--on-dark-2); }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-fix,
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-add { color: inherit; }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-note { visibility: hidden; }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-cap--review { display: none; }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-cap--clean { display: inline; }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-list .lcx-marks-item--used::before { background: rgba(255, 255, 255, 0.12); }
+
+  @media (max-width: 1080px) {
+    .lcx-marks-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); column-gap: 2.5rem; }
+    .lcx-marks-code { font-size: 0.75rem; }
+    .lcx-marks-row { grid-template-columns: minmax(0, 1fr) 7rem; }
+  }
+
+  @media (max-width: 620px) {
+    .lcx-marks-head { margin-bottom: 2rem; }
+    .lcx-marks-body { grid-template-columns: minmax(0, 1fr); row-gap: 2.5rem; }
+    .lcx-marks-list { margin-top: 0; }
+    .lcx-marks-seg { width: 100%; }
+    .lcx-marks-tile { padding: 1.125rem 1rem 1rem; border-radius: 1rem; }
+    .lcx-marks-code { font-size: 0.6875rem; line-height: 1.6; }
+    .lcx-marks-ln { padding-left: 4ch; text-indent: -4ch; }
+    .lcx-marks-page { margin-top: 1.125rem; padding: 1.125rem 1rem 1.25rem; font-size: 0.875rem; }
+    .lcx-marks-row { grid-template-columns: minmax(0, 1fr); row-gap: 0.5rem; }
+    .lcx-marks-note { font-size: 0.6875rem; }
+    .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-note { display: none; }
+  }
+
+  /* ===== numbers ===== */
+  /* Part: numbers. Four figures in a row under a hairline, the books they come from in one line below.
+     Sibling of the PaperTok commits stat (.stat__num / .stat__label), set on black. */
+  .lcx-numbers {
+    padding-top: 2.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .lcx-numbers-title {
+    font-size: 1.0625rem; line-height: 1.24; font-weight: 600; letter-spacing: 0.005em;
+    color: var(--on-dark);
+  }
+  .lcx-numbers-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    margin: 1.5rem 0 0;
+  }
+  /* Value first on screen, label first for a screen reader ("pages compiled, 969"). */
+  .lcx-numbers-stat { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 0.75rem; }
+  .lcx-numbers-value {
+    margin: 0;
+    font-size: clamp(2.75rem, 5vw, 4.5rem); line-height: 0.85; font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    margin-left: -0.04em; /* optical: the figure's side bearing, so it lines up with its label */
+    color: var(--on-dark);
+  }
+  .lcx-numbers-label {
+    font-size: 0.9375rem; line-height: 1.4; letter-spacing: 0.01em;
+    color: var(--on-dark-2);
+    text-wrap: balance;
+  }
+  /* One line across the full row at the wide container (1200px holds it with no tracking, which is where
+     SF sits at 14px anyway). Where it cannot fit, it breaks into two even lines, never a lone last word. */
+  .lcx-numbers-caption {
+    margin-top: 2.5rem;
+    font-size: 0.875rem; line-height: 1.43; letter-spacing: 0;
+    color: var(--on-dark-2);
+    text-wrap: balance;
+  }
+  .lcx-numbers-caption cite { font-style: italic; }
+
+  @media (max-width: 1080px) {
+    .lcx-numbers { padding-top: 2rem; }
+  }
+  @media (max-width: 620px) {
+    .lcx-numbers { padding-top: 1.75rem; }
+    .lcx-numbers-row { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 2rem; column-gap: 1.25rem; margin-top: 1.25rem; }
+    .lcx-numbers-stat { gap: 0.5rem; }
+    .lcx-numbers-caption { margin-top: 2rem; letter-spacing: 0.01em; text-wrap: pretty; }
+  }
+
+  /* ===== overrides ===== */
+  /* Composition: the four parts under one roof. The heads share one layout (eyebrow and title on the left,
+     the intro on the right, level with the title's foot), the same eyebrow size, and the same rhythm between
+     parts. Each part's own rules come first; these settle what they share. */
+  .lcx-crew-eyebrow, .lcx-marks-eyebrow { font-size: 1.1875rem; }
+  .lcx-crew-head, .lcx-marks-head {
+    max-width: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 1fr auto;
+    column-gap: clamp(2rem, 5vw, 5rem);
+    align-items: end;
+  }
+  .lcx-crew-eyebrow, .lcx-crew-title, .lcx-marks-eyebrow, .lcx-marks-title { grid-column: 1; }
+  .lcx-crew-intro, .lcx-marks-intro { grid-column: 2; grid-row: 1 / span 2; align-self: end; margin-top: 0; max-width: 32rem; }
+  @media (max-width: 620px) {
+    .lcx-crew-head, .lcx-marks-head { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; row-gap: 1rem; }
+    .lcx-crew-eyebrow, .lcx-marks-eyebrow { font-size: 1.0625rem; }
+    .lcx-crew-title, .lcx-marks-title { font-size: clamp(1.875rem, 8.2vw, 2.125rem); }
+    .lcx-crew-intro, .lcx-marks-intro { grid-column: 1; grid-row: auto; }
+  }
+  /* Narrower than a desktop: every head stacks, the intro under its title. */
+  @media (max-width: 1080px) {
+    .lcx-crew-head, .lcx-run-head, .lcx-marks-head { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; row-gap: 1rem; align-items: start; }
+    .lcx-crew-intro, .lcx-marks-intro { grid-column: 1; grid-row: auto; }
+  }
+
+  /* ===== motion ===== */
+  /* Motion, in the page's own vocabulary: lines that draw once when they come into view (as the 748 chart and
+     the citation trail do), and a control whose state slides. The text never moves.
+
+     The crew: the hand-off is drawn, once, the first time the orchestrator row is mostly on screen
+     (scripts/scroll.ts adds .is-in to [data-draw]). The stem drops from the orchestrator, the bus runs across,
+     and each drop lands in its column, in order. Transforms only, from the line's own start. Without the
+     script, or with reduced motion, the lines are simply there. */
+  :global(html.js:not(.reduce)) .lcx-crew-lead::after { transform: scaleY(0); transform-origin: top; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead + .lcx-crew-list::before { transform: scaleX(0); transform-origin: left; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead + .lcx-crew-list .lcx-crew-card::before { transform: scaleY(0); transform-origin: top; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in::after { animation: lcx-draw 200ms var(--ease-out) forwards; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list::before { animation: lcx-draw 450ms var(--ease-out) 150ms forwards; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card::before { animation: lcx-draw 200ms var(--ease-out) forwards; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(1)::before { animation-delay: 250ms; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(2)::before { animation-delay: 350ms; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(3)::before { animation-delay: 450ms; }
+  :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(4)::before { animation-delay: 550ms; }
+  @keyframes lcx-draw { to { transform: none; } }
+
+  /* Phones: the spine runs down the left in four stretches, one per role, and each tick reaches its role
+     once its stretch has arrived. */
+  @media (max-width: 620px) {
+    :global(html.js:not(.reduce)) .lcx-crew-lead + .lcx-crew-list .lcx-crew-card::after { transform: scaleY(0); transform-origin: top; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead + .lcx-crew-list .lcx-crew-card::before { transform: scaleX(0); transform-origin: left; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card::after { animation: lcx-draw 260ms var(--ease-out) forwards; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card::before { animation: lcx-draw 160ms var(--ease-out) forwards; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(1)::after { animation-delay: 0ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(1)::before { animation-delay: 120ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(2)::after { animation-delay: 260ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(2)::before { animation-delay: 440ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(3)::after { animation-delay: 520ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(3)::before { animation-delay: 700ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(4)::after { animation-delay: 780ms; }
+    :global(html.js:not(.reduce)) .lcx-crew-lead.is-in + .lcx-crew-list .lcx-crew-card:nth-child(4)::before { animation-delay: 900ms; }
+  }
+
+  /* The marks: a state the reader flips, so transitions (they retarget mid-flight if tapped twice). The thumb
+     slides; the notes and the blue on the page fade; the lit stretches of hairline fade with them. The
+     [entrega] flag cuts in: it reflows the line, and a fade would only blur the cause. */
+  .lcx-marks-thumb { transition: transform 200ms var(--ease-out); }
+  .lcx-marks-note { transition: opacity 160ms ease, visibility 0s linear 0s; }
+  .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-note { opacity: 0; transition: opacity 160ms ease, visibility 0s linear 160ms; }
+  .lcx-marks-fix, .lcx-marks-add, .lcx-marks-mk-cmd { transition: color 160ms ease; }
+  .lcx-marks-item--used::before { transition: background-color 300ms ease; }
+  :global(html.reduce) .lcx-marks-thumb { transition: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .lcx-marks-thumb { transition: none; }
+  }
+</style>

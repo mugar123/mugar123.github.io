@@ -1,6 +1,7 @@
 ---
 import '@/styles/global.css';
 import NotesScan from '@/components/NotesScan.astro';
+import NotesPipeline from '@/components/NotesPipeline.astro';
 import Island from '@/components/Island.astro';
 import { helloStrokes, helloStrokeWidth, helloViewBox } from '@/data/hello';
 import { sources, universities } from '@/data/papertok';
@@ -271,6 +272,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
       </section>
 
       <NotesScan />
+      <NotesPipeline />
 
       <section class="divider section--dark" id="studies" aria-labelledby="part-studies" data-divider>
         <div class="divider__pin">

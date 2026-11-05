@@ -13,8 +13,8 @@ import '@fontsource/caveat/latin-500.css';
     <header class="lc__head">
       <p class="lc-brand"><img src="/latex/openclaw.svg" alt="OpenClaw" width="56" height="56" />LaTeX converter</p>
       <h2 class="headline" id="notes-title">From my notebook to LaTeX. Automatically.</h2>
-      <p class="lede">Photos of handwritten lecture pages become structured LaTeX documents. <strong>Claude Opus 5.5 splits the transcription</strong> across low-cost open-source models, and the figures come back as LaTeX graphics.</p>
-      <p class="lc__note">One reusable template keeps the format, notation and structure the same in every set of notes, which go to my classmates. The pipeline is private for now.</p>
+      <p class="lede">Photos of handwritten pages, or a whole textbook in PDF, become a structured LaTeX document: the text, every equation and every figure, redrawn in TikZ. <strong>One Claude orchestrates a crew of subagents.</strong> Nothing ships until it compiles with zero errors and has been checked against the original.</p>
+      <p class="lc__note">One reusable template keeps the format, notation and structure the same in every document, which go to my classmates. The pipeline runs in OpenClaw and is private for now.</p>
     </header>
 
     <div class="lc__run" data-scan-run><div class="lc__pin" data-scan-pin>
@@ -82,7 +82,7 @@ import '@fontsource/caveat/latin-500.css';
 
     <ol class="lc-legend" data-steps>
       <li><span><b>Photograph</b> the page</span></li>
-      <li><span><b>Models read</b> the handwriting, open and closed</span></li>
+      <li><span><b>Subagents transcribe</b> it, twice</span></li>
       <li><span><b>LaTeX comes out</b>, and it compiles</span></li>
     </ol>
     </div></div>
