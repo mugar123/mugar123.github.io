@@ -218,14 +218,20 @@ const once = new IntersectionObserver((entries) => {
   }
 }, { threshold: 0.6 });
 document.querySelectorAll('[data-draw], [data-trail]').forEach((el) => once.observe(el));
-// Reached again from the island, they draw again (scripts/goto.ts): undrawn now, drawn when next on screen.
+// Reached again from the island, they draw again (scripts/goto.ts). Each is undrawn once it is off
+// screen, so one still in view as the trip begins doesn't replay unseen while the page travels away,
+// and is drawn again when it is next mostly on screen.
+const away = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (entry.isIntersecting) continue;
+    away.unobserve(entry.target);
+    entry.target.classList.remove('is-in');
+    once.observe(entry.target);
+  }
+});
 document.addEventListener('replay', (e) => {
   const { has } = (e as Replay).detail;
-  document.querySelectorAll('[data-draw].is-in, [data-trail].is-in').forEach((el) => {
-    if (!has(el)) return;
-    el.classList.remove('is-in');
-    once.observe(el);
-  });
+  document.querySelectorAll('[data-draw].is-in, [data-trail].is-in').forEach((el) => { if (has(el)) away.observe(el); });
 });
 
 // The citation trail is dashed in its drawing's own units, so while it draws, its stroke scales with the

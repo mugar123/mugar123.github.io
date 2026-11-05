@@ -200,14 +200,18 @@ const steps = [
       });
       seen.observe(tile);
     });
+    // Reset once the tile is off screen, so a tile still in view as the trip begins doesn't count unseen.
+    const away = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) continue;
+        away.unobserve(entry.target);
+        entry.target.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => { runs.set(el, (runs.get(el) ?? 0) + 1); el.textContent = '0'; });
+        seen.observe(entry.target);
+      }
+    });
     document.addEventListener('replay', (e) => {
       const { has } = (e as CustomEvent<{ has: (el: Element) => boolean }>).detail;
-      tiles.forEach((tile) => {
-        if (!has(tile)) return;
-        tile.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => { runs.set(el, (runs.get(el) ?? 0) + 1); el.textContent = '0'; });
-        seen.unobserve(tile);
-        seen.observe(tile);
-      });
+      tiles.forEach((tile) => { if (has(tile)) { seen.unobserve(tile); away.observe(tile); } });
     });
   }
 
