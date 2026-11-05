@@ -36,53 +36,82 @@ function writeStatements(rects: DOMRect[]) {
   });
 }
 
-// Notes scan: the compiled page is uncovered behind a beam as the section is scrolled.
+// Notes scan: the compiled page is uncovered behind a beam as the section is scrolled. Where the browser
+// runs the scan as a scroll-driven animation (see NotesScan.astro), this only follows its progress to
+// light the steps; otherwise it moves the same layers itself. The hold is measured on what is pinned:
+// the whole stage on wide screens, only the sheet and the steps (inside their run) on phones.
 const scan = document.querySelector<HTMLElement>('[data-scan]');
 const scanStage = scan?.querySelector<HTMLElement>('.lc__stage');
+const scanRunEl = scan?.querySelector<HTMLElement>('[data-scan-run]');
+const scanPinEl = scan?.querySelector<HTMLElement>('[data-scan-pin]');
 const sheet = scan?.querySelector<HTMLElement>('[data-sheet]');
+const reveal = scan?.querySelector<HTMLElement>('[data-reveal]');
 const tex = scan?.querySelector<HTMLElement>('[data-tex]');
 const beam = scan?.querySelector<HTMLElement>('[data-beam]');
 const steps = scan ? [...scan.querySelectorAll<HTMLElement>('[data-steps] li')] : [];
+let scanRun: HTMLElement | undefined = scan ?? undefined;
 let scanH = 0;
-let sheetH = 0;
 let scanned = -1;
+const cssScan = () => reveal?.getAnimations().find((a) => (a as CSSAnimation).animationName === 'lc-reveal');
 
-function writeScan(rect: DOMRect | undefined, vh: number) {
-  if (!scan || !sheet || !tex || !beam || !rect) return;
+function readScan(vh: number) {
+  if (!scan || !scanRun || reduce.matches) return null;
+  const rect = scanRun.getBoundingClientRect();
+  if (scanned !== -1 && !onScreen(rect, vh)) return null;
+  const css = cssScan();
+  if (css) return { s: clamp(Number(css.effect?.getComputedTiming().progress ?? 0)), css: true };
+  return { s: clamp((held(rect, scanH) - 0.18) / 0.62), css: false };
+}
+
+function writeScan(read: { s: number; css: boolean } | null) {
+  if (!scan || !sheet || !reveal || !tex || !beam) return;
   if (reduce.matches) { sheet.classList.add('is-done'); return; } // shown compiled, no scrub
-  if (scanned !== -1 && !onScreen(rect, vh)) return;
-  const s = clamp((held(rect, scanH) - 0.18) / 0.62);
-  if (s === scanned) return;
+  if (!read || read.s === scanned) return;
+  const { s, css } = read;
   scanned = s;
-  tex.style.clipPath = `inset(0 0 ${(1 - s) * 100}% 0)`;
-  beam.style.transform = `translate3d(0, ${s * sheetH}px, 0)`;
-  beam.style.opacity = s > 0 && s < 1 ? '1' : '0';
+  if (!css) {
+    reveal.style.transform = `translate3d(0, ${(s - 1) * 100}%, 0)`;
+    tex.style.transform = `translate3d(0, ${(1 - s) * 100}%, 0)`;
+    beam.style.transform = `translate3d(0, ${s * 100}%, 0)`;
+    beam.style.opacity = s > 0 && s < 1 ? '1' : '0';
+  }
   sheet.classList.toggle('is-done', s >= 1);
   const step = s >= 1 ? 2 : s > 0 ? 1 : 0;
   steps.forEach((li, i) => li.classList.toggle('is-on', i === step));
 }
 
 // Separation pages: the name fills with light from left to right while its page is held on screen,
-// then the line under it fades in. Set on the elements themselves, never inherited through a parent.
-const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => ({
-  section,
-  pin: section.querySelector<HTMLElement>('.divider__pin')!,
-  title: section.querySelector<HTMLElement>('.divider__title')!,
-  sub: section.querySelector<HTMLElement>('.divider__sub')!,
-  pinH: 0,
-  fill: -1,
-  shown: -1,
-}));
+// then the line under it fades in. Where the browser runs this as a scroll-driven animation (see
+// .divider__lit), there is nothing to do here; otherwise the script moves the same two layers.
+// Set on the elements themselves, never inherited through a parent.
+const dividers = [...document.querySelectorAll<HTMLElement>('[data-divider]')].map((section) => {
+  const lit = section.querySelector<HTMLElement>('.divider__lit')!;
+  return {
+    section,
+    pin: section.querySelector<HTMLElement>('.divider__pin')!,
+    lit,
+    words: lit.firstElementChild as HTMLElement,
+    sub: section.querySelector<HTMLElement>('.divider__sub')!,
+    pinH: 0,
+    fill: -1,
+    shown: -1,
+  };
+});
+const cssDividers = () => !!dividers[0]?.lit.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-window');
 
-function writeDividers(rects: DOMRect[], vh: number) {
-  if (reduce.matches) return;
+function writeDividers(rects: DOMRect[], vh: number, css: boolean) {
+  if (reduce.matches || css) return;
   dividers.forEach((d, i) => {
     const rect = rects[i]!;
     if (!onScreen(rect, vh)) return;
     const hold = held(rect, d.pinH);
     const fill = clamp(hold / 0.7);
     const shown = clamp((hold - 0.7) / 0.2);
-    if (fill !== d.fill) { d.title.style.backgroundPositionX = `${(1 - fill) * 100}%`; d.fill = fill; }
+    if (fill !== d.fill) {
+      d.lit.style.transform = `translate3d(${(fill - 1) * 100}%, 0, 0)`;
+      d.words.style.transform = `translate3d(${(1 - fill) * 125}%, 0, 0)`;
+      d.fill = fill;
+    }
     if (shown !== d.shown) { d.sub.style.opacity = shown.toFixed(3); d.shown = shown; }
   });
 }
@@ -174,8 +203,10 @@ function writeTimeline(read: { p: number; css: boolean } | null) {
 function measure() {
   for (const s of statements) { s.pinH = s.pin.offsetHeight; s.lit = -1; }
   for (const d of dividers) { d.pinH = d.pin.offsetHeight; d.fill = -1; d.shown = -1; }
-  scanH = scanStage?.offsetHeight ?? 0;
-  sheetH = sheet?.clientHeight ?? 0;
+  // Phones pin only the sheet and the steps; there the hold runs through their run, not the section.
+  const pinOnly = !!scanPinEl && getComputedStyle(scanPinEl).position === 'sticky';
+  scanRun = (pinOnly ? scanRunEl : scan) ?? undefined;
+  scanH = (pinOnly ? scanPinEl?.offsetHeight : scanStage?.offsetHeight) ?? 0;
   scanned = -1;
   measureTimeline();
 }
@@ -207,13 +238,14 @@ function update() {
   const vh = innerHeight;
   // Read...
   const statementRects = statements.map((s) => s.section.getBoundingClientRect());
-  const scanRect = scan?.getBoundingClientRect();
-  const dividerRects = dividers.map((d) => d.section.getBoundingClientRect());
+  const scanRead = readScan(vh);
+  const dividersCss = cssDividers();
+  const dividerRects = dividersCss ? [] : dividers.map((d) => d.section.getBoundingClientRect());
   const tl = readTimeline(vh);
   // ...then write.
   writeStatements(statementRects);
-  writeScan(scanRect, vh);
-  writeDividers(dividerRects, vh);
+  writeScan(scanRead);
+  writeDividers(dividerRects, vh, dividersCss);
   writeTimeline(tl);
 }
 function queue() {
@@ -225,8 +257,8 @@ addEventListener('scroll', queue, { passive: true });
 addEventListener('resize', () => { dirty = true; queue(); });
 reduce.addEventListener('change', () => {
   root.classList.toggle('reduce', reduce.matches);
-  if (reduce.matches && tex) tex.style.clipPath = '';
-  if (reduce.matches) dividers.forEach((d) => { d.title.style.backgroundPositionX = ''; d.sub.style.opacity = ''; });
+  if (reduce.matches) [reveal, tex, beam].forEach((el) => { el?.style.removeProperty('transform'); el?.style.removeProperty('opacity'); });
+  if (reduce.matches) dividers.forEach((d) => { d.lit.style.transform = ''; d.words.style.transform = ''; d.sub.style.opacity = ''; });
   if (timeline) timeline.p = -1;
   dirty = true;
   queue();

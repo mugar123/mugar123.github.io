@@ -1,9 +1,10 @@
 ---
 /**
- * LaTeX converter: a dark stage where the sheet of notes is the one lit object. scripts/scroll.ts
- * drives it while the section is pinned: the compiled page is uncovered from the top (clip-path on
- * [data-tex]) under a beam that also reaches the active step in the legend beside it. Without the
- * script, or with reduced motion, the page is shown compiled and nothing moves.
+ * LaTeX converter: a dark stage where the sheet of notes is the one lit object. While it is pinned, the
+ * compiled page is uncovered from the top ([data-reveal] and [data-tex] moving against each other) under
+ * a beam that also reaches the active step in the legend beside it: a scroll-driven animation where the
+ * browser has them, scripts/scroll.ts otherwise. Without the script, or with reduced motion, the page is
+ * shown compiled and nothing moves.
  */
 import '@fontsource/caveat/latin-500.css';
 ---
@@ -16,6 +17,7 @@ import '@fontsource/caveat/latin-500.css';
       <p class="lc__note">One reusable template keeps the format, notation and structure the same in every set of notes, which go to my classmates. The pipeline is private for now.</p>
     </header>
 
+    <div class="lc__run" data-scan-run><div class="lc__pin" data-scan-pin>
     <div class="lc-sheet" data-sheet>
       <div class="lc-page hand" aria-hidden="true">
         <p class="hand__title">Change of variables <span>(thm.)</span></p>
@@ -38,7 +40,7 @@ import '@fontsource/caveat/latin-500.css';
         </svg>
       </div>
 
-      <div class="lc-page lc-tex" data-tex>
+      <div class="lc-reveal" data-reveal><div class="lc-page lc-tex" data-tex>
         <p class="lc-tex__run" aria-hidden="true"><span>Multiple integrals</span></p>
         <p><b>Theorem 1</b> (Change of variables)<b>.</b> <i>Let U, V ⊂ ℝ<sup>n</sup> be open and φ : U → V a C<sup>1</sup> diffeomorphism. Then, for every integrable f : V → ℝ,</i></p>
         <math display="block">
@@ -72,7 +74,7 @@ import '@fontsource/caveat/latin-500.css';
           <figcaption><b>Figure 1.</b> Polar coordinates, <math><mi>φ</mi><mo>:</mo><mi>U</mi><mo>→</mo><mi>V</mi></math>.</figcaption>
         </figure>
         <p class="lc-tex__folio" aria-hidden="true">1</p>
-      </div>
+      </div></div>
 
       <div class="lc-beam" data-beam aria-hidden="true"></div>
       <p class="lc-file" aria-hidden="true"><span class="lc-file__in">IMG_2041.jpg</span><span class="lc-file__out">notes.tex · compiled</span></p>
@@ -83,6 +85,7 @@ import '@fontsource/caveat/latin-500.css';
       <li><span><b>Models read</b> the handwriting, open and closed</span></li>
       <li><span><b>LaTeX comes out</b>, and it compiles</span></li>
     </ol>
+    </div></div>
   </div>
 </section>
 
@@ -99,6 +102,9 @@ import '@fontsource/caveat/latin-500.css';
     column-gap: clamp(2rem, 3.6vw, 3.25rem);
     padding-block: 5rem 3rem;
   }
+  /* The run and the pin only take a box on phones (below); elsewhere the sheet and the legend are the
+     stage's own grid items. */
+  .lc__run, .lc__pin { display: contents; }
 
   /* The story. */
   .lc__head { grid-area: head; display: grid; gap: 1.25rem; align-content: center; }
@@ -180,8 +186,13 @@ import '@fontsource/caveat/latin-500.css';
     letter-spacing: 0;
     padding: 11cqh 10cqi 0;
     display: flex; flex-direction: column; gap: 0.85em;
-    clip-path: inset(0 0 100% 0);
   }
+  /* The compiled page is uncovered from the top by two layers moving against each other: the window
+     slides down from above, the page inside slides up by as much, so the page stands still while its
+     visible part grows. Transforms only, so the browser can run it on the scrolling thread (a clip-path
+     rewritten from the script every frame trailed the finger and stuttered on phones). */
+  .lc-reveal { position: absolute; inset: 0; overflow: hidden; border-radius: 0.25rem; transform: translateY(-100%); }
+  .lc-reveal > .lc-tex { transform: translateY(100%); }
   .lc-tex__run {
     position: absolute; top: 5cqh; left: 10cqi; right: 10cqi;
     padding-bottom: 0.45em;
@@ -205,14 +216,14 @@ import '@fontsource/caveat/latin-500.css';
   .tikz .it { font-style: italic; }
 
   /* The beam: one blue hairline that runs past the page and points at the legend. */
+  /* The box is the sheet's height and the line its top edge, so translateY(100%) puts the line at the
+     sheet's foot whatever its size. */
   .lc-beam {
-    position: absolute; top: 0; left: -1.25rem; right: calc(-1 * clamp(2rem, 3.6vw, 3.25rem));
-    height: 1px;
-    background: var(--link-on-dark);
+    position: absolute; top: 0; bottom: 0; left: -1.25rem; right: calc(-1 * clamp(2rem, 3.6vw, 3.25rem));
+    border-top: 1px solid var(--link-on-dark);
     opacity: 0;
     pointer-events: none;
     transition: opacity 200ms ease;
-    will-change: transform;
   }
 
   /* File name under the page, swapped when the page is done. */
@@ -288,24 +299,31 @@ import '@fontsource/caveat/latin-500.css';
   }
 
   @media (max-width: 620px) {
-    .lc__stage {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-areas: "head" "sheet" "legend";
-      align-content: center; row-gap: 1.25rem;
+    /* Phones: only the sheet and the steps are pinned. The brand and the headline scroll past above them,
+       so the sheet gets nearly the whole screen, close to a real page, instead of the strip left over
+       under a pinned headline (13rem on an iPhone, which cut the compiled page off at the bottom). */
+    .lc__stage { position: relative; height: 100%; display: flex; flex-direction: column; padding-block: 4rem 0; }
+    .lc__run { display: block; flex: 1; margin-top: 2rem; }
+    .lc__pin {
+      position: sticky; top: 0;
+      height: 100svh;
+      display: grid; align-content: center; row-gap: 1rem;
       padding-block: 4rem 1.25rem;
     }
+    .lc-sheet, .lc-legend { grid-area: auto; }
     .lc__head { gap: 0.75rem; }
     .lc-brand { gap: 0.75rem; margin-bottom: 0.25rem; font-size: 1.3125rem; }
     .lc-brand img { width: 2.5rem; height: 2.5rem; }
     .lc__head .headline { font-size: clamp(1.875rem, 8.7vw, 2.125rem); }
     .lc__head .lede, .lc__note { display: none; }
-    .lc-sheet { --h: clamp(13rem, 100svh - 27.5rem, 24rem); width: 100%; }
+    .lc-sheet { --h: max(15rem, min(100svh - 13.5rem, 141vw)); width: 100%; }
     .lc-beam { left: -0.5rem; right: -0.5rem; }
     .lc-file { display: none; }
     .hand { font-size: min(5cqi, 4.4cqh); padding-left: calc(3.25rem + 2cqi); }
-    .lc-tex { font-size: clamp(0.6875rem, min(3.5cqi, 3.15cqh), 0.875rem); padding: 6cqh 7cqi 0; gap: 0.7em; }
+    /* The compiled page scales with the sheet, figure included, so all of it fits on a short screen too. */
+    .lc-tex { font-size: clamp(0.5625rem, min(3.5cqi, 3.15cqh), 0.875rem); padding: 6cqh 7cqi 0; gap: 0.7em; }
     .lc-tex__run, .lc-tex__folio { display: none; }
-    .lc-tex figure svg { width: 80%; }
+    .lc-tex figure svg { width: min(80%, 75cqh); }
     .lc-legend li { font-size: 0.875rem; padding-block: 0.5rem; }
   }
 
@@ -316,7 +334,36 @@ import '@fontsource/caveat/latin-500.css';
   /* Without the scroll script, or when motion is reduced: the finished page, nothing pinned. */
   :global(html:not(.js)) .lc, :global(html.reduce) .lc { height: auto; }
   :global(html:not(.js)) .lc__stage, :global(html.reduce) .lc__stage { position: static; height: auto; padding-block: clamp(5rem, 11vw, 10rem); }
-  :global(html:not(.js)) .lc-tex, :global(html.reduce) .lc-tex { clip-path: none; }
+  :global(html:not(.js)) .lc__pin, :global(html.reduce) .lc__pin { position: static; height: auto; }
+  :global(html:not(.js)) .lc-reveal, :global(html.reduce) .lc-reveal,
+  :global(html:not(.js)) .lc-reveal > .lc-tex, :global(html.reduce) .lc-reveal > .lc-tex { transform: none; animation: none; }
+
+  /* Where an animation can be tied to the scroll, the browser runs the scan itself, on the scrolling
+     thread in Chrome and Safari 26.4+: the reveal, its counter-move and the beam, over the same stretch
+     of the hold as the script's fallback (18% to 80%). The hold is the section's on wide screens, where
+     the whole stage is pinned, and the run's on phones, where only the sheet and the steps are. The
+     script reads this progress to light the steps. The timeline goes in a rule of its own: in the same
+     rule as the shorthand, the CSS minifier folds it into a form no browser accepts. */
+  @supports (animation-timeline: view()) {
+    .lc { view-timeline-name: --lc-scan; view-timeline-axis: block; view-timeline-inset: 0; }
+    @media (max-width: 620px) {
+      .lc { view-timeline-name: none; }
+      .lc__run { view-timeline-name: --lc-scan; view-timeline-axis: block; view-timeline-inset: 0; }
+    }
+    :global(html.js:not(.reduce)) .lc-reveal { animation: lc-reveal linear both; }
+    :global(html.js:not(.reduce)) .lc-reveal > .lc-tex { animation: lc-counter linear both; }
+    :global(html.js:not(.reduce)) .lc-beam { animation: lc-beam linear both; }
+    :global(html.js:not(.reduce)) .lc-sheet > .lc-reveal,
+    :global(html.js:not(.reduce)) .lc-sheet > .lc-reveal > .lc-tex,
+    :global(html.js:not(.reduce)) .lc-sheet > .lc-beam {
+      animation-duration: auto;
+      animation-timeline: --lc-scan;
+      animation-range: contain 18% contain 80%;
+    }
+    @keyframes lc-reveal { from { transform: translateY(-100%); } to { transform: none; } }
+    @keyframes lc-counter { from { transform: translateY(100%); } to { transform: none; } }
+    @keyframes lc-beam { 0% { transform: none; opacity: 0; } 1%, 99% { opacity: 1; } 100% { transform: translateY(100%); opacity: 0; } }
+  }
   :global(html:not(.js)) .lc-beam, :global(html.reduce) .lc-beam { display: none; }
   :global(html:not(.js)) .lc-legend li, :global(html.reduce) .lc-legend li { color: var(--on-dark); }
   :global(html:not(.js)) .lc__head .lede, :global(html.reduce) .lc__head .lede,

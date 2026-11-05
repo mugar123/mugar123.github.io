@@ -37,11 +37,8 @@ const links = [
     /* A soft shadow lifts it on the light pages. Over the black ones the script adds .is-on-dark: the
        island steps up to the dark-tile grey with a hairline ring, so it never melts into the page. */
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-    transition: width 380ms var(--back), height 380ms var(--back), border-radius 380ms var(--back), background-color 200ms ease, box-shadow 200ms ease, scale 160ms var(--ease-out);
+    transition: width 380ms var(--back), height 380ms var(--back), border-radius 380ms var(--back), background-color 200ms ease, box-shadow 200ms ease;
   }
-  /* A finger on the closed island presses it in a little the moment it lands, as the real one does, so
-     the tap is answered before the island opens on release. */
-  .island:not(.is-open):has(.island__hit:active) { scale: 0.96; }
   .island.is-on-dark { background: var(--dark-tile); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
   .island__hit { position: absolute; inset: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
   .island__hit:focus-visible { outline-offset: 3px; }
@@ -90,7 +87,7 @@ const links = [
   /* Open. */
   .island.is-open, :global(html:not(.js)) .island {
     width: var(--open-w); height: var(--open-h); border-radius: var(--open-r);
-    transition: width 600ms var(--out), height 600ms var(--out), border-radius 600ms var(--out), scale 300ms var(--out);
+    transition: width 600ms var(--out), height 600ms var(--out), border-radius 600ms var(--out);
   }
   .island.is-open .island__inner, :global(html:not(.js)) .island__inner {
     opacity: 1; filter: blur(0); scale: 1; pointer-events: auto;

@@ -86,7 +86,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
       <section class="divider section--dark" id="projects" aria-labelledby="part-projects" data-divider>
         <div class="divider__pin">
-          <h2 class="divider__title" id="part-projects">Projects.</h2>
+          <h2 class="divider__title" id="part-projects">Projects.<span class="divider__lit" aria-hidden="true"><span>Projects.</span></span></h2>
           <p class="divider__sub">{parts.projects}</p>
         </div>
       </section>
@@ -274,7 +274,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
       <section class="divider section--dark" id="studies" aria-labelledby="part-studies" data-divider>
         <div class="divider__pin">
-          <h2 class="divider__title" id="part-studies">Studies.</h2>
+          <h2 class="divider__title" id="part-studies">Studies.<span class="divider__lit" aria-hidden="true"><span>Studies.</span></span></h2>
           <p class="divider__sub">{parts.studies}</p>
         </div>
       </section>
@@ -371,7 +371,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
       <section class="divider section--dark" id="how-i-work" aria-labelledby="part-how" data-divider>
         <div class="divider__pin">
-          <h2 class="divider__title" id="part-how">How I work.</h2>
+          <h2 class="divider__title" id="part-how">How I work.<span class="divider__lit" aria-hidden="true"><span>How I work.</span></span></h2>
           <p class="divider__sub">{parts.how}</p>
         </div>
       </section>
@@ -433,7 +433,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
 
       <section class="divider section--dark" aria-labelledby="part-contact" data-divider>
         <div class="divider__pin">
-          <h2 class="divider__title" id="part-contact">Contact.</h2>
+          <h2 class="divider__title" id="part-contact">Contact.<span class="divider__lit" aria-hidden="true"><span>Contact.</span></span></h2>
           <p class="divider__sub">{parts.contact}</p>
         </div>
       </section>
@@ -550,8 +550,8 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .statement__text.is-armed .w { color: #3a3a3c; transition: color 400ms ease; }
   .statement__text.is-armed .w.on { color: var(--on-dark); }
 
-  /* Separation pages: the part's name holds the screen and fills with light, left to right, as it scrolls past
-     (scripts/scroll.ts sets the fill). Without the script, or with reduced motion, it is simply lit. */
+  /* Separation pages: the part's name holds the screen and fills with light, left to right, as it scrolls past.
+     Without the script, or with reduced motion, it is simply lit. */
   .divider { height: 150vh; }
   .divider__pin {
     position: sticky; top: var(--nav-h);
@@ -561,19 +561,46 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     text-align: center;
   }
   .divider__title {
-    /* The light fill only paints inside the box: give descenders (the j) and the last glyph room. */
+    /* The light only shows inside the box: give descenders (the j) and the last glyph room. */
+    position: relative;
     padding: 0.04em 0.06em 0.18em;
     margin-bottom: -0.14em;
     font-size: clamp(4.5rem, 17vw, 16rem); line-height: 0.95; font-weight: 600; letter-spacing: -0.05em;
     text-wrap: balance;
   }
   .divider__sub { max-width: 34rem; font-size: clamp(1.1875rem, 1.7vw, 1.5rem); line-height: 1.33; font-weight: 500; color: var(--on-dark-2); text-wrap: balance; }
-  :global(html.js:not(.reduce)) .divider__title {
-    background: linear-gradient(90deg, var(--on-dark) 45%, #2c2c2e 55%) 100% 0 / 220% 100% no-repeat;
-    -webkit-background-clip: text; background-clip: text;
-    color: transparent;
+  /* The name is set twice: dim, and lit on top, inside a window a quarter wider than the name whose right
+     edge fades out. The window slides in from the left while the lit name inside slides back by as much,
+     so the words stand still and the soft edge of light crosses them. Transforms only: the browser runs
+     it on the scrolling thread (a background repainted from the script every frame lagged behind the
+     scroll, and the page could leave before its name had filled). */
+  .divider__lit { display: none; }
+  :global(html.js:not(.reduce)) .divider__title { color: #2c2c2e; }
+  :global(html.js:not(.reduce)) .divider__lit {
+    display: block; position: absolute; inset: 0 -25% 0 0;
+    overflow: hidden; pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 80%, transparent); mask-image: linear-gradient(90deg, #000 80%, transparent);
+    transform: translateX(-100%);
+  }
+  :global(html.js:not(.reduce)) .divider__lit > span {
+    display: block; width: 80%; padding: 0.04em 0.06em 0.18em;
+    color: var(--on-dark);
+    transform: translateX(125%);
   }
   :global(html.js:not(.reduce)) .divider__sub { opacity: 0; }
+  @supports (animation-timeline: view()) {
+    .divider { view-timeline-name: --divider; view-timeline-axis: block; view-timeline-inset: 0; }
+    :global(html.js:not(.reduce)) .divider__lit { animation: divider-window linear both; }
+    :global(html.js:not(.reduce)) .divider__lit > span { animation: divider-words linear both; }
+    :global(html.js:not(.reduce)) .divider__sub { animation: divider-sub linear both; }
+    /* The timelines in rules of their own (see .tl__fill): 0–70% of the hold fills, 70–90% brings the line in. */
+    :global(html.js:not(.reduce)) .divider__title > .divider__lit,
+    :global(html.js:not(.reduce)) .divider__title > .divider__lit > span { animation-duration: auto; animation-timeline: --divider; animation-range: contain 0% contain 70%; }
+    :global(html.js:not(.reduce)) .divider__pin > .divider__sub { animation-duration: auto; animation-timeline: --divider; animation-range: contain 70% contain 90%; }
+    @keyframes divider-window { from { transform: translateX(-100%); } to { transform: none; } }
+    @keyframes divider-words { from { transform: translateX(125%); } to { transform: none; } }
+    @keyframes divider-sub { from { opacity: 0; } to { opacity: 1; } }
+  }
   :global(html:not(.js)) .divider, :global(html.reduce) .divider { height: auto; }
   :global(html:not(.js)) .divider__pin, :global(html.reduce) .divider__pin { position: static; min-height: calc(100svh - var(--nav-h)); }
 
