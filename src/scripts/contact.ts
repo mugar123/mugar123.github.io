@@ -5,7 +5,7 @@
  * The exchange: the thread is armed on load (its pieces hidden), plays the first time it is mostly on
  * screen (the typing bubble, the message growing out of it, the reply sent, "Delivered"), and then the
  * classes come off, so the end state is exactly the state without this script. Someone tabbing to the
- * reply never waits for it.
+ * reply never waits for it. Reached again from the island, it plays again.
  *
  * The greeting: "Say" stays, and the word after it changes, hi, hola, bonjour…, the way iOS changes a
  * number in place: the old letters lift and blur away, the new ones rise into place one after another,
@@ -14,6 +14,8 @@
  * the section is on screen, rests under the pointer or keyboard focus and while the tab is hidden, and
  * never moves with reduced motion.
  */
+import type { Replay } from './goto';
+
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 // A spring sampled into a linear() easing: damping ratio 0.9, response 0.5s, so it settles without a
 // visible bounce (nothing was flung). Browsers without linear() get the site's strong ease-out.
@@ -28,16 +30,19 @@ export function initContact(section: HTMLElement) {
   const reply = section.querySelector<HTMLElement>('[data-reply]');
   const receipt = section.querySelector<HTMLElement>('[data-receipt]');
   if (thread && reply && receipt && 'IntersectionObserver' in window) {
-    const finish = () => { io.disconnect(); section.classList.remove('is-armed', 'is-playing'); };
     const io = new IntersectionObserver((entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
       io.disconnect();
       section.classList.add('is-playing');
     }, { threshold: 0.6 });
-    section.classList.add('is-armed');
-    io.observe(thread);
-    receipt.addEventListener('animationend', finish, { once: true });
-    reply.addEventListener('focus', finish, { once: true });
+    const finish = () => { io.disconnect(); section.classList.remove('is-armed', 'is-playing'); };
+    const arm = () => { section.classList.add('is-armed'); io.observe(thread); };
+    arm();
+    receipt.addEventListener('animationend', finish);
+    reply.addEventListener('focus', finish);
+    // Asked for again from the island or "Get in touch" (scripts/goto.ts), the exchange plays again, from
+    // the start, when it is next mostly on screen; at once if it already is.
+    document.addEventListener('replay', (e) => { if ((e as Replay).detail.has(section)) { finish(); arm(); } });
   }
 
   const greet = section.querySelector<HTMLElement>('[data-greet]');

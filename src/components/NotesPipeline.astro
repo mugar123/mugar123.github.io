@@ -165,16 +165,20 @@ const steps = [
     new ResizeObserver(layout).observe(crew);
   }
 
-  // The numbers count up once, the first time their tile is mostly on screen. Not with reduced motion,
-  // where they are simply there.
+  // The numbers count up once, the first time their tile is mostly on screen, and again when the part is
+  // reached from the island (scripts/goto.ts). Not with reduced motion, where they are simply there.
   const root = document.documentElement;
   const still = () => root.classList.contains('reduce') || matchMedia('(prefers-reduced-motion: reduce)').matches;
   const tiles = document.querySelectorAll<HTMLElement>('[data-counts]');
   if (!still()) {
+    const runs = new WeakMap<HTMLElement, number>(); // a new count stops the one before it
     const count = (el: HTMLElement) => {
       const to = Number(el.dataset.to);
       const t0 = performance.now(), ms = 1400;
+      const run = (runs.get(el) ?? 0) + 1;
+      runs.set(el, run);
       const tick = (now: number) => {
+        if (runs.get(el) !== run) return;
         const t = Math.min(1, (now - t0) / ms);
         el.textContent = String(Math.round(to * (1 - (1 - t) ** 4))); // ease-out: fast, then settles
         if (t < 1) requestAnimationFrame(tick);
@@ -195,6 +199,15 @@ const steps = [
         el.textContent = '0';
       });
       seen.observe(tile);
+    });
+    document.addEventListener('replay', (e) => {
+      const { has } = (e as CustomEvent<{ has: (el: Element) => boolean }>).detail;
+      tiles.forEach((tile) => {
+        if (!has(tile)) return;
+        tile.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => { runs.set(el, (runs.get(el) ?? 0) + 1); el.textContent = '0'; });
+        seen.unobserve(tile);
+        seen.observe(tile);
+      });
     });
   }
 </script>

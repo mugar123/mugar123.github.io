@@ -8,6 +8,8 @@
  * innerHeight: on phones innerHeight grows when the browser's toolbar collapses, mid-scroll, which made
  * the fills jump forward and finish before their page was released.
  */
+import type { Replay } from './goto';
+
 const root = document.documentElement;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 root.classList.toggle('reduce', reduce.matches);
@@ -216,6 +218,15 @@ const once = new IntersectionObserver((entries) => {
   }
 }, { threshold: 0.6 });
 document.querySelectorAll('[data-draw], [data-trail]').forEach((el) => once.observe(el));
+// Reached again from the island, they draw again (scripts/goto.ts): undrawn now, drawn when next on screen.
+document.addEventListener('replay', (e) => {
+  const { has } = (e as Replay).detail;
+  document.querySelectorAll('[data-draw].is-in, [data-trail].is-in').forEach((el) => {
+    if (!has(el)) return;
+    el.classList.remove('is-in');
+    once.observe(el);
+  });
+});
 
 // The citation trail is dashed in its drawing's own units, so while it draws, its stroke scales with the
 // drawing; --unit is one screen pixel in those units, which keeps the line a hairline at any width.

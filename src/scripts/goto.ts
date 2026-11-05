@@ -52,9 +52,24 @@ function settle(target: HTMLElement, hash: string) {
   target.focus({ preventScroll: true });
 }
 
+/**
+ * Asked for from the island or a pill, a part of the page plays its one-time animations again, even if
+ * they have already played: everything from the target up to the next separation page hears a 'replay'
+ * event, resets, and plays again when it is next on screen (scripts/scroll.ts, scripts/contact.ts,
+ * NotesPipeline.astro).
+ */
+export type Replay = CustomEvent<{ has: (el: Element) => boolean }>;
+const after = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+function replay(target: HTMLElement) {
+  const next = [...document.querySelectorAll('[data-divider]')].find((d) => after(target, d) && !target.contains(d));
+  const has = (el: Element) => (target.contains(el) || after(target, el)) && (!next || after(el, next));
+  document.dispatchEvent(new CustomEvent('replay', { detail: { has } }) satisfies Replay);
+}
+
 export function goTo(hash: string) {
   const target = document.querySelector<HTMLElement>(hash);
   if (!target) return false;
+  replay(target);
   stop();
   const start = scrollY;
   const max = document.scrollingElement!.scrollHeight - innerHeight;
