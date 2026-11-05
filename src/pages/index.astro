@@ -1412,17 +1412,24 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   }
 
   /* Contact */
-  /* With the footer, exactly the last screen: scrolled to the end, the section starts at the top of the
-     screen, so the black page before it never shows and "Say hi." sits clear of the island. Dynamic
-     height, because Safari shows its toolbar at the end of a page and the visible area shrinks; a whole
-     small-viewport screen plus the footer lifted the headline under the island. --footer-h is measured
-     by the page script. The thread is a short iMessage exchange set on the page like a quote: the
-     visitor asks where to reach him, his reply is the email, and the reply bubble is the mailto. The
-     headline says hi in one language after another (scripts/contact.ts). */
-  .contact { min-height: calc(100dvh - var(--footer-h, 0px)); display: grid; align-content: center; text-align: center; background: var(--bg); }
+  /* With the footer, the last screen at its tallest (Safari's toolbar tucked away): scrolled to the end,
+     the section starts at the top of the screen, so the black page before it never shows; with the
+     toolbar out it starts a toolbar's height above, and "Say hi." still sits clear of the island. Never
+     dynamic units here or below: Safari moves its toolbar when the end of the page is pulled, and a
+     section that resized with it changed the page's length mid-pull, so the page jumped back and forth.
+     --footer-h is measured by the page script. The thread is a short iMessage exchange set on the page
+     like a quote: the visitor asks where to reach him, his reply is the email, and the reply bubble is
+     the mailto. The headline says hi in one language after another (scripts/contact.ts). */
+  .contact { min-height: calc(100lvh - var(--footer-h, 0px)); display: grid; align-content: center; text-align: center; background: var(--bg); }
+  /* Only the island's clearance above and a little air below, not a section's generous padding, so the
+     exchange fits that last screen and is centred in it; with the full padding it outgrew short windows
+     and the headline went under the island at the end. Scrolled to the end, the headline sits as far
+     below the top as the screen is taller than everything under it, so in short windows the headline,
+     the thread and their spacing also scale with the height. */
+  .contact.section { padding-block: 5rem 3rem; }
   .contact__inner { display: grid; justify-items: center; gap: 1.25rem; }
   /* One line, one em tall whatever script the greeting is in, so nothing below moves when it changes. */
-  .contact__title { width: 100%; height: 1.05em; font-size: clamp(2.75rem, 6vw, 4.5rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.022em; }
+  .contact__title { width: 100%; height: 1.05em; font-size: clamp(2.75rem, min(6vw, 8.5svh), 4.5rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.022em; }
   /* "Say" stays; the greeting after it changes (scripts/contact.ts). The line stays centred: when the new
      word is a different width, the whole line glides to its new place instead of jumping. */
   .contact__greet { display: inline-block; white-space: nowrap; }
@@ -1441,9 +1448,9 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     --grey: #e9e9eb; /* the received-bubble grey, one step darker than --bg-alt so it holds on white */
     --tail: 1.18em;
     width: min(100%, 22em);
-    margin-top: clamp(1.25rem, 3vw, 2.5rem);
+    margin-top: clamp(1.25rem, min(3vw, 3svh), 2.5rem);
     padding-inline: 0.45em; /* room for the tails inside the gutter */
-    font-size: clamp(1.0625rem, 0.5rem + 1.4vw, 1.75rem);
+    font-size: clamp(1.0625rem, min(0.5rem + 1.4vw, 0.25rem + 2.5svh), 1.75rem); /* smaller in short windows too (see .contact) */
     line-height: 1.3;
     letter-spacing: -0.005em;
     text-align: left;
@@ -1479,7 +1486,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .thread__reply:hover .bubble--me { background-color: var(--blue-hover); }
   }
   /* The other ways to reach me, as the action buttons of a contact card: a round icon, its name under it. */
-  .contact__links { display: flex; justify-content: center; gap: clamp(1.5rem, 4vw, 2.5rem); margin: clamp(1rem, 2.5vw, 2rem) 0 0; padding: 0; list-style: none; }
+  .contact__links { display: flex; justify-content: center; gap: clamp(1.5rem, 4vw, 2.5rem); margin: clamp(1rem, min(2.5vw, 2.5svh), 2rem) 0 0; padding: 0; list-style: none; }
   .contact__link {
     display: grid; justify-items: center; gap: 0.5rem; min-width: 4.5rem;
     color: var(--ink-2); text-decoration: none;
