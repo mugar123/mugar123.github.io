@@ -145,7 +145,7 @@
         <div class="lcx-marks-seg"><span class="lcx-marks-thumb" aria-hidden="true"></span><label class="lcx-marks-opt lcx-marks-opt--review" for="lcx-marks-review">Review</label><label class="lcx-marks-opt lcx-marks-opt--clean" for="lcx-marks-clean">Clean</label></div>
 
         <div class="lcx-marks-tile">
-          <pre class="lcx-marks-code"><code><span class="lcx-marks-ln"><span class="lcx-marks-kw">\usepackage</span><span class="lcx-marks-flag">[entrega]</span>&#123;apuntes-nmg&#125;</span>
+          <pre class="lcx-marks-code"><code><span class="lcx-marks-ln"><span class="lcx-marks-kw">\usepackage</span><span class="lcx-marks-flag">[clean]</span>&#123;apuntes-nmg&#125;</span>
   <span class="lcx-marks-ln"> </span>
   <span class="lcx-marks-ln"><span class="lcx-marks-kw">\begin</span>&#123;theorem&#125;[Change of variables]</span>
   <span class="lcx-marks-ln">  \[ \int_V f(y)\,dy</span>
@@ -175,7 +175,7 @@
 
         <figcaption class="lcx-marks-cap">
           <span class="lcx-marks-cap--review"><code>\usepackage&#123;apuntes-nmg&#125;</code> shows the marks and the table.</span>
-          <span class="lcx-marks-cap--clean"><code>\usepackage[entrega]&#123;apuntes-nmg&#125;</code> hides them: the clean copy.</span>
+          <span class="lcx-marks-cap--clean"><code>\usepackage[clean]&#123;apuntes-nmg&#125;</code> hides them: the clean copy.</span>
         </figcaption>
       </figure>
     </div>
@@ -747,7 +747,7 @@
 
   /* The marks: a state the reader flips, so transitions (they retarget mid-flight if tapped twice). The thumb
      slides; the notes and the blue on the page fade; the lit stretches of hairline fade with them. The
-     [entrega] flag cuts in: it reflows the line, and a fade would only blur the cause. */
+     [clean] flag cuts in: it reflows the line, and a fade would only blur the cause. */
   .lcx-marks-thumb { transition: transform 200ms var(--ease-out); }
   .lcx-marks-note { transition: opacity 160ms ease, visibility 0s linear 0s; }
   .lcx-marks-radio--clean:checked ~ .lcx-marks-demo .lcx-marks-note { opacity: 0; transition: opacity 160ms ease, visibility 0s linear 160ms; }
