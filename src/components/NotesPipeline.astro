@@ -147,16 +147,16 @@
         <div class="lcx-marks-tile">
           <pre class="lcx-marks-code"><code><span class="lcx-marks-ln"><span class="lcx-marks-kw">\usepackage</span><span class="lcx-marks-flag">[entrega]</span>&#123;apuntes-nmg&#125;</span>
   <span class="lcx-marks-ln"> </span>
-  <span class="lcx-marks-ln"><span class="lcx-marks-kw">\begin</span>&#123;teorema&#125;[Cambio de variable]</span>
+  <span class="lcx-marks-ln"><span class="lcx-marks-kw">\begin</span>&#123;teorema&#125;[Change of variables]</span>
   <span class="lcx-marks-ln">  \[ \int_V f(y)\,dy</span>
-  <span class="lcx-marks-ln">     = \int_U f(\varphi(x))\,<span class="lcx-marks-mk"><span class="lcx-marks-mk-cmd">\correccion</span><span class="lcx-marks-mk-note">[faltaba el valor absoluto]</span>&#123;</span>\lvert\det D\varphi(x)\rvert<span class="lcx-marks-mk">&#125;</span>\,dx \]</span>
+  <span class="lcx-marks-ln">     = \int_U f(\varphi(x))\,<span class="lcx-marks-mk"><span class="lcx-marks-mk-cmd">\correccion</span><span class="lcx-marks-mk-note">[absolute value was missing]</span>&#123;</span>\lvert\det D\varphi(x)\rvert<span class="lcx-marks-mk">&#125;</span>\,dx \]</span>
   <span class="lcx-marks-ln"><span class="lcx-marks-kw">\end</span>&#123;teorema&#125;</span>
-  <span class="lcx-marks-ln"><span class="lcx-marks-mk"><span class="lcx-marks-mk-cmd">\anadido</span><span class="lcx-marks-mk-note">[paso omitido en el cuaderno]</span>&#123;</span>Como $\varphi$ es un difeomorfismo, $\det D\varphi \neq 0$.<span class="lcx-marks-mk">&#125;</span></span></code></pre>
+  <span class="lcx-marks-ln"><span class="lcx-marks-mk"><span class="lcx-marks-mk-cmd">\anadido</span><span class="lcx-marks-mk-note">[step skipped in the notebook]</span>&#123;</span>Since $\varphi$ is a diffeomorphism, $\det D\varphi \neq 0$.<span class="lcx-marks-mk">&#125;</span></span></code></pre>
 
           <div class="lcx-marks-page" aria-label="The same lines, compiled">
             <div class="lcx-marks-row">
               <div class="lcx-marks-text">
-                <p><b>Teorema 1</b> (Cambio de variable)<b>.</b></p>
+                <p><b>Theorem 1</b> (Change of variables)<b>.</b></p>
                 <math display="block">
                   <msub><mo>∫</mo><mi>V</mi></msub><mi>f</mi><mo stretchy="false">(</mo><mi>y</mi><mo stretchy="false">)</mo><mspace width="0.17em" /><mi>d</mi><mi>y</mi>
                   <mo>=</mo>
@@ -164,11 +164,11 @@
                   <mrow class="lcx-marks-fix"><mo form="prefix" stretchy="false">|</mo><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo form="postfix" stretchy="false">|</mo></mrow><mspace width="0.17em" /><mi>d</mi><mi>x</mi>
                 </math>
               </div>
-              <p class="lcx-marks-note">faltaba el valor absoluto</p>
+              <p class="lcx-marks-note">absolute value was missing</p>
             </div>
             <div class="lcx-marks-row">
-              <p class="lcx-marks-text lcx-marks-add">Como <math><mi>φ</mi></math> es un difeomorfismo, <math><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo>≠</mo><mn>0</mn></math>.</p>
-              <p class="lcx-marks-note">paso omitido en el cuaderno</p>
+              <p class="lcx-marks-text lcx-marks-add">Since <math><mi>φ</mi></math> is a diffeomorphism, <math><mi>det</mi><mspace width="0.17em" /><mi>D</mi><mi>φ</mi><mo>≠</mo><mn>0</mn></math>.</p>
+              <p class="lcx-marks-note">step skipped in the notebook</p>
             </div>
           </div>
         </div>
@@ -189,7 +189,6 @@
       <div class="lcx-numbers-stat"><dt class="lcx-numbers-label">chapters, plus appendices</dt><dd class="lcx-numbers-value">27</dd></div>
       <div class="lcx-numbers-stat"><dt class="lcx-numbers-label">compile errors at delivery</dt><dd class="lcx-numbers-value">0</dd></div>
     </dl>
-    <p class="lcx-numbers-caption">Marion, <cite>Classical Dynamics of Particles and Systems</cite>, 15 chapters. Griffiths, <cite>Introduction to Electrodynamics</cite>, 12 chapters and three appendices. Personal study copies of my own books.</p>
   </div>
   </div>
 </section>
@@ -673,15 +672,6 @@
     color: var(--on-dark-2);
     text-wrap: balance;
   }
-  /* One line across the full row at the wide container (1200px holds it with no tracking, which is where
-     SF sits at 14px anyway). Where it cannot fit, it breaks into two even lines, never a lone last word. */
-  .lcx-numbers-caption {
-    margin-top: 2.5rem;
-    font-size: 0.875rem; line-height: 1.43; letter-spacing: 0;
-    color: var(--on-dark-2);
-    text-wrap: balance;
-  }
-  .lcx-numbers-caption cite { font-style: italic; }
 
   @media (max-width: 1080px) {
     .lcx-numbers { padding-top: 2rem; }
@@ -690,7 +680,6 @@
     .lcx-numbers { padding-top: 1.75rem; }
     .lcx-numbers-row { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 2rem; column-gap: 1.25rem; margin-top: 1.25rem; }
     .lcx-numbers-stat { gap: 0.5rem; }
-    .lcx-numbers-caption { margin-top: 2rem; letter-spacing: 0.01em; text-wrap: pretty; }
   }
 
   /* ===== overrides ===== */
