@@ -1498,9 +1498,12 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   /* The arrival, once, the way Messages does it. Armed by the script, so without it the exchange simply
      reads. The typing bubble pops in at the tail (a spring with a little bounce), the dots breathe, then
      the bubble grows into the message (a clip that opens, critically damped, with the text fading in as
-     it does), and the reply is sent: it springs up from below the thread, anchored at its own tail, and
-     "Delivered" follows. Springs are sampled into linear() easings, so all of it is CSS, off the main
-     thread; browsers without linear() get the site's ease-out. */
+     it does), and the reply is sent: it springs up from below the thread, anchored at its own tail. Then,
+     a beat later, it is delivered, as Messages shows it: the conversation is anchored at its bottom, so
+     the label is added below the reply and the whole thread rises by the label's height while
+     "Delivered" fades in. Until then the thread sits that much lower. Springs are sampled into linear()
+     easings, so all of it is CSS, off the main thread; browsers without linear() get the site's ease-out. */
+  .thread { --receipt-h: calc(max(0.75rem, 0.55em) * 1.7); } /* the label's line and its margin, in its own em */
   .bubble__dots { display: none; }
   .contact.is-armed .thread__stamp, .contact.is-armed .bubble--them, .contact.is-armed .thread__reply, .contact.is-armed .thread__receipt { opacity: 0; }
   .contact.is-armed .bubble__dots { position: absolute; left: 0; bottom: 0; width: 3.6em; height: 2.14em; display: flex; align-items: center; justify-content: center; gap: 0.24em; }
@@ -1514,10 +1517,11 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .contact.is-playing .bubble__dots i + i + i { animation-delay: 660ms; }
   .contact.is-playing .bubble__dots { animation: contact-fade 150ms linear 1900ms reverse both; }
   .contact.is-playing .thread__reply { animation: contact-send 575ms var(--ease-out) 2800ms both; }
-  .contact.is-playing .thread__receipt { animation: contact-fade 240ms ease 3400ms both; }
+  .contact.is-playing .thread { animation: contact-lift 450ms var(--ease-out) 3900ms both; }
+  .contact.is-playing .thread__receipt { animation: contact-fade 200ms var(--ease-out) 3940ms both; }
   @supports (animation-timing-function: linear(0, 1)) {
     .contact.is-playing .bubble--them { animation-timing-function: linear(0.0, 0.039 3.1%, 0.138 6.2%, 0.27 9.4%, 0.415 12.5%, 0.559 15.6%, 0.691 18.8%, 0.805 21.9%, 0.898 25.0%, 0.97 28.1%, 1.021 31.2%, 1.056 34.4%, 1.075 37.5%, 1.083 40.6%, 1.082 43.8%, 1.076 46.9%, 1.065 50.0%, 1.054 53.1%, 1.041 56.2%, 1.03 59.4%, 1.02 62.5%, 1.011 65.6%, 1.005 68.8%, 1.0 71.9%, 0.996 75.0%, 0.994 78.1%, 0.993 81.2%, 0.993 84.4%, 0.993 87.5%, 0.994 90.6%, 0.995 93.8%, 0.996 96.9%, 1); }
-    .contact.is-playing .bubble__body { animation-timing-function: linear(0.0, 0.024 3.1%, 0.084 6.2%, 0.166 9.4%, 0.258 12.5%, 0.353 15.6%, 0.445 18.8%, 0.532 21.9%, 0.611 25.0%, 0.682 28.1%, 0.743 31.2%, 0.796 34.4%, 0.84 37.5%, 0.877 40.6%, 0.907 43.8%, 0.931 46.9%, 0.951 50.0%, 0.966 53.1%, 0.978 56.2%, 0.986 59.4%, 0.993 62.5%, 0.997 65.6%, 1.001 68.8%, 1.003 71.9%, 1.004 75.0%, 1.005 78.1%, 1.005 81.2%, 1.005 84.4%, 1.005 87.5%, 1.004 90.6%, 1.004 93.8%, 1.003 96.9%, 1); }
+    .contact.is-playing .bubble__body, .contact.is-playing .thread { animation-timing-function: linear(0.0, 0.024 3.1%, 0.084 6.2%, 0.166 9.4%, 0.258 12.5%, 0.353 15.6%, 0.445 18.8%, 0.532 21.9%, 0.611 25.0%, 0.682 28.1%, 0.743 31.2%, 0.796 34.4%, 0.84 37.5%, 0.877 40.6%, 0.907 43.8%, 0.931 46.9%, 0.951 50.0%, 0.966 53.1%, 0.978 56.2%, 0.986 59.4%, 0.993 62.5%, 0.997 65.6%, 1.001 68.8%, 1.003 71.9%, 1.004 75.0%, 1.005 78.1%, 1.005 81.2%, 1.005 84.4%, 1.005 87.5%, 1.004 90.6%, 1.004 93.8%, 1.003 96.9%, 1); }
     .contact.is-playing .thread__reply { animation-timing-function: linear(0.0, 0.023 3.1%, 0.082 6.2%, 0.165 9.4%, 0.262 12.5%, 0.365 15.6%, 0.468 18.8%, 0.565 21.9%, 0.656 25.0%, 0.737 28.1%, 0.807 31.2%, 0.867 34.4%, 0.916 37.5%, 0.956 40.6%, 0.986 43.8%, 1.009 46.9%, 1.026 50.0%, 1.037 53.1%, 1.043 56.2%, 1.046 59.4%, 1.046 62.5%, 1.044 65.6%, 1.04 68.8%, 1.036 71.9%, 1.031 75.0%, 1.027 78.1%, 1.022 81.2%, 1.018 84.4%, 1.014 87.5%, 1.01 90.6%, 1.007 93.8%, 1.005 96.9%, 1); }
   }
   @keyframes contact-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -1531,6 +1535,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   }
   @keyframes contact-breathe { 0%, 100% { opacity: 0.35; } 35% { opacity: 1; } }
   @keyframes contact-send { from { opacity: 0; transform: translateY(1.2em) scale(0.8); } 25% { opacity: 1; } to { opacity: 1; transform: none; } }
+  @keyframes contact-lift { from { transform: translateY(var(--receipt-h)); } to { transform: none; } }
 
   /* Reduced motion: the same order, as cross-fades. No pop, no growing, no dots, and the greeting stays. */
   @media (prefers-reduced-motion: reduce) {
@@ -1543,6 +1548,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .contact.is-playing .bubble__body { animation: none; }
     .contact.is-playing .bubble--them .bubble__text { animation: none; }
     .contact.is-playing .thread__reply { animation: contact-fade 300ms ease 900ms both; }
+    .contact.is-playing .thread { animation: none; }
     .contact.is-playing .thread__receipt { animation: contact-fade 240ms ease 1300ms both; }
   }
 

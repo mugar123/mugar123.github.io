@@ -38,7 +38,11 @@ export function initContact(section: HTMLElement) {
     const finish = () => { io.disconnect(); section.classList.remove('is-armed', 'is-playing'); };
     const arm = () => { section.classList.add('is-armed'); io.observe(thread); };
     arm();
-    receipt.addEventListener('animationend', finish);
+    // Done when the last piece settles: the thread's rise as "Delivered" arrives, or, with reduced
+    // motion, where nothing rises, the label's fade.
+    thread.addEventListener('animationend', (e) => {
+      if (e.animationName === 'contact-lift' || (e.target === receipt && reduce.matches)) finish();
+    });
     reply.addEventListener('focus', finish);
     // Asked for again from the island or "Get in touch" (scripts/goto.ts), the exchange plays again, from
     // the start, when it is next mostly on screen; at once if it already is.
