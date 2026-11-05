@@ -38,7 +38,7 @@ export const universities: Logo[] = [
   { name: 'Technical University of Munich', src: '/img/papertok/universities/tum.png', url: 'https://tum.de' },
   { name: 'Sorbonne Université', src: '/img/papertok/universities/sorbonne.png', url: 'https://sorbonne-universite.fr' },
   { name: 'University of Amsterdam', src: '/img/papertok/universities/uva.png', url: 'https://uva.nl' },
-  { name: 'Universidad de Salamanca', src: '/img/papertok/universities/usal.png', url: 'https://usal.es' },
+  { name: 'University of Salamanca', src: '/img/papertok/universities/usal.png', url: 'https://usal.es' },
   { name: 'Tsinghua University', src: '/img/papertok/universities/tsinghua.png', url: 'https://tsinghua.edu.cn' },
   { name: 'University of Hong Kong', src: '/img/papertok/universities/hku.png', url: 'https://hku.hk' },
   { name: 'Seoul National University', src: '/img/papertok/universities/snu.png', url: 'https://snu.ac.kr' },
