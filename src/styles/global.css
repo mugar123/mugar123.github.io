@@ -63,6 +63,9 @@ a, button { touch-action: manipulation; }
 math { font-family: var(--math); }
 
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 4px; }
+/* Where an in-page link leaves the reader (scripts/goto.ts focuses the section, so Tab and screen
+   readers carry on from there). It is not a control: no ring around a whole section. */
+[tabindex="-1"]:focus { outline: none; }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
