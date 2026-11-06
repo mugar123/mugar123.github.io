@@ -14,7 +14,6 @@ import '@fontsource/caveat/latin-500.css';
       <p class="lc-brand"><img src="/latex/openclaw.svg" alt="OpenClaw" width="56" height="56" />LaTeX converter</p>
       <h2 class="headline" id="notes-title">From my notebook to LaTeX. Automatically.</h2>
       <p class="lede">Photos of handwritten pages, or a whole textbook in PDF, become a structured LaTeX document: the text, every equation and every figure, redrawn in TikZ. <strong>One Claude orchestrates a crew of subagents.</strong> Nothing ships until it compiles with zero errors and has been checked against the original.</p>
-      <p class="lc__note">One reusable template keeps the format, notation and structure the same in every document, which go to my classmates. The pipeline runs in OpenClaw and is private for now.</p>
     </header>
 
     <div class="lc__run" data-scan-run><div class="lc__pin" data-scan-pin>
@@ -116,13 +115,6 @@ import '@fontsource/caveat/latin-500.css';
   .lc-brand img { width: 3.5rem; height: 3.5rem; flex: none; }
   .lc__head .headline { font-size: clamp(2.25rem, 3.2vw, 2.875rem); line-height: 1.06; letter-spacing: -0.02em; }
   .lc__head .lede { font-size: 1.1875rem; line-height: 1.42; max-width: 28rem; }
-  .lc__note {
-    margin-top: 0.75rem; padding-top: 1.25rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
-    max-width: 28rem;
-    font-size: 0.875rem; line-height: 1.43; letter-spacing: 0.01em; color: var(--on-dark-2);
-    text-wrap: pretty;
-  }
 
   /* The page. One rectangle, two layers: the notebook below, the PDF above. */
   .lc-sheet {
@@ -278,11 +270,11 @@ import '@fontsource/caveat/latin-500.css';
   /* Narrower desktops: the legend joins the story, as an ordinary list. */
   @media (max-width: 1080px) {
     /* Two columns: the story and the legend stack beside the page. Only what fits a screen stays:
-       the brand, the headline and the three steps; the lede and the note come back without the
+       the brand, the headline and the three steps; the lede comes back without the
        script or under reduced motion, where nothing is pinned. */
     .lc__stage { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "head sheet" "legend sheet"; align-content: center; row-gap: 1.5rem; padding-block: 4rem 2rem; }
     .lc__head { align-self: end; gap: 0.75rem; }
-    .lc__head .lede, .lc__note { display: none; }
+    .lc__head .lede { display: none; }
     .lc-brand { font-size: 1.375rem; gap: 0.75rem; }
     .lc-brand img { width: 2.75rem; height: 2.75rem; }
     .lc__head .headline { font-size: clamp(1.75rem, 3.4vw, 2.25rem); }
@@ -317,7 +309,7 @@ import '@fontsource/caveat/latin-500.css';
     .lc-brand { gap: 0.75rem; margin-bottom: 0.25rem; font-size: 1.3125rem; }
     .lc-brand img { width: 2.5rem; height: 2.5rem; }
     .lc__head .headline { font-size: clamp(1.875rem, 8.7vw, 2.125rem); }
-    .lc__head .lede, .lc__note { display: none; }
+    .lc__head .lede { display: none; }
     /* A little shorter than before, on the full width: about 1.15 to 1 on an iPhone, not a strip. */
     .lc-sheet { --h: max(15rem, min(100svh - 15rem, 118vw)); width: 100%; }
     .lc-beam { left: -0.5rem; right: -0.5rem; }
@@ -328,10 +320,6 @@ import '@fontsource/caveat/latin-500.css';
     .lc-tex__run, .lc-tex__folio { display: none; }
     .lc-tex figure svg { width: min(80%, 75cqh); }
     .lc-legend li { font-size: 0.875rem; padding-block: 0.5rem; }
-  }
-
-  @media (max-height: 760px) and (min-width: 621px) {
-    .lc__note { display: none; }
   }
 
   /* Without the scroll script, or when motion is reduced: the finished page, nothing pinned. */
@@ -369,8 +357,7 @@ import '@fontsource/caveat/latin-500.css';
   }
   :global(html:not(.js)) .lc-beam, :global(html.reduce) .lc-beam { display: none; }
   :global(html:not(.js)) .lc-legend li, :global(html.reduce) .lc-legend li { color: var(--on-dark); }
-  :global(html:not(.js)) .lc__head .lede, :global(html.reduce) .lc__head .lede,
-  :global(html:not(.js)) .lc__note, :global(html.reduce) .lc__note { display: block; }
+  :global(html:not(.js)) .lc__head .lede, :global(html.reduce) .lc__head .lede { display: block; }
   :global(html:not(.js)) .lc-file__in { opacity: 0; }
   :global(html:not(.js)) .lc-file__out { opacity: 1; }
 </style>
