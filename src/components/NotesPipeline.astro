@@ -508,9 +508,19 @@ const steps = [
     .lx-crew { --gap: 0.5rem; }
     .lx-node { padding: 0.625rem 0.375rem; }
     .lx-node b { font-size: 0.875rem; }
-    .lx-paper__row { grid-template-columns: minmax(0, 1fr); row-gap: 0.375rem; }
-    /* Stacked under their lines, hidden notes would leave holes: in the clean copy they leave the page. */
-    .lx-radio--clean:checked ~ .lx-paper .lx-paper__note { display: none; }
+    /* Stacked under their lines, hidden notes would leave holes: in the clean copy they fold away, the row
+       closing like an accordion (0fr) so the tile and everything under it glide instead of jumping. The
+       note fades first on the way out and last on the way in, so text is never seen being clipped. */
+    .lx-paper__row {
+      grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; row-gap: 0.375rem;
+      /* While the note's track is under 1fr, the space it gives up would stretch the text's track and the
+         centred text would sink: pin both to the top. */
+      align-content: start; align-items: start;
+      transition: grid-template-rows 260ms var(--ease-out), row-gap 260ms var(--ease-out);
+    }
+    .lx-paper__note { align-self: stretch; min-height: 0; overflow: hidden; transition: opacity 180ms ease 100ms, visibility 0s; }
+    .lx-radio--clean:checked ~ .lx-paper .lx-paper__row { grid-template-rows: auto 0fr; row-gap: 0; }
+    .lx-radio--clean:checked ~ .lx-paper .lx-paper__note { visibility: hidden; transition: opacity 120ms ease, visibility 0s 260ms; }
     .lx-steps li { grid-template-columns: 1.375rem minmax(0, 1fr); row-gap: 0.125rem; }
     .lx-steps__gist { grid-column: 2; justify-self: start; text-align: left; font-size: 0.875rem; }
   }
@@ -579,7 +589,8 @@ const steps = [
   @keyframes lx-in { to { opacity: 1; } }
 
   @media (prefers-reduced-motion: reduce) {
-    .lx-seg__thumb, .lx-fix, .lx-paper__note { transition: none; }
+    .lx-seg__thumb, .lx-fix, .lx-paper__row, .lx-paper__note,
+    .lx-radio--clean:checked ~ .lx-paper .lx-paper__note { transition: none; }
   }
-  :global(html.reduce) .lx-seg__thumb { transition: none; }
+  :global(html.reduce) .lx-seg__thumb, :global(html.reduce) .lx-paper__row { transition: none; }
 </style>
