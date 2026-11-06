@@ -376,13 +376,29 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         <div class="how-bento container--wide">
           <article class="how-tile how-tile--code" aria-labelledby="how-code">
             <h3 class="how-title" id="how-code">Different tools for different tasks.</h3>
-            <ul class="how-tools">
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="40" height="40" /></span>Python</li>
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/javascript.svg" alt="" width="40" height="40" /></span>JavaScript</li>
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/typescript.svg" alt="" width="40" height="40" /></span>TypeScript</li>
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/matlab.png" alt="" width="40" height="40" /></span>MATLAB</li>
-              <li class="how-tool"><span class="how-icon"><img src="/toolkit/mathematica.svg" alt="" width="40" height="40" /></span>Mathematica</li>
-            </ul>
+            <!-- More languages than the tile is wide: they run past as a marquee; the second copy closes the loop and is hidden from screen readers. -->
+            <div class="how-marquee">
+              <div class="how-marquee__track">
+                <ul class="how-marquee__list">
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="64" height="64" /></span>Python</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/html5.svg" alt="" width="64" height="64" /></span>HTML</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/css.svg" alt="" width="64" height="64" /></span>CSS</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/javascript.svg" alt="" width="64" height="64" /></span>JavaScript</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/typescript.svg" alt="" width="64" height="64" /></span>TypeScript</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/matlab.png" alt="" width="64" height="64" /></span>MATLAB</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/mathematica.svg" alt="" width="64" height="64" /></span>Mathematica</li>
+                </ul>
+                <ul class="how-marquee__list" aria-hidden="true">
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="64" height="64" /></span>Python</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/html5.svg" alt="" width="64" height="64" /></span>HTML</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/css.svg" alt="" width="64" height="64" /></span>CSS</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/javascript.svg" alt="" width="64" height="64" /></span>JavaScript</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/typescript.svg" alt="" width="64" height="64" /></span>TypeScript</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/matlab.png" alt="" width="64" height="64" /></span>MATLAB</li>
+                  <li class="how-tool"><span class="how-icon"><img src="/toolkit/mathematica.svg" alt="" width="64" height="64" /></span>Mathematica</li>
+                </ul>
+              </div>
+            </div>
           </article>
           <article class="how-tile how-tile--build" aria-labelledby="how-build">
             <h3 class="how-title" id="how-build">From interface to deployment.</h3>
@@ -1357,7 +1373,30 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   /* Give each programming language an equal track; LaTeX keeps its larger standalone logo. */
   .how-tool--hero { --well: 7.5rem; }
   .how-tool--hero .how-icon img { width: 66%; }
-  .how-tile--code .how-tools { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+
+  /* Code: more languages than the tile is wide, so they run past edge to edge in a slow marquee.
+     Two identical lists, each ending in one gap, so sliding the track by -50% lands exactly on the start. */
+  .how-marquee {
+    --well: 7rem; --g: 2rem; --pad: 2rem; /* --pad: the tile's padding, so the reel runs to the tile's edges */
+    margin: auto calc(-1 * var(--pad)) 0; padding-top: 2rem;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--pad), #000 calc(100% - var(--pad)), transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 var(--pad), #000 calc(100% - var(--pad)), transparent);
+  }
+  .how-marquee__track { display: flex; width: max-content; margin-left: var(--pad); animation: how-marquee 36s linear infinite; } /* starts in line with the title */
+  .how-marquee__list { display: flex; gap: var(--g); margin: 0; padding: 0 var(--g) 0 0; list-style: none; }
+  .how-tile--code .how-tool { flex: none; font-size: 1.0625rem; white-space: nowrap; }
+  @keyframes how-marquee { to { transform: translateX(-50%); } }
+  /* A pointer resting on the reel stops it, to read a name; touch has no hover, so it never sticks. */
+  @media (hover: hover) and (pointer: fine) {
+    .how-marquee:hover .how-marquee__track { animation-play-state: paused; }
+  }
+  /* Reduced motion: no reel; the one list stays, and scrolls sideways by hand. */
+  @media (prefers-reduced-motion: reduce) {
+    .how-marquee { overflow-x: auto; scrollbar-width: none; }
+    .how-marquee__track { animation: none; }
+    .how-marquee__list[aria-hidden] { display: none; }
+  }
   .how-tile--type .how-tools { grid-template-columns: 7.5rem; }
   .how-tile--type .how-icon img { width: 76%; }
 
@@ -1390,7 +1429,8 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .how-tools { --g: 0.5rem; --well: 3.5rem; gap: 1.25rem var(--g); padding-top: 1.5rem; }
     .how-tool { gap: 0.5rem; font-size: 0.75rem; white-space: normal; }
     .how-tool--hero { --well: 6rem; }
-    .how-tile--code .how-tools { --n: 3; }
+    .how-marquee { --well: 4.5rem; --g: 1.25rem; --pad: 1.5rem; padding-top: 1.5rem; }
+    .how-tile--code .how-tool { font-size: 0.8125rem; }
     .how-tile--type .how-tools { grid-template-columns: 6rem; }
     .how-tile--type .how-tool { font-size: 0.875rem; }
     .how-ship { grid-template-columns: 1fr; grid-template-rows: auto 1px auto; justify-content: stretch; gap: 1.5rem; padding-top: 1.5rem; }
@@ -1402,6 +1442,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   }
   @media (max-width: 360px) {
     .how-tile { padding: 1.25rem; }
+    .how-marquee { --pad: 1.25rem; }
     .how-tools { --well: 3rem; --g: 0.375rem; }
   }
 
