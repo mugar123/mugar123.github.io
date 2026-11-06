@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "src/pages/index.astro"
+        ],
+        "createdAt": "2026-11-06T11:16:59.331Z",
+        "reason": "User confirmed keeping the existing animations: replied no when asked whether to review the two pre-existing marquee findings."
+      }
+    ]
+  }
+}
