@@ -375,10 +375,9 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
         </header>
         <div class="how-bento container--wide">
           <article class="how-tile how-tile--code" aria-labelledby="how-code">
-            <h3 class="how-kicker" id="how-code">Languages</h3>
-            <p class="how-title">I usually start with Python.</p>
+            <h3 class="how-title" id="how-code">Different tools for different tasks.</h3>
             <ul class="how-tools">
-              <li class="how-tool how-tool--hero"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="80" height="80" /></span>Python</li>
+              <li class="how-tool"><span class="how-icon"><img src="/toolkit/python.svg" alt="" width="40" height="40" /></span>Python</li>
               <li class="how-tool"><span class="how-icon"><img src="/toolkit/javascript.svg" alt="" width="40" height="40" /></span>JavaScript</li>
               <li class="how-tool"><span class="how-icon"><img src="/toolkit/typescript.svg" alt="" width="40" height="40" /></span>TypeScript</li>
               <li class="how-tool"><span class="how-icon"><img src="/toolkit/matlab.png" alt="" width="40" height="40" /></span>MATLAB</li>
@@ -386,8 +385,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
             </ul>
           </article>
           <article class="how-tile how-tile--build" aria-labelledby="how-build">
-            <h3 class="how-kicker" id="how-build">Web development</h3>
-            <p class="how-title">From interface to deployment.</p>
+            <h3 class="how-title" id="how-build">From interface to deployment.</h3>
             <p class="how-text">I work across the frontend and backend, using React and Vite for interfaces and Cloudflare Workers, D1 or Firebase for APIs and data.</p>
             <ul class="how-tools">
               <li class="how-tool"><span class="how-icon"><img src="/toolkit/react.svg" alt="" width="40" height="40" /></span>React</li>
@@ -397,16 +395,14 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
             </ul>
           </article>
           <article class="how-tile how-tile--type" aria-labelledby="how-type">
-            <h3 class="how-kicker" id="how-type">Study notes</h3>
-            <p class="how-title">Lecture notes, in LaTeX.</p>
+            <h3 class="how-title" id="how-type">Lecture notes, in LaTeX.</h3>
             <p class="how-text">LaTeX is part of my daily study routine. I use it to write up my lectures.</p>
             <ul class="how-tools">
               <li class="how-tool how-tool--hero"><span class="how-icon"><img src="/toolkit/latex.svg" alt="" width="80" height="80" /></span>LaTeX</li>
             </ul>
           </article>
           <article class="how-tile how-tile--ship" aria-labelledby="how-ship">
-            <h3 class="how-kicker" id="how-ship">Development workflow</h3>
-            <p class="how-title">AI is part of my daily workflow.</p>
+            <h3 class="how-title" id="how-ship">AI is part of my daily workflow.</h3>
             <p class="how-text">I work with Claude Code, Codex and Cursor throughout my projects, from exploring an idea to refining the code. I use Git and GitHub to track changes and manage pull requests.</p>
             <div class="how-ship">
               <ul class="how-tools how-ship__group">
@@ -1332,7 +1328,6 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   .how-tile--type { grid-column: span 2; }
   .how-tile--ship { grid-column: span 4; }
 
-  .how-kicker { font-size: 0.875rem; line-height: 1.3; font-weight: 600; color: var(--ink-2); }
   .how-title { font-size: clamp(1.5rem, 2.4vw, 2rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
   .how-text { max-width: 34rem; font-size: 1.0625rem; line-height: 1.47; color: var(--ink-2); text-wrap: pretty; }
   .how-tile .more { align-self: flex-start; transition: transform 120ms var(--ease-out); }
@@ -1359,10 +1354,10 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
   }
   .how-icon img { width: 62%; height: auto; }
 
-  /* Code and Typeset each lead with the language the headline names, at twice the size. */
+  /* Give each programming language an equal track; LaTeX keeps its larger standalone logo. */
   .how-tool--hero { --well: 7.5rem; }
   .how-tool--hero .how-icon img { width: 66%; }
-  .how-tile--code .how-tools { align-items: end; }
+  .how-tile--code .how-tools { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
   .how-tile--type .how-tools { grid-template-columns: 7.5rem; }
   .how-tile--type .how-icon img { width: 76%; }
 
@@ -1395,8 +1390,7 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     .how-tools { --g: 0.5rem; --well: 3.5rem; gap: 1.25rem var(--g); padding-top: 1.5rem; }
     .how-tool { gap: 0.5rem; font-size: 0.75rem; white-space: normal; }
     .how-tool--hero { --well: 6rem; }
-    .how-tile--code .how-tools { --n: 4; }
-    .how-tile--code .how-tool--hero { grid-column: 1 / -1; justify-items: start; font-size: 0.875rem; }
+    .how-tile--code .how-tools { --n: 3; }
     .how-tile--type .how-tools { grid-template-columns: 6rem; }
     .how-tile--type .how-tool { font-size: 0.875rem; }
     .how-ship { grid-template-columns: 1fr; grid-template-rows: auto 1px auto; justify-content: stretch; gap: 1.5rem; padding-top: 1.5rem; }
