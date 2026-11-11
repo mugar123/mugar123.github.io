@@ -46,6 +46,10 @@ const sparkEnd = `190 ${(38.7 - (Math.log1p(daily[daily.length - 1]!) / Math.log
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="hello, I’m Nicolás. Second-year physics student at the University of Salamanca." />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL('/og.jpg', Astro.site)} />
+    <meta name="twitter:image:alt" content="hello, I’m Nicolás. Second-year physics student at the University of Salamanca." />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
