@@ -52,6 +52,10 @@
 
 /* The headline's parts move on their own in the intro (intro.ts), so they are boxes. */
 .v4-love, .v4-word, .v4-love > [data-intro-w] { display: inline-block; }
+/* Each word of "I love" comes into focus through a blur, and a filtered layer is cut at its box. The
+   tight tracking leaves the last letter's ink (the "e") past that box, so it lost a sliver on its
+   right; padding gives the ink room and the negative margin keeps the layout where it was. */
+.v4-love > [data-intro-w] { padding-inline: 0.08em; margin-inline: -0.08em; }
 /* On their way home the two cross; "I love" passes in front of the black behind "music". */
 .v4-love { position: relative; z-index: 1; transform-origin: 100% 50%; }
 /* The full stop sits on the edge of the black behind "music", so it goes in front of it too. */
