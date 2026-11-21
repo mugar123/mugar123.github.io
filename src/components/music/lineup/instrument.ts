@@ -6,7 +6,7 @@
 import {
   AgXToneMapping, Color, DirectionalLight, EquirectangularReflectionMapping, Material, MathUtils,
   Mesh, MeshPhysicalMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PCFSoftShadowMap,
-  RectAreaLight, Scene, SRGBColorSpace, WebGLRenderer,
+  RectAreaLight, Scene, SRGBColorSpace, Texture, WebGLRenderer,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -29,6 +29,8 @@ export interface SurroundPose {
 export interface Instrument {
   pose(degrees: number, surround: readonly SurroundPose[], pixelRatio: number): void; // turned about its own long axis; 0 faces you
   resize(size: number, compact: boolean): void;
+  /** Get the first picture's one-off work done ahead of it, a piece at a time: `pause` resolves when the next piece may go. */
+  warm?(pixelRatio: number, pause: () => Promise<void>): Promise<void>;
   dispose(): void;
 }
 
@@ -140,10 +142,14 @@ export async function createInstrument(
   scene.environmentRotation.y = 5.3;
   const model = gltf.scene;
   const anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+  const textures = new Set<Texture>();
+  const meshes: Mesh[] = [];
   model.traverse(node => {
     if (!(node instanceof Mesh)) return;
+    meshes.push(node);
     node.castShadow = node.receiveShadow = true;
     for (const material of [node.material].flat()) {
+      for (const value of Object.values(material)) if (value instanceof Texture) textures.add(value);
       if (material.name === paint || material.name === 'Ebony lacquer') satin(material);
       if (!(material instanceof MeshStandardMaterial)) continue;
       if (material.map) material.map.anisotropy = anisotropy;
@@ -166,6 +172,13 @@ export async function createInstrument(
   let shown = NaN;
   let size = 0;
   let width = 0;
+  let disposed = false;
+  let partial = false; // warming up: only some of the meshes are switched on
+  function whole() {
+    if (!partial) return;
+    partial = false;
+    for (const mesh of meshes) mesh.visible = true;
+  }
   // On mobile, subpixel changes to the pose or the reflected light can share the last render.
   const desktopThreshold = { angle: 1e-4, x: 1e-4, exposure: 1e-4, lean: 1e-3, yaw: 1e-2 };
   const mobileThreshold = { angle: .04, x: .001, exposure: .002, lean: .08, yaw: .15 };
@@ -217,6 +230,7 @@ export async function createInstrument(
         dirty = true;
       }
       if (!dirty) return;
+      whole();
       shown = degrees;
       holder.rotation.y = MathUtils.degToRad(degrees);
       // The coloured lights and the CSS sway do not move the model relative to the shadow caster.
@@ -245,7 +259,34 @@ export async function createInstrument(
       shown = shadowYaw = NaN;
       lastSurround.fill(NaN);
     },
+    // The first picture of a model sends every texture to the GPU, readies each material's program and the
+    // shadow pass, and waits for it all: some 60 ms on a laptop, in whichever frame the instrument first shows
+    // (the reader arriving at the chapter, the slide setting off). Done here ahead of that, in pieces small
+    // enough to fit between frames: a texture at a time, then a material at a time, in pictures nobody sees.
+    async warm(pixelRatio, pause) {
+      for (const texture of textures) {
+        if (disposed) return;
+        renderer.initTexture(texture);
+        await pause();
+      }
+      const drawn = () => disposed || !size || !Number.isNaN(shown); // gone, or already drawn for real
+      if (drawn()) return;
+      renderer.setDrawingBufferSize(width, size, Math.min(devicePixelRatio || 1, pixelRatio));
+      for (const material of new Set(meshes.flatMap(mesh => [mesh.material].flat()))) {
+        partial = true;
+        for (const mesh of meshes) mesh.visible = [mesh.material].flat().includes(material);
+        key.shadow.needsUpdate = renderer.shadowMap.enabled;
+        renderer.render(scene, camera);
+        await pause();
+        if (drawn()) return whole();
+      }
+      whole();
+      key.shadow.needsUpdate = renderer.shadowMap.enabled;
+      renderer.render(scene, camera);
+      await pause();
+    },
     dispose() {
+      disposed = true;
       environment.dispose();
       key.shadow.dispose();
       scene.traverse(node => {

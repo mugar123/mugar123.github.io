@@ -187,9 +187,21 @@ onPage(signal => {
     paint(progress.value);
   }
 
+  // Coming near, the chapter only finds its place in the scroll again. Nothing is measured: its sizes change
+  // with the stage (the observer below), the fonts and the join, and each of those measures. Measuring here
+  // laid the whole Playlist out again (a 35 ms task on a laptop) in the middle of the instruments' slide,
+  // which is what is on screen when this chapter comes within reach.
+  function arrive() {
+    cancelAnimationFrame(frame);
+    frame = lastFrame = 0;
+    snap = true;
+    progress.set(readProgress());
+    paint(progress.value);
+  }
+
   const visibility = new IntersectionObserver(([entry]) => {
     nearby = !!entry?.isIntersecting;
-    if (nearby && motion.matches) reset();
+    if (nearby && motion.matches) arrive();
   }, { rootMargin: '30% 0px' });
   const resize = new ResizeObserver(reset);
   visibility.observe(section);

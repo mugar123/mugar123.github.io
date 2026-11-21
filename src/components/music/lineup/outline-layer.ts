@@ -146,11 +146,13 @@ export function createOutlineLayer(stage: HTMLElement, copies: TurningCopy[], ba
         const opacity = x < -size * .28 || x > width + size * .28 ? 0 : copy.opacity();
         if (!opacity && !pose.opacity) continue;
         const yaw = copy.yaw(), lean = copy.lean();
+        // Anything the eye could follow is drawn in its own frame. With coarser steps a spring's last swing
+        // was drawn every second or third frame: the row came to rest in little jerks.
         if (
-          Math.abs(x - pose.x) >= .08 ||
-          Math.abs(opacity - pose.opacity) >= .004 ||
-          Math.abs(yaw - pose.yaw) >= .08 ||
-          Math.abs(lean - pose.lean) >= .04
+          Math.abs(x - pose.x) >= .02 ||
+          Math.abs(opacity - pose.opacity) >= .002 ||
+          Math.abs(yaw - pose.yaw) >= .02 ||
+          Math.abs(lean - pose.lean) >= .004
         ) {
           dirty = true;
         }

@@ -137,6 +137,7 @@ onPage(signal => {
     })),
     lights: [...element.querySelectorAll<SVGSVGElement>('[data-lu-copy]')].map((): SurroundPose => ({ x: 0, exposure: 0, lean: 0, yaw: 0 })),
     instrument: null as Instrument | null,
+    modelShown: false,
     loading: false,
     centre: { x: 0, y: 0, size: 1 } as Slot,
     standing: false,
@@ -269,9 +270,27 @@ onPage(signal => {
       instrument.resize(scene.centre.size, narrow.matches);
       if (mobileView.matches && scene === bass && shown <= introEnd) {
         scene.instrument.pose(0, scene.lights, 1);
+        scene.modelShown = true;
         scene.cam.classList.add('has-model');
       }
       if (near) request();
+      // A live model does its first picture's one-off work now, in the gaps between frames, so it is ready
+      // before it shows: the bass as the page opens, the guitar while the bass's chapter scrolls (a piece in
+      // the first idle moment after a frame, and within 80 ms regardless, to be done before the slide).
+      // Safari is the exception for the guitar. Whenever its textures were sent ahead of its first picture
+      // (as the page opened, or during the scroll), Safari later stood still for 600 ms at a time, in the slide
+      // and twice in the hand-off, painting FL Studio's Playlist again; so there the guitar is made half way
+      // through the bass's chapter and left to its first picture, as it always was. Safari has no idle
+      // callback, which is how it is told apart: no idle time, no warming of what is made during a scroll.
+      const idleTime = 'requestIdleCallback' in window;
+      if (scene === bass || idleTime) {
+        await instrument.warm?.(Math.min(devicePixelRatio || 1, 3), () => new Promise(done => {
+          requestAnimationFrame(() => {
+            if (idleTime) window.requestIdleCallback(() => done(), { timeout: 80 });
+            else setTimeout(done, 0);
+          });
+        }));
+      }
     } catch {
       // Keep the still if both renderers fail. Retrying on each scroll frame stalls the entrance.
     }
@@ -559,7 +578,11 @@ onPage(signal => {
       out.yaw = Number.isNaN(follower.yaw) ? scene.yaw : follower.yaw;
     }
     scene.instrument.pose(scene.yaw, scene.lights, pixelRatio);
-    scene.cam.classList.add('has-model');
+    // (Once: adding a class that is there already still writes the attribute, every frame.)
+    if (!scene.modelShown) {
+      scene.modelShown = true;
+      scene.cam.classList.add('has-model');
+    }
   }
 
   // The rack. Every instrument on the row (the copies, the in-between ones, the two real ones) has weight:
@@ -667,15 +690,18 @@ onPage(signal => {
     if (!active) outlineLayer?.invalidate();
   }
 
-  // Both ends of the fully opened row face the same angle. Paint the entire row, including
-  // the five intermediate shapes, ahead of the slide. Moving it then costs one transform.
+  // Both ends of the fully opened row face the same angle. Where the outlines are filled on the main thread
+  // (no GPU for the outline layer), paint the entire row, including the five intermediate shapes, ahead of
+  // the slide: moving it then costs one transform. With the outline layer the row is never swapped for a
+  // picture of itself. The picture's edges fell a fraction of a pixel from the live ones, so the whole row
+  // twitched as the fan came to rest, and it leaned as one piece, where each instrument has a spring of its own.
   function prepareSlideStrip() {
     const { y, size } = bass.centre;
     const width = stage.clientWidth + reach;
     const density = Math.min(devicePixelRatio || 1, mobileView.matches ? 1.5 : 2);
     const ratio = Math.min(density, 4096 / width, 4096 / size);
     // Keep live vector edges on desktops whose complete row won't fit at native density.
-    if (!enabled || !ready(bass) || !ready(guitar) || (!mobileView.matches && ratio < density)) {
+    if (!enabled || outlineLayer || !ready(bass) || !ready(guitar) || (!mobileView.matches && ratio < density)) {
       showSlideStrip(false);
       slideStrip?.remove();
       slideStrip = null;
@@ -737,6 +763,7 @@ onPage(signal => {
           invalidateOutlines();
           configureCopyLayer();
           resizeCopyLayer();
+          scheduleSlideStrip();
           request();
         });
       gpuUnavailable = !outlineLayer;
@@ -858,8 +885,9 @@ onPage(signal => {
     const e = smooth(move);
     writeStyle(bass.element, 'transform', `translate3d(${(-reach * e).toFixed(2)}px,0,0)`);
     writeStyle(guitar.element, 'transform', `translate3d(${(reach * (1 - e)).toFixed(2)}px,0,0)`);
-    // During the cached slide the model leans with the row, holding the outlines’ axial angle.
-    const bassSway = slideStrip ? 0 : (lean.get(bass.canvas) ?? 0) * RACK.yaw;
+    // The sway also turns the live model a little on its axis. The photographed one (phones) and the cached
+    // slide hold the fan's angle: the photographs cover the scroll's arc, and the strip is painted at it.
+    const bassSway = slideStrip || mobileView.matches ? 0 : (lean.get(bass.canvas) ?? 0) * RACK.yaw;
     turn(bass, (THREE_QUARTER_YAW + bassSway) * smooth(bassProgress));
     turn(guitar, THREE_QUARTER_YAW);
 
@@ -946,11 +974,10 @@ onPage(signal => {
         const { y, size } = bass.centre;
         copyLayer.paint(y, size, size * (.5 + .5 / FRAME_WIDTH));
       }
-      // On mobile `rest-50.webp` already renders the 50° guitar at full studio detail; only load
-      // the turntable if the reader grabs or spins it.
-      if (!guitar.loading && guitar.standing && (!mobileView.matches ? !moving : !!(guitar.drag || guitar.spring))) {
-        void load(guitar);
-      }
+      // On phones `rest-50.webp` already shows the 50° guitar at full studio detail. Its turntable is for the
+      // hand, and is fetched once the guitar stands still: fetched at the touch, its first picture was decoded in
+      // the middle of whatever scroll that touch began.
+      if (!guitar.loading && guitar.standing && !moving) void load(guitar);
       const centre = bass.centre.x + rowX();
       const pixelRatio = renderPixelRatio(elapsed, moving);
       if (onScreen(centre)) renderInstrument(bass, pixelRatio);

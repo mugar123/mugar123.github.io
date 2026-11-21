@@ -7,14 +7,33 @@ const SCROLL_HEIGHT = 700;
 const DETAIL_HEIGHT = 1600;
 const ASPECT = .32;
 const wrapTile = (tile: number) => (tile + TILE_COUNT) % TILE_COUNT;
+// How wide the instrument stands when turned `degrees` about its long axis, against face-on: a slab's face
+// narrows with the cosine while its side comes round with the sine (the bodies are about a fifth as deep as wide).
+const DEPTH = .18;
+const breadth = (degrees: number) => {
+  const turn = degrees * Math.PI / 180;
+  return Math.abs(Math.cos(turn)) + DEPTH * Math.abs(Math.sin(turn));
+};
 
 type Photograph = ImageBitmap | HTMLImageElement;
 
-async function photograph(url: string): Promise<Photograph> {
+// `fit`: the sheet's size on this screen, when that is smaller than it was photographed. The decoder then hands
+// over a picture already that size, made off the main thread. Left at full size, the first frame drawn from a
+// sheet scaled the whole of it down on the main thread (12 ms on a laptop for one strip of the guitar): a hitch
+// every twelve degrees of a turn by hand.
+async function photograph(url: string, fit?: { width: number; height: number }): Promise<Photograph> {
   if (typeof createImageBitmap === 'function') {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Missing instrument view');
-    return createImageBitmap(await response.blob());
+    const blob = await response.blob();
+    if (fit) {
+      try {
+        return await createImageBitmap(blob, { resizeWidth: fit.width, resizeHeight: fit.height, resizeQuality: 'high' });
+      } catch {
+        // No resizing in this browser: the picture as it was taken.
+      }
+    }
+    return createImageBitmap(blob);
   }
   const image = new Image();
   image.decoding = 'async';
@@ -41,7 +60,10 @@ export async function createTurntable(
   const positionAt = (yaw: number) => ((-yaw % 360 + 360) % 360) / 2;
   const initialPosition = positionAt(initialYaw);
   const initialTile = Math.floor(initialPosition / STEPS);
-  const loadTile = (index: number) => photograph(folder + '/detail/' + index + '.webp');
+  // A sheet of `columns` by `rows` views, each `tall` px as photographed, at the size the canvas shows them.
+  const fit = (columns: number, rows: number, tall: number) =>
+    canvas.height > 1 && canvas.height < tall ? { width: columns * canvas.width, height: rows * canvas.height } : undefined;
+  const loadTile = (index: number) => photograph(folder + '/detail/' + index + '.webp', fit(STEPS + 1, 1, DETAIL_HEIGHT));
   const overviewUrl = folder + '/turntable.webp';
   const context = canvas.getContext('2d', { alpha: true });
   if (!context) throw new Error('2D canvas unavailable');
@@ -68,7 +90,7 @@ export async function createTurntable(
 
   if (hasScrollSheet && initialPosition <= SCROLL_FRAMES - 1) {
     try {
-      scrollSheet = await photograph(folder + '/scroll.webp');
+      scrollSheet = await photograph(folder + '/scroll.webp', fit(SCROLL_COLS, SCROLL_ROWS, SCROLL_HEIGHT));
     } catch {
       // Fall back to the per-angle detail strips if the scroll sheet is missing.
     }
@@ -134,44 +156,47 @@ export async function createTurntable(
     }, () => {});
   }
 
-  function paint(image: Photograph, position: number, columns: number, rows: number, wrapFrames: boolean, singlePass: boolean) {
+  // The instrument at `position` frames into a sheet whose frames are `step` degrees apart, the first at `from`.
+  // Between two photographs it is both, each brought to the angle asked for before they are mixed: turned a
+  // degree on, the instrument is the same picture a little narrower (or wider) about its axis. Mixed as they
+  // were taken, two poses read as a double exposure; shown one at a time (the nearest), the instrument turned
+  // in two-degree jumps, at half the frame rate of the copies beside it.
+  function paint(image: Photograph, position: number, columns: number, rows: number, wrapFrames: boolean, from: number, step: number) {
     painted = true;
     const total = columns * rows;
     const width = image.width / columns, height = image.height / rows;
-    function draw(frame: number) {
+    const wide = breadth(from + position * step);
+    function draw(frame: number, taken: number) {
+      // Never stretched far: near edge-on the two photographs are simply mixed.
+      const scale = Math.min(1.12, Math.max(.89, wide / breadth(from + taken * step)));
+      const across = canvas.width * scale;
       context!.drawImage(image, frame % columns * width, Math.floor(frame / columns) * height,
-        width, height, 0, 0, canvas.width, canvas.height);
+        width, height, (canvas.width - across) / 2, 0, across, canvas.height);
     }
     context!.clearRect(0, 0, canvas.width, canvas.height);
     context!.globalCompositeOperation = 'source-over';
-    if (singlePass) {
-      const nearest = wrapFrames ? Math.round(position) % total : Math.min(total - 1, Math.round(position));
-      context!.globalAlpha = 1;
-      draw(nearest);
-      return;
-    }
     const first = Math.floor(position);
     const blend = position - first;
     const second = wrapFrames ? (first + 1) % total : Math.min(total - 1, first + 1);
-    if (blend <= .01 || second === first) {
+    if (blend <= .005 || second === first) {
       context!.globalAlpha = 1;
-      draw(first);
-    } else if (blend >= .99) {
+      draw(first, first);
+    } else if (blend >= .995) {
       context!.globalAlpha = 1;
-      draw(second);
+      draw(second, first + 1);
     } else {
       context!.globalAlpha = 1 - blend;
-      draw(first);
+      draw(first, first);
       context!.globalCompositeOperation = 'lighter';
       context!.globalAlpha = blend;
-      draw(second);
+      draw(second, first + 1);
     }
   }
 
   // Upload the decoded bitmap to the GPU backing texture ahead of scroll.
   if (canvas.width > 1 && canvas.height > 1) {
-    if (scrollSheet) paint(scrollSheet, initialPosition, SCROLL_COLS, SCROLL_ROWS, false, false);
-    else if (tiles.has(initialTile)) paint(tiles.get(initialTile)!, initialPosition - initialTile * STEPS, STEPS + 1, 1, false, false);
+    if (scrollSheet) paint(scrollSheet, initialPosition, SCROLL_COLS, SCROLL_ROWS, false, 0, 2);
+    else if (tiles.has(initialTile)) paint(tiles.get(initialTile)!, initialPosition - initialTile * STEPS, STEPS + 1, 1, false, initialTile * STEPS * 2, 2);
     drawnYaw = previousYaw = initialYaw;
     dirty = false;
   }
@@ -179,16 +204,15 @@ export async function createTurntable(
   return {
     pose(yaw) {
       const exactRest = yaw === 0 || yaw === -50;
-      if (!dirty && (yaw === drawnYaw || (!exactRest && Math.abs(yaw - drawnYaw) < .12))) return;
-      const step = Number.isFinite(previousYaw) ? Math.abs(yaw - previousYaw) : 0;
+      // (A turn too small to move a pixel shares the last picture.)
+      if (!dirty && (yaw === drawnYaw || (!exactRest && Math.abs(yaw - drawnYaw) < .03))) return;
       if (Number.isFinite(previousYaw) && previousYaw !== yaw) direction = Math.sign(previousYaw - yaw);
       previousYaw = yaw;
       drawnYaw = yaw;
       dirty = false;
-      const fast = !exactRest && step > .75;
       const position = positionAt(yaw);
       if (scrollSheet && position <= SCROLL_FRAMES - 1) {
-        paint(scrollSheet, position, SCROLL_COLS, SCROLL_ROWS, false, fast);
+        paint(scrollSheet, position, SCROLL_COLS, SCROLL_ROWS, false, 0, 2);
         return;
       }
       const tile = Math.floor(position / STEPS);
@@ -197,17 +221,17 @@ export async function createTurntable(
       if (image) {
         tiles.delete(tile);
         tiles.set(tile, image);
-        paint(image, local, STEPS + 1, 1, false, fast);
+        paint(image, local, STEPS + 1, 1, false, tile * STEPS * 2, 2);
         if ((direction > 0 && local >= 2) || (direction < 0 && local <= 4)) fetchDetail(wrapTile(tile + direction));
       } else {
         fetchDetail(tile);
         fetchOverview();
-        if (overview) paint(overview, ((yaw % 360 + 360) % 360) / 4, 15, 6, true, fast);
+        if (overview) paint(overview, ((yaw % 360 + 360) % 360) / 4, 15, 6, true, 0, 4);
         else if (!painted) {
           const firstAvailable = tiles.entries().next().value;
           if (firstAvailable) {
             const [index, sheet] = firstAvailable;
-            paint(sheet, Math.max(0, Math.min(STEPS, position - index * STEPS)), STEPS + 1, 1, false, true);
+            paint(sheet, Math.max(0, Math.min(STEPS, position - index * STEPS)), STEPS + 1, 1, false, index * STEPS * 2, 2);
           }
         }
       }
