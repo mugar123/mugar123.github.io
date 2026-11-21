@@ -19,6 +19,9 @@ onPage(signal => {
   const stage = section.querySelector<HTMLElement>('.studio__stage')!;
   const passages = [...section.querySelectorAll<HTMLElement>('[data-fill-text]')];
   const fl = section.querySelector<HTMLElement>('[data-fl]')!;
+  // What follows the chapter stands on the rest of its Playlist, and the window's shadow falls on it too.
+  const after = section.nextElementSibling instanceof HTMLElement && section.nextElementSibling.matches('[data-studio-after]')
+    ? section.nextElementSibling : null;
   const startOf = (el: HTMLElement, { start, sweep }: { start: number; sweep: number }) =>
     start + Number(el.dataset.step) / 32 * sweep;
   const notes = [...section.querySelectorAll<HTMLElement>('.note')].map(el => ({
@@ -78,11 +81,30 @@ onPage(signal => {
       section!.style.removeProperty('--studio-fill-travel');
     }
     travel = section!.offsetHeight - stage.offsetHeight;
+    placeAfter();
     lead = Math.min(innerHeight * .66, stage.offsetHeight * .66);
     for (const stem of stems) {
       stem.height = stem.el.offsetHeight;
       stem.shown = -1;
     }
+  }
+
+  // Where the window rests in its screen, from layout (the arrival's and the hand-off's transforms left out).
+  function placeAfter() {
+    if (!after) return;
+    let x = 0;
+    let y = 0;
+    for (let el: HTMLElement | null = fl; el && el !== stage; el = el.offsetParent as HTMLElement | null) {
+      x += el.offsetLeft;
+      y += el.offsetTop;
+    }
+    const set = (name: string, px: number) => after.style.setProperty(name, `${px}px`);
+    set('--studio-screen', stage.offsetHeight);
+    set('--fl-x', x);
+    set('--fl-y', y);
+    set('--fl-w', fl.offsetWidth);
+    set('--fl-h', fl.offsetHeight);
+    after.toggleAttribute('data-placed', true);
   }
 
   // Joined, the screen is held from the hand-off's first frame: progress runs over the hand-off and then the chapter.

@@ -61,25 +61,17 @@ import '@/components/music/v4/listening-bar.css';
         </div>
       </section>
       <LineupStory />
-      <StudioStory />
-
       <!-- The way out once the last chapter is over: back to the home page. -->
-      <nav class="music-end" aria-label="Leave the music page">
-        <a class="pill" href="/">Back to the home page</a>
-      </nav>
+      <StudioStory>
+        <nav aria-label="Leave the music page">
+          <a class="pill pill--glass" href="/">Back to the home page</a>
+        </nav>
+      </StudioStory>
     </div>
 
     <OpenRecord />
   </main>
 </MusicShell>
-
-<style>
-  .music-end {
-    display: grid; place-items: center;
-    padding-block: clamp(4rem, 12vw, 8rem);
-    background: var(--dark);
-  }
-</style>
 
 <script>
   import '@/components/music/v4/listening-bar';

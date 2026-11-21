@@ -1,6 +1,12 @@
 ---
 import { flIcons } from './fl-icons';
 
+/* The Playlist is taller than the screen it stands behind. `continued`: this copy is the screen's, and the
+   window goes on below it (no bottom edge, the scroll bar runs on). `tail`: this copy is the rest of the same
+   window, drawn one screen higher (--studio-screen, set by write-beat.ts) so its rows carry on where the screen's stop. */
+interface Props { continued?: boolean; tail?: boolean }
+const { continued = false, tail = false } = Astro.props;
+
 const tools = ['magnet','pencil','brush','erase','mute','interpolate','slice','select','zoom','playback'] as const;
 const clipTypes = [
   ['pattern', 'M2 4h3v8h2V4h2v8h2V4h3v10H2z'],
@@ -34,7 +40,7 @@ const arrangement = [...tracks, ...percussion.map(({name, clips}, i) => ({
 const emptyTracks = Array.from({length:32}, (_, i) => arrangement.length + i + 1);
 const measures = Array.from({length:34},(_,i)=>i*2+1);
 ---
-<div class="playlist" aria-hidden="true" inert>
+<div class:list={['playlist', { continued, tail }]} aria-hidden="true" inert>
   <div class="titlebar"><span>▸</span><div class="tools">{tools.map(name=><i style={`clip-path:path('${flIcons[name]}')`}></i>)}</div><b>◀</b><strong>Playlist - Arrangement</strong><span class="instrument">› Open Hat</span><span class="controls">−　▫　×</span></div>
   <div class="picker-head">
     {clipTypes.map(([type, path]) => <i class:list={['clip-icon', {active:type==='audio'}]} style={`clip-path:path(evenodd, '${path}')`}></i>)}
@@ -89,6 +95,15 @@ const measures = Array.from({length:34},(_,i)=>i*2+1);
   .timeline-head,.lanes { --bar:max(13px, calc((100cqw - var(--picker) - var(--track) - var(--rail)) / 68)); }
   .titlebar { grid-column:1/-1; display:flex; gap:.4em; align-items:center; padding:0 .55em; min-width:0; overflow:hidden; background:var(--chrome); color:#aebbc1; white-space:nowrap; }
   .playlist::after { content:''; position:absolute; inset:var(--bar-height) 0 0 auto; width:var(--rail); border-left:1px solid #344047; background:linear-gradient(#748087 0 4%,#48565e 4% 6%,#666f76 6% 19%,#49565e 19% 96%,#667179 96%); }
+  .playlist.continued { border-bottom:0; }
+  .playlist.continued::after { background:linear-gradient(#748087 0 4%,#48565e 4% 6%,#666f76 6% 19%,#49565e 19%); }
+  /* The rest: one screen higher, the same height plus what it shows; the scroll bar's thumb sized to that screen. */
+  .playlist.tail { inset:calc(-1 * var(--studio-screen, 100svh)) 0 0; }
+  .playlist.tail::after {
+    background:
+      linear-gradient(#748087 0 4%,#48565e 4% 6%,#666f76 6% 19%,#49565e 19%) 0 0 / 100% calc(var(--studio-screen, 100svh) - 1px - var(--bar-height)) no-repeat,
+      linear-gradient(#49565e calc(100% - 36px),#667179 0);
+  }
   .titlebar b { color:#92b65e; } .titlebar strong { font-weight:600; } .controls { margin-left:auto; }
   .tools { display:flex; align-items:center; gap:1px; } .tools i { width:80px; height:80px; zoom:.25; background:#b7c5ce; }
   .tools i:nth-child(3) { background:#83bcdb; }

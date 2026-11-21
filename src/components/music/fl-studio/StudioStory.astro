@@ -86,7 +86,7 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
     <!-- A window and its content: the playhead's wipe moves them against each other (handoff.ts). -->
     <div class="studio__wipe" data-studio-wipe>
     <div class="studio__world" data-studio-world>
-    <PlaylistBackdrop />
+    <PlaylistBackdrop continued={Astro.slots.has('default')} />
     <header class="lu__words studio__words">
       <h2 class="lu__title" id="fl-title" data-fill-text>{title.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</h2>
       <p class="lu__body" data-fill-text>{body.split(' ').map(word => <><span data-w>{word}</span>{' '}</>)}</p>
@@ -181,6 +181,14 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
     <canvas class="studio__flight" aria-hidden="true" width="1" height="1" data-studio-flight></canvas>
   </div>
 </section>
+<!-- What comes after the chapter (the way out of the page) stands on the rest of the same Playlist, at the
+     same half light, so FL Studio's screen carries on under it instead of ending in black. -->
+{Astro.slots.has('default') && (
+  <div class="studio__after" data-studio-after>
+    <PlaylistBackdrop tail />
+    <div class="studio__out"><slot /></div>
+  </div>
+)}
 <style>
   .studio { position: relative; background: var(--dark); color: var(--on-dark); }
   .studio__stage { position: relative; min-height: 100svh; display: grid; overflow: clip; isolation: isolate; }
@@ -218,6 +226,21 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
     content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
     background: linear-gradient(rgb(0 0 0 / 1.000) 14.0%, rgb(0 0 0 / 0.998) 17.4%, rgb(0 0 0 / 0.988) 20.9%, rgb(0 0 0 / 0.965) 24.3%, rgb(0 0 0 / 0.928) 27.7%, rgb(0 0 0 / 0.877) 31.1%, rgb(0 0 0 / 0.816) 34.6%, rgb(0 0 0 / 0.750) 38.0%, rgb(0 0 0 / 0.684) 41.4%, rgb(0 0 0 / 0.623) 44.9%, rgb(0 0 0 / 0.572) 48.3%, rgb(0 0 0 / 0.535) 51.7%, rgb(0 0 0 / 0.512) 55.1%, rgb(0 0 0 / 0.502) 58.6%, rgb(0 0 0 / 0.500) 62.0%);
   }
+  .studio__after {
+    position: relative; isolation: isolate; overflow: clip;
+    display: grid; place-items: center;
+    padding-block: clamp(4rem, 12vw, 8rem);
+    background: var(--dark);
+  }
+  .studio__after::after { content: ''; position: absolute; inset: 0; z-index: -1; background: rgb(0 0 0 / 0.5); pointer-events: none; }
+  /* The piano roll's shadow reaches past the bottom of its screen: the rest of it falls here, from where the
+     window stands (write-beat.ts measures it), so the screen's edge never shows as a line. */
+  .studio__after[data-placed]::before {
+    content: ''; position: absolute; pointer-events: none;
+    left: var(--fl-x); top: calc(var(--fl-y) - var(--studio-screen)); width: var(--fl-w); height: var(--fl-h);
+    box-shadow: 0 2px 6px #0006, 0 50px 110px -18px #000;
+  }
+  .studio__out { position: relative; }
   .studio__words { width: calc(100% - 2 * var(--gutter)); --on-dark-2: #e0e5e9; }
   .studio__desktop {
     position: relative; isolation: isolate; width: 100%; min-height: 0;
