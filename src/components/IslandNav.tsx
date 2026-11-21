@@ -116,7 +116,7 @@ export const IslandNav = ({ home = '', current = '/' }: {
     return () => media.removeEventListener('change', onChange);
   }, []);
 
-  // What is under the island: once per frame while scrolling, and once more when it settles.
+  // What is under the island: as the page scrolls, and once more when it settles.
   useEffect(() => {
     const below = islandMetrics.idle.height + 14 + 6;
     let ticking = false;
@@ -127,12 +127,16 @@ export const IslandNav = ({ home = '', current = '/' }: {
       const colour = backdropUnder(below);
       if (colour) setBackdrop(colour);
     };
+    // Reading it is a hit test of the whole page, and a page that animates with the scroll has just changed its
+    // styles when it runs: on the music page it was the largest cost of every scrolled frame. Ten readings a
+    // second while the page moves follow the ground closely enough, and one more is taken when it stops.
+    let readAt = 0;
     const sense = () => {
       clearTimeout(settle);
       settle = window.setTimeout(read, 120);
-      if (ticking) return;
+      if (ticking || performance.now() - readAt < 100) return;
       ticking = true;
-      requestAnimationFrame(() => { read(); ticking = false; });
+      requestAnimationFrame(() => { readAt = performance.now(); read(); ticking = false; });
     };
     read();
     addEventListener('scroll', sense, { passive: true });

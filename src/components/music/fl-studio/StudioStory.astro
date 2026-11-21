@@ -196,8 +196,11 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
   .studio[data-held] .studio__world { min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
   /* Joined to the instruments (handoff.ts): this stage lies over theirs, see-through until the playhead has crossed it. */
   .studio[data-joined] { margin-top: calc(-1 * var(--studio-overlap, 0px)); background: none; }
-  .studio[data-joined]:not([data-arrived]) { pointer-events: none; }
-  .studio[data-joined] .studio__wipe, .studio[data-joined] .studio__world { will-change: transform; }
+  /* Nothing of the stage itself takes the pointer, so the guitar underneath can still be turned; FL Studio's
+     own content does wherever the playhead has uncovered it (the rest is clipped away, hit-testing included). */
+  .studio[data-joined] { pointer-events: none; }
+  .studio[data-joined] .studio__world { pointer-events: auto; will-change: transform; }
+  .studio[data-joined] .studio__wipe { will-change: transform, opacity; }
   .studio__scan, .studio__flight { display: none; }
   .studio[data-joined] .studio__flight { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   /* FL's playhead, as in the Playlist behind (PlaylistBackdrop.astro), with the light it throws on what it has passed. */

@@ -99,7 +99,6 @@ onPage(signal => {
       const scrolled = progress * travel;
       const t = scrolled / joined;
       moving = handoff.paint(t, dt, snap, Math.max(0, section!.getBoundingClientRect().top));
-      section!.toggleAttribute('data-arrived', t >= 1);
       p = (lead + scrolled - joined) / Math.max(1, lead + travel - joined);
       fl.style.opacity = fl.style.transform = '';
     } else {

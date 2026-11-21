@@ -21,7 +21,10 @@ import { Spring, clamp } from '../v4/physics';
      and damping ratio), and turns on a looser one, so a fast scroll throws them and they rock into
      their slots; a slow one lays them down. Nothing appears from nothing: a shape is the instrument
      that stood there, and the note it becomes takes over under it, in the same place and colour.
-   - One canvas, seven shapes; drawn only while something moves. */
+   - The row stays the instruments' own. Ahead of the playhead nothing here is drawn at all; behind it FL
+     Studio covers the row, and this canvas holds only what the playhead has already passed: at most a few
+     shapes a frame, and none of them changes hands on a still screen.
+   - Nothing in FL Studio's picture is repainted while it plays, bar a note appearing or a key going down. */
 
 /** What the instruments chapter lends to the hand-off (set by lineup.ts while its page is shown). */
 export interface LineupPiece {
@@ -46,8 +49,11 @@ export interface LineupBridge {
   /** The chapter is on screen and has come to rest on its last frame. */
   near(): boolean;
   settled(): boolean;
-  /** The hand-off draws the copies from now on (or gives them back). */
-  take(on: boolean): void;
+  /** The hand-off is playing: the instrument is not the hand's for now. */
+  busy(on: boolean): void;
+  /** The copies the hand-off is drawing itself, a bit each in the order of `pieces()`. The rest stay the row's:
+      what the playhead has passed is under FL Studio anyway, so in an ordinary pass nothing is ever taken. */
+  take(mask: number): void;
   /** FL Studio covers the stage completely: nothing needs drawing under it. */
   cover(on: boolean): void;
 }
@@ -65,12 +71,20 @@ export const onJoinChange = (listener: () => void, signal: AbortSignal) => joina
 const smooth = (n: number) => { const t = clamp(n, 0, 1); return t * t * (3 - 2 * t); };
 // A note as the piano roll draws it (StudioStory.astro, .note): its face, flat, inside a darker edge. The edge keeps
 // shapes that overlap apart, as it does notes; the glint is the face's top highlight, for the moment a shape lands.
-const NOTE = [195, 245, 204], GLINT = [240, 255, 243], EDGE = '#83ab89';
+const NOTE = [195, 245, 204], GLINT = [240, 255, 243], EDGE = '#83ab89', FACE = `rgb(${NOTE.join()})`;
+const LEVEL = .92; // from here to its slot a shape only gives way to its note
 const SWEEP = { from: .04, to: .95 }; // the share of the hand-off the playhead takes
 const FLIGHT = .34; // screen widths the playhead travels while a shape flies
 const GAP = .012; // screen widths the playhead is past a shape before it comes away
 
-interface Job { shape: Path2D; x: number; y: number; cos: number; sin: number; alpha: number; colour: string | null; edge: number; face: string }
+interface Job {
+  shape: Path2D; x: number; y: number; cos: number; sin: number; alpha: number; colour: string | null; edge: number; face: string;
+  away: boolean; // off its place in the row: its own colour is this canvas's to draw ahead of the playhead
+  left: number; right: number; // how far it reaches on the stage, px: a shape wholly on one side of the playhead is drawn once
+}
+/** A piece's outline as it stands, kept between frames: it is only made again when the instrument has turned. */
+interface Standing { points: Float32Array | null; path: Path2D | null; cx: number; cy: number; length: number; reach: number }
+type Cut = Pick<Job, 'shape' | 'x' | 'y' | 'cos' | 'sin'>;
 interface Flyer {
   target: HTMLElement;
   key: HTMLElement | null;
@@ -78,8 +92,10 @@ interface Flyer {
   u: Spring; // 0 standing in the row, 1 in its slot
   turn: Spring; // 0 upright, 1 lying along the grid
   swing: number; // its own response, s
-  fade: number; // how far the note has taken over from the shape
+  landed: boolean | null; // the note itself is on the grid, under the shape
   down: boolean;
+  standing: Standing;
+  hold: number; // frames it is still drawn here after it was given back to the row
 }
 
 export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTMLElement[]) {
@@ -96,15 +112,19 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     // Each turns at its own pace, as the instruments on the rack sway at theirs.
     turn: new Spring(0, { response: .4, damping: .58 }, .0004),
     swing: .4 + .05 * ((index * 5) % 4),
-    fade: -1,
+    landed: null,
     down: false,
+    standing: { points: null, path: null, cx: 0, cy: 0, length: 1, reach: 1 },
+    hold: 0,
   }));
+  // Back to front: the copies furthest from the middle first, the real one last, as they stand in the row.
+  const order = flyers.map((_, index) => index).sort((a, b) => Math.abs(b - 3) - Math.abs(a - 3));
   let width = 1, height = 1, ratio = 1;
   let drawn = false;
-  let taken = false;
+  let playing = false;
+  let taken = 0;
   let covered = false;
-  let linger = 0;
-  const written = { reveal: -1, line: NaN, lineOpacity: -1 };
+  const written = { reveal: -1, faint: null as boolean | null, line: NaN, lineOpacity: -1 };
 
   function measure() {
     width = stage.clientWidth;
@@ -123,35 +143,57 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     }
     fl.style.transform = transform;
     written.reveal = -1;
+    written.faint = null;
     written.line = NaN;
   }
 
   function reveal(share: number, lineX: number) {
-    const shown = Math.round(clamp(share, 0, 1) * width * 100) / 100;
+    // Closed, a hair of FL Studio stays on screen at next to no opacity. Nothing of it can be seen, but its
+    // picture is painted and kept: hidden outright, the browser paints the whole Playlist in the frame the
+    // playhead sets off (and restyles every element in it), which is a frame the reader sees drop.
+    const shown = Math.max(1, Math.round(clamp(share, 0, 1) * width * 100) / 100);
     if (shown !== written.reveal) {
       written.reveal = shown;
       const hidden = width - shown;
-      wipe.style.visibility = shown <= 0 ? 'hidden' : '';
       wipe.style.transform = hidden <= 0 ? '' : `translate3d(${(-hidden).toFixed(2)}px,0,0)`;
       world.style.transform = hidden <= 0 ? '' : `translate3d(${hidden.toFixed(2)}px,0,0)`;
     }
+    const faint = share * width < 1;
+    if (faint !== written.faint) wipe.style.opacity = (written.faint = faint) ? '.01' : '';
     // The playhead fades in over its first steps and is gone once it has left the screen.
     const opacity = lineX <= -8 || lineX >= width + 8 ? 0 : Math.round(smooth((lineX + 8) / 40) * 100) / 100;
     if (opacity !== written.lineOpacity) scan.style.opacity = String(written.lineOpacity = opacity);
     if (opacity && lineX !== written.line) scan.style.transform = `translate3d(${(written.line = lineX).toFixed(2)}px,0,0)`;
   }
 
-  function land(flyer: Flyer, fade: number, down: boolean) {
-    const rounded = Math.round(fade * 100) / 100;
-    if (rounded !== flyer.fade) {
-      flyer.fade = rounded;
-      flyer.target.style.visibility = rounded > 0 ? '' : 'hidden';
-      flyer.target.style.opacity = rounded >= 1 ? '' : String(rounded);
-    }
+  // The note is put on the grid once, under its shape, and the shape fades away over it on the canvas: one
+  // repaint of FL Studio's picture per note, not one a frame.
+  function land(flyer: Flyer, landed: boolean, down: boolean) {
+    if (landed !== flyer.landed) flyer.target.style.visibility = (flyer.landed = landed) ? '' : 'hidden';
     if (down !== flyer.down) flyer.key?.classList.toggle('is-down', flyer.down = down);
   }
 
-  const path = (points: Float32Array, cx: number, cy: number, half: number, inflate: number) => {
+  function standingOf(flyer: Flyer, points: Float32Array) {
+    const standing = flyer.standing;
+    if (standing.points === points) return standing;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < points.length; i += 2) {
+      const x = points[i]!, y = points[i + 1]!;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    standing.points = points;
+    standing.cx = (minX + maxX) / 2;
+    standing.cy = (minY + maxY) / 2;
+    standing.length = maxY - minY;
+    standing.reach = Math.hypot(maxX - minX, maxY - minY) / 2;
+    standing.path = path(points, standing.cx, standing.cy, 0, 0);
+    return standing;
+  }
+
+  function path(points: Float32Array, cx: number, cy: number, half: number, inflate: number) {
     // Seen along its length, a shape swells (or thins) sideways into the note's bar; its length is the note's already.
     const shape = new Path2D();
     const sides = points.length / 2;
@@ -164,7 +206,7 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     }
     shape.closePath();
     return shape;
-  };
+  }
 
   /** One frame at `t` (0 the row as the instruments left it, 1 FL Studio's screen). True while anything still moves.
       `lift`: how far this stage still is below the instruments' (px), when a scroll is thrown back past the start. */
@@ -173,37 +215,35 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     const pieces = bridge?.pieces() ?? [];
     const live = pieces.length === flyers.length && !!ctx;
     // Where the playhead is, in screen widths. It keeps going past the right edge, so the last shapes land on its count.
-    const last = live ? Math.max(...pieces.map(piece => piece.x + piece.size * .13)) / width : 1;
+    let last = 1;
+    if (live) { last = 0; for (const piece of pieces) last = Math.max(last, (piece.x + piece.size * .13) / width); }
     const end = Math.max(1.03, last + GAP + FLIGHT + .01);
     const at = -.03 + (end + .03) * clamp((t - SWEEP.from) / (SWEEP.to - SWEEP.from), 0, 1);
     const lineX = at * width;
     reveal(at, lineX);
 
-    // The shapes are the hand-off's while it plays, and until the last one thrown by a fast scroll has come to rest.
-    // (At rest for the eye is enough: the last of a spring's ringing is not worth holding the row for.)
-    const flying = flyers.some(flyer => Math.abs(flyer.u.value - flyer.u.target) > .002 || Math.abs(flyer.turn.value - flyer.turn.target) * 90 > .4
-      || Math.abs(flyer.turn.velocity) * 90 > 6);
-    const take = live && ((t > 0 && t < 1) || (flying && !snap));
-    if (take !== taken) {
-      bridge?.take(taken = take);
-      // Given back, the row draws its copies again on its next frame: keep them here until it has.
-      linger = take ? 0 : 3;
-    }
-    const draw = take || (live && linger > 0);
-    if (linger > 0 && dt > 0) linger--;
+    // It plays across the hand-off's stretch of scroll, and until the last shape thrown by a fast scroll has come to rest.
+    // (At rest for the eye is enough: the last of a spring's ringing is not worth holding the row for.
+    // A shape in its slot is held level whatever its spring is doing, so only one still on its way counts.)
+    const flying = flyers.some(flyer => Math.abs(flyer.u.value - flyer.u.target) > .002 || (flyer.u.value < LEVEL
+      && (Math.abs(flyer.turn.value - flyer.turn.target) * 90 > .4 || Math.abs(flyer.turn.velocity) * 90 > 6)));
+    // (Nor does it stop while a copy is still its own to draw, or just given back: the row needs a frame to show it.)
+    const take = live && ((t > 0 && t < 1) || ((flying || taken !== 0 || flyers.some(flyer => flyer.hold > 0)) && !snap));
+    if (take !== playing) bridge?.busy(playing = take);
     const cover = t >= 1 && !take;
     if (cover !== covered) bridge?.cover(covered = cover);
 
-    let moving = linger > 0;
+    let moving = false;
+    let mask = 0;
     const scale = live ? pieces[0]!.size / bridge!.view : 1;
-    if (ctx && (draw || drawn)) {
+    if (ctx && (take || drawn)) {
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, width, height);
       drawn = false;
     }
-    // Back to front: the copies furthest from the middle first, the real one last, as they stand in the row.
-    const order = flyers.map((_, index) => index).sort((a, b) => Math.abs(b - 3) - Math.abs(a - 3));
     const jobs: Job[] = [];
+    // Ahead of the playhead, back to front: a copy in the air (drawn), or something standing in the row (cut out of those).
+    const ahead: (Job | Cut)[] = [];
     for (const index of order) {
       const flyer = flyers[index]!;
       const piece = pieces[index];
@@ -220,82 +260,111 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
       const stood = flyer.turn.step(dt);
       if (!still || !stood) moving = true;
       const u = clamp(flyer.u.value, 0, 1);
-      // The note takes over once the shape is its bar and lies level; a shape still rocking stays a shape.
-      // (Within half a degree it reads as level: the last of a spring's ringing is not worth waiting for.)
-      const level = 1 - clamp((Math.abs(flyer.turn.value - 1) * 90 - .5) / 2.5, 0, 1);
-      const fade = !live || !take ? Number(goal >= 1) : smooth((u - .9) / .1) * level;
-      land(flyer, fade, u > .78 && fade < .6 && take);
-      if (!draw || !piece || fade >= 1) continue;
-
+      // Its last stretch is the note taking over, in place: by then it is the note's bar, in its slot and level.
+      const fade = !live || !take ? Number(goal >= 1) : smooth((u - LEVEL) / (1 - LEVEL));
+      land(flyer, fade > 0, u > .78 && fade < .6 && take);
+      if (!take || !piece) continue;
+      // Off its place while the playhead is not past it (a scroll thrown back): the row must not show it standing too.
+      // (Within a pixel of where it stands, and upright, it is standing: the row has it back before a spring's last breath.)
+      const away = flyer.u.value > .02 || Math.abs(flyer.turn.value) * 90 > .5;
+      if (away && piece.colour && lineX < piece.x + piece.size * .2) mask |= 1 << index;
+      // Given back, a copy is drawn by the row again on its next frame or the one after: it stays here until then.
+      else if (taken >> index & 1) flyer.hold = 4;
+      else if (flyer.hold > 0 && dt > 0) flyer.hold--;
+      if (flyer.hold > 0) moving = true;
+      const held = away || flyer.hold > 0;
       const { points, size, colour } = piece;
       const view = bridge!.view;
-      // The shape's own box, for its centre and length.
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (let i = 0; i < points.length; i += 2) {
-        const x = points[i]!, y = points[i + 1]!;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      const standing = standingOf(flyer, points);
+      const { cx, cy } = standing;
       // Standing: on its foot, leaning as the rack has it.
       const lean = piece.lean * Math.PI / 180 * (1 - smooth(u * 5));
       const footX = view / 2 - cx, footY = view * bridge!.foot - cy; // the foot, seen from the shape's centre
       const startX = piece.x - (Math.cos(lean) * footX - Math.sin(lean) * footY) * scale;
       const startY = piece.y - lift - size / 2 + size * bridge!.foot - (Math.sin(lean) * footX + Math.cos(lean) * footY) * scale;
+      // What stands in the row (a copy in its place; the real instrument always) is drawn by the row, under this
+      // canvas. A copy in the air ahead of the playhead passes behind the ones standing nearer the middle, as it
+      // stood behind them: their shapes are cut out of it.
+      if (!held || !colour) {
+        const rest = piece.lean * Math.PI / 180;
+        const restX = piece.x - (Math.cos(rest) * footX - Math.sin(rest) * footY) * scale;
+        const restY = piece.y - lift - size / 2 + size * bridge!.foot - (Math.sin(rest) * footX + Math.cos(rest) * footY) * scale;
+        ahead.push({ shape: standing.path!, x: restX * ratio, y: restY * ratio, cos: Math.cos(rest) * scale * ratio, sin: Math.sin(rest) * scale * ratio });
+      }
+      if (fade >= 1) continue;
+      // Standing with the playhead still short of it, there is nothing of it to draw here.
+      if (!held && colour && lineX <= piece.x - size * .2) continue;
       // Lying: its length the note's, its centre the note's.
       const slot = flyer.slot;
-      const lying = slot.w / (maxY - minY);
-      const travel = smooth(u);
+      const lying = slot.w / standing.length;
+      const travel = smooth(u / LEVEL);
       const grow = smooth(u / .86);
       const size1 = scale * (lying / scale) ** grow;
       // It comes away upwards before it comes down into its slot: a small hop, bigger for the ones that go far.
       const hop = Math.min(height * .09, Math.hypot(slot.x - startX, slot.y - startY) * .16) * Math.sin(Math.PI * travel);
       const x = startX + (slot.x + slot.w / 2 - startX) * travel;
       const y = startY + (slot.y + slot.h / 2 - startY) * travel - hop;
-      const angle = lean + flyer.turn.value * Math.PI / 2;
+      // It rocks on its spring in the air and is brought level as it comes in, so it never lands askew.
+      const turned = flyer.turn.value + (1 - flyer.turn.value) * smooth((u - .7) / (LEVEL - .7));
+      const angle = lean + turned * Math.PI / 2;
       const inflate = smooth((u - .48) / .44);
-      const shape = path(points, cx, cy, slot.h / 2 / lying, inflate);
+      const half = slot.h / 2 / lying;
+      const shape = inflate ? path(points, cx, cy, half, inflate) : standing.path!;
       const glint = smooth((u - .7) / .2);
-      jobs.push({
+      const reach = Math.max(standing.reach, half * 1.5) * size1 + 2;
+      const job: Job = {
         shape, x: x * ratio, y: y * ratio, cos: Math.cos(angle) * size1 * ratio, sin: Math.sin(angle) * size1 * ratio,
         alpha: 1 - fade, colour, edge: 2 / size1, // half the edge lies under the fill: a pixel shows
-        face: `rgb(${NOTE.map((channel, i) => Math.round(channel + (GLINT[i]! - channel) * glint)).join()})`,
-      });
+        face: glint ? `rgb(${NOTE.map((channel, i) => Math.round(channel + (GLINT[i]! - channel) * glint)).join()})` : FACE,
+        left: x - reach, right: x + reach, away: held,
+      };
+      jobs.push(job);
+      if (held && colour) ahead.push(job);
+    }
+    if (mask !== taken) {
+      bridge?.take(taken = mask);
+      moving = true;
     }
     if (ctx && jobs.length) {
-      const within = (from: number, to: number, job: Job) => {
+      // One clip a side, and each shape only on the side (or sides) of the playhead it is on.
+      const side = (from: number, to: number) => {
         ctx.save();
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         ctx.beginPath();
         ctx.rect(from, 0, to - from, height);
         ctx.clip();
-        ctx.setTransform(job.cos, job.sin, -job.sin, job.cos, job.x, job.y);
-        ctx.globalAlpha = job.alpha;
       };
-      const ahead = Math.max(0, lineX), behind = Math.min(width, lineX);
-      // Ahead of the playhead the copies are still their own colour, and still behind the real one: its shape is cut
-      // out of them, so the instrument itself (on the stage underneath) shows through as it always stood.
-      if (ahead < width) for (const job of jobs) {
-        within(ahead, width, job);
-        if (job.colour) {
-          ctx.fillStyle = job.colour;
-        } else {
-          ctx.globalCompositeOperation = 'destination-out';
-          ctx.globalAlpha = 1;
+      const front = Math.max(0, lineX), behind = Math.min(width, lineX);
+      // Ahead of the playhead a copy is still its own colour. Only one off its place is drawn here: the rest stand
+      // in the row underneath.
+      if (front < width && ahead.some(item => 'colour' in item && item.right > front)) {
+        side(front, width);
+        let any = false;
+        for (const item of ahead) {
+          const flown = 'colour' in item;
+          if (flown ? item.right <= front : !any) continue;
+          ctx.setTransform(item.cos, item.sin, -item.sin, item.cos, item.x, item.y);
+          ctx.globalCompositeOperation = flown ? 'source-over' : 'destination-out';
+          ctx.globalAlpha = flown ? item.alpha : 1;
+          if (flown) ctx.fillStyle = item.colour!;
+          ctx.fill(item.shape);
+          any = true;
         }
-        ctx.fill(job.shape);
         ctx.restore();
       }
       // Behind it they are a note's colour already, each inside its edge.
-      if (behind > 0) for (const job of jobs) {
-        within(0, behind, job);
-        ctx.fillStyle = job.face;
+      if (behind > 0) {
+        side(0, behind);
         ctx.strokeStyle = EDGE;
-        ctx.lineWidth = job.edge;
-        ctx.stroke(job.shape);
-        ctx.fill(job.shape);
+        for (const job of jobs) {
+          if (job.left >= behind) continue;
+          ctx.setTransform(job.cos, job.sin, -job.sin, job.cos, job.x, job.y);
+          ctx.globalAlpha = job.alpha;
+          ctx.fillStyle = job.face;
+          ctx.lineWidth = job.edge;
+          ctx.stroke(job.shape);
+          ctx.fill(job.shape);
+        }
         ctx.restore();
       }
       drawn = true;
@@ -308,18 +377,22 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
   }
 
   function clear() {
-    taken = covered = false;
-    lineupBridge.current?.take(false);
+    playing = covered = false;
+    taken = 0;
+    lineupBridge.current?.busy(false);
+    lineupBridge.current?.take(0);
     lineupBridge.current?.cover(false);
-    wipe.style.visibility = wipe.style.transform = world.style.transform = '';
+    wipe.style.opacity = wipe.style.transform = world.style.transform = '';
     scan.style.opacity = '0';
     written.reveal = written.lineOpacity = -1;
+    written.faint = null;
     written.line = NaN;
     for (const flyer of flyers) {
       flyer.u.set(1);
       flyer.turn.set(1);
-      flyer.fade = -1;
-      flyer.target.style.visibility = flyer.target.style.opacity = '';
+      flyer.landed = null;
+      flyer.hold = 0;
+      flyer.target.style.visibility = '';
       if (flyer.down) flyer.key?.classList.remove('is-down');
       flyer.down = false;
     }

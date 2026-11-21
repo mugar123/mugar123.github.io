@@ -78,8 +78,8 @@
 .lu__step { opacity: 0; }
 .lu__slide-strip { position: absolute; left: 0; max-width: none; opacity: 0; pointer-events: none; will-change: transform, opacity; }
 .has-slide-strip .lu__copy { visibility: hidden; }
-/* Handed over to FL Studio: the copies are drawn there from here on (fl-studio/handoff.ts). */
-.is-handed .lu__copy { visibility: hidden; }
+/* In the air over FL Studio's hand-off (fl-studio/handoff.ts): drawn there until it stands in the row again. */
+.lu__copy.is-handed { visibility: hidden; }
 
 /* The hand, over the instrument only, once the instrument has settled (is-standing). */
 .is-scrubbed .lu__grab {

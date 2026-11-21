@@ -634,14 +634,18 @@ onPage(signal => {
       flatCopies.push({
         svg: copy.svg, colour: copy.colour, yaw: () => following.get(copy.svg)!.yaw, guitarShare: Number(scene === guitar),
         restX, x: () => rowX() + restX() + (scene === bass ? dealt(copy) : 0),
-        opacity: () => scene === guitar ? Number(shown > span.moveAt && !handed) : bassOpacity(copy.rank),
+        opacity: () => scene === guitar ? Number(shown > span.moveAt && !(handed >> handing.get(copy.svg)! & 1)) : bassOpacity(copy.rank),
         lean: () => lean.get(copy.svg) ?? 0,
       });
     }
   }
-  // Handed over to FL Studio, the guitar's copies are drawn there; covered by it, nothing here is drawn at all.
-  let handed = false;
+  // The hand-off to FL Studio (fl-studio/handoff.ts). While it plays the guitar is not the hand's (`busy`). The row
+  // stays ours to draw, bar a copy the hand-off has in the air while its place is uncovered (`handed`, a bit each
+  // in the row's order); covered by FL Studio, nothing here is drawn at all.
+  let busy = false;
+  let handed = 0;
   let covered = false;
+  const handing = new Map<SVGSVGElement, number>();
   let copyLayer: ReturnType<typeof createCopyLayer> = null;
 
   let outlineLayer: ReturnType<typeof createOutlineLayer> = null;
@@ -861,7 +865,7 @@ onPage(signal => {
 
     // The hand: a scene's instrument is free when its turn is complete.
     stand(bass, bassProgress > .995 && move <= 0);
-    stand(guitar, move === 1 && !handed);
+    stand(guitar, move === 1 && !busy);
   }
 
   // Use native detail while the phone keeps pace. Sustained late frames lower only the moving
@@ -902,6 +906,7 @@ onPage(signal => {
 
   let queued = 0;
   let last = 0;
+  let resting = false;
   function tick(now: number) {
     queued = 0;
     const elapsed = last ? now - last : 0;
@@ -952,14 +957,19 @@ onPage(signal => {
       if (onScreen(centre + reach)) renderInstrument(guitar, pixelRatio);
     }
     // Leaving a chapter mid-turn can already have queued the settling spring for the next frame.
+    // At rest on the last frame, with FL Studio's hand-off playing over it, a scroll changes nothing here.
+    resting = !moving && enabled && near && shown === span.end;
     if (moving) request();
     else if (!queued) last = 0;
   }
   function request() { if (!queued) queued = requestAnimationFrame(tick); }
 
   // The hand-off to FL Studio (fl-studio/handoff.ts): the guitar's row, left to right, as it stands now.
-  const handing = [...guitar.copies].sort((a, b) => a.side * a.rank - b.side * b.rank);
-  const lent = [...handing.slice(0, 3), null, ...handing.slice(3)].map(copy => ({
+  const row = [...guitar.copies].sort((a, b) => a.side * a.rank - b.side * b.rank);
+  const lent = [...row.slice(0, 3), null, ...row.slice(3)].map((copy, index) => {
+    if (copy) handing.set(copy.svg, index);
+    return copy;
+  }).map(copy => ({
     copy, yaw: NaN, stride: 0, buffer: new Float32Array(POINTS * 2),
     piece: { x: 0, y: 0, size: 1, colour: copy?.colour ?? null, lean: 0, points: new Float32Array(0) } as LineupPiece,
   }));
@@ -990,11 +1000,20 @@ onPage(signal => {
         return piece;
       });
     },
-    take(on) {
-      if (on === handed) return;
-      handed = on;
-      guitar.element.classList.toggle('is-handed', on);
+    busy(on) {
+      if (on === busy) return;
+      busy = on;
       if (near) request();
+    },
+    take(mask) {
+      if (mask === handed) return;
+      handed = mask;
+      for (const [svg, index] of handing) svg.classList.toggle('is-handed', !!(mask >> index & 1));
+      // In this same frame: a copy shown here and there at once, or in neither, is a frame the eye catches.
+      if (near && enabled) {
+        cancelAnimationFrame(queued);
+        tick(performance.now());
+      }
     },
     cover(on) {
       if (on === covered) return;
@@ -1119,14 +1138,16 @@ onPage(signal => {
   }
   resized();
   document.fonts.ready.then(() => { if (!signal.aborted) measure(); });
-  window.addEventListener('scroll', () => { if (near) request(); }, { passive: true, signal });
+  window.addEventListener('scroll', () => {
+    if (near && !(resting && scrollY - pinStart >= span.end * line)) request();
+  }, { passive: true, signal });
   window.addEventListener('resize', resized, { passive: true, signal });
   allowed.addEventListener('change', measure, { signal });
   mobileView.addEventListener('change', measure, { signal });
   signal.addEventListener('abort', () => {
     stopped = true;
     if (lineupBridge.current === bridge) lineupBridge.current = null;
-    guitar.element.classList.remove('is-handed');
+    for (const svg of handing.keys()) svg.classList.remove('is-handed');
     clearTimeout(warmTimer);
     cancelAnimationFrame(queued);
     cancelAnimationFrame(stripTimer);
