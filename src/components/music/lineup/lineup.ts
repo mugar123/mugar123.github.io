@@ -1047,6 +1047,7 @@ onPage(signal => {
       covered = on;
       if (!on && near) request();
     },
+    runway: () => span.end * line,
   };
   lineupBridge.current = bridge;
   onJoinChange(() => { size = ''; resized(); }, signal);

@@ -210,7 +210,13 @@ const CHEVRON = 'M15.6 8.4 9.9 14.5 15.6 20.6';
   .studio[data-joined] .studio__world { pointer-events: auto; will-change: transform; }
   .studio[data-joined] .studio__wipe { will-change: transform, opacity; }
   .studio__scan, .studio__flight { display: none; }
-  .studio[data-joined] .studio__flight { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  /* The shapes in flight (handoff.ts) are drawn on the screen itself: held by the viewport, as the instruments'
+     stage is, and not by this one, which goes down the page when a scroll is thrown back past the hand-off's
+     start. Its place and size are the held stage's (set by the script); shown only while the chapter is near. */
+  .studio[data-joined] .studio__flight {
+    display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100svh;
+    pointer-events: none; visibility: hidden;
+  }
   /* FL's playhead, as in the Playlist behind (PlaylistBackdrop.astro), with the light it throws on what it has passed. */
   .studio[data-joined] .studio__scan {
     display: block; position: absolute; top: 0; bottom: 0; left: -1px; width: 1px; opacity: 0;

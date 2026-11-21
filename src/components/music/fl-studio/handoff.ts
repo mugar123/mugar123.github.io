@@ -24,7 +24,11 @@ import { Spring, clamp } from '../v4/physics';
    - The row stays the instruments' own. Ahead of the playhead nothing here is drawn at all; behind it FL
      Studio covers the row, and this canvas holds only what the playhead has already passed: at most a few
      shapes a frame, and none of them changes hands on a still screen.
-   - Nothing in FL Studio's picture is repainted while it plays, bar a note appearing or a key going down. */
+   - Nothing in FL Studio's picture is repainted while it plays, bar a note appearing or a key going down.
+   - The shapes are drawn on the screen, not on FL Studio's stage (the canvas is fixed to the viewport). A scroll
+     thrown back leaves the hand-off before its shapes are home, and FL Studio's stage then goes down the page
+     while the instruments' is still held: drawn on that stage, the shapes went with it and its top edge cut
+     their heads off. */
 
 /** What the instruments chapter lends to the hand-off (set by lineup.ts while its page is shown). */
 export interface LineupPiece {
@@ -56,6 +60,8 @@ export interface LineupBridge {
   take(mask: number): void;
   /** FL Studio covers the stage completely: nothing needs drawing under it. */
   cover(on: boolean): void;
+  /** The scroll before the hand-off's start over which the row's screen is still held, px. */
+  runway(): number;
 }
 export const lineupBridge: { current: LineupBridge | null } = { current: null };
 
@@ -124,7 +130,16 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
   let playing = false;
   let taken = 0;
   let covered = false;
+  let nearby = false;
+  let lit: boolean | null = null;
   const written = { reveal: -1, faint: null as boolean | null, line: NaN, lineOpacity: -1 };
+
+  // The canvas lies over the whole screen wherever the page is, so it is only there to be composited while
+  // its chapter is within reach or something is still drawn on it.
+  function light() {
+    const on = nearby || playing || drawn;
+    if (on !== lit) canvas.style.visibility = (lit = on) ? 'visible' : 'hidden';
+  }
 
   function measure() {
     width = stage.clientWidth;
@@ -137,6 +152,10 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     const transform = fl.style.transform;
     fl.style.transform = 'none';
     const origin = stage.getBoundingClientRect();
+    // Where the held stage is on the screen: the canvas takes its place there, whatever the stage does after.
+    canvas.style.left = `${origin.left}px`;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     for (const flyer of flyers) {
       const box = flyer.target.getBoundingClientRect();
       flyer.slot = { x: box.left - origin.left, y: box.top - origin.top, w: box.width, h: box.height };
@@ -210,8 +229,12 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
 
   /** One frame at `t` (0 the row as the instruments left it, 1 FL Studio's screen). True while anything still moves.
       `lift`: how far this stage still is below the instruments' (px), when a scroll is thrown back past the start. */
-  function paint(t: number, dt: number, snap: boolean, lift = 0) {
+  function paint(t: number, dt: number, jumped: boolean, lift = 0) {
     const bridge = lineupBridge.current;
+    // Thrown back further than the instruments' screen is held (a jump up the page), there is no row on the screen
+    // to stand the shapes in: they are home at once, and nothing is drawn over whatever is there instead.
+    const gone = lift > (bridge?.runway() ?? 0);
+    const snap = jumped || gone;
     const pieces = bridge?.pieces() ?? [];
     const live = pieces.length === flyers.length && !!ctx;
     // Where the playhead is, in screen widths. It keeps going past the right edge, so the last shapes land on its count.
@@ -228,7 +251,7 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     const flying = flyers.some(flyer => Math.abs(flyer.u.value - flyer.u.target) > .002 || (flyer.u.value < LEVEL
       && (Math.abs(flyer.turn.value - flyer.turn.target) * 90 > .4 || Math.abs(flyer.turn.velocity) * 90 > 6)));
     // (Nor does it stop while a copy is still its own to draw, or just given back: the row needs a frame to show it.)
-    const take = live && ((t > 0 && t < 1) || ((flying || taken !== 0 || flyers.some(flyer => flyer.hold > 0)) && !snap));
+    const take = live && !gone && ((t > 0 && t < 1) || ((flying || taken !== 0 || flyers.some(flyer => flyer.hold > 0)) && !snap));
     if (take !== playing) bridge?.busy(playing = take);
     const cover = t >= 1 && !take;
     if (cover !== covered) bridge?.cover(covered = cover);
@@ -249,10 +272,13 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
       const piece = pieces[index];
       // Without the row to draw from (its outlines never came), the notes still arrive on the playhead's count.
       const right = piece ? (piece.x + piece.size * .13) / width : (index + 1) / (flyers.length + 1);
-      const goal = t >= 1 ? 1 : clamp((at - right - GAP) / FLIGHT, 0, 1);
+      const goal = t >= 1 ? 1 : gone ? 0 : clamp((at - right - GAP) / FLIGHT, 0, 1);
       // Thrown back past the start, the row is the instruments' again and may scroll away: whatever is still in the
       // air stands up at once, without a swing. (Thrown forward, the shapes keep theirs: they rock into their slots.)
-      const over = t <= 0;
+      // Past the start is where the scroll is, not where the playhead has got to: the playhead follows the scroll
+      // through a spring and is a third of a second behind a fast one, and until it arrived the shapes went on
+      // rocking loose in a row that had been the instruments' again for hundreds of pixels.
+      const over = t <= 0 || lift > 0;
       flyer.u.to(goal, { response: over ? .18 : .26 });
       flyer.turn.to(smooth(goal / .7), over ? { response: .2, damping: 1 } : { response: flyer.swing, damping: .58 });
       if (snap) { flyer.u.set(goal); flyer.turn.set(flyer.turn.target); }
@@ -265,8 +291,10 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
       land(flyer, fade > 0, u > .78 && fade < .6 && take);
       if (!take || !piece) continue;
       // Off its place while the playhead is not past it (a scroll thrown back): the row must not show it standing too.
-      // (Within a pixel of where it stands, and upright, it is standing: the row has it back before a spring's last breath.)
-      const away = flyer.u.value > .02 || Math.abs(flyer.turn.value) * 90 > .5;
+      // (Within a pixel of where it stands, upright and no longer swinging, it is standing: the row has it back
+      // before a spring's last breath. Upright alone is not standing: a shape still rocking passes through upright
+      // twice a swing, and was given back and taken again each time.)
+      const away = flyer.u.value > .02 || Math.abs(flyer.turn.value) * 90 > .5 || Math.abs(flyer.turn.velocity) * 90 > 6;
       if (away && piece.colour && lineX < piece.x + piece.size * .2) mask |= 1 << index;
       // Given back, a copy is drawn by the row again on its next frame or the one after: it stays here until then.
       else if (taken >> index & 1) flyer.hold = 4;
@@ -281,29 +309,30 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
       const lean = piece.lean * Math.PI / 180 * (1 - smooth(u * 5));
       const footX = view / 2 - cx, footY = view * bridge!.foot - cy; // the foot, seen from the shape's centre
       const startX = piece.x - (Math.cos(lean) * footX - Math.sin(lean) * footY) * scale;
-      const startY = piece.y - lift - size / 2 + size * bridge!.foot - (Math.sin(lean) * footX + Math.cos(lean) * footY) * scale;
+      const startY = piece.y - size / 2 + size * bridge!.foot - (Math.sin(lean) * footX + Math.cos(lean) * footY) * scale;
       // What stands in the row (a copy in its place; the real instrument always) is drawn by the row, under this
       // canvas. A copy in the air ahead of the playhead passes behind the ones standing nearer the middle, as it
       // stood behind them: their shapes are cut out of it.
       if (!held || !colour) {
         const rest = piece.lean * Math.PI / 180;
         const restX = piece.x - (Math.cos(rest) * footX - Math.sin(rest) * footY) * scale;
-        const restY = piece.y - lift - size / 2 + size * bridge!.foot - (Math.sin(rest) * footX + Math.cos(rest) * footY) * scale;
+        const restY = piece.y - size / 2 + size * bridge!.foot - (Math.sin(rest) * footX + Math.cos(rest) * footY) * scale;
         ahead.push({ shape: standing.path!, x: restX * ratio, y: restY * ratio, cos: Math.cos(rest) * scale * ratio, sin: Math.sin(rest) * scale * ratio });
       }
       if (fade >= 1) continue;
       // Standing with the playhead still short of it, there is nothing of it to draw here.
       if (!held && colour && lineX <= piece.x - size * .2) continue;
-      // Lying: its length the note's, its centre the note's.
+      // Lying: its length the note's, its centre the note's. (The note is on FL Studio's stage, wherever that is.)
       const slot = flyer.slot;
+      const slotY = slot.y + lift;
       const lying = slot.w / standing.length;
       const travel = smooth(u / LEVEL);
       const grow = smooth(u / .86);
       const size1 = scale * (lying / scale) ** grow;
       // It comes away upwards before it comes down into its slot: a small hop, bigger for the ones that go far.
-      const hop = Math.min(height * .09, Math.hypot(slot.x - startX, slot.y - startY) * .16) * Math.sin(Math.PI * travel);
+      const hop = Math.min(height * .09, Math.hypot(slot.x - startX, slotY - startY) * .16) * Math.sin(Math.PI * travel);
       const x = startX + (slot.x + slot.w / 2 - startX) * travel;
-      const y = startY + (slot.y + slot.h / 2 - startY) * travel - hop;
+      const y = startY + (slotY + slot.h / 2 - startY) * travel - hop;
       // It rocks on its spring in the air and is brought level as it comes in, so it never lands askew.
       const turned = flyer.turn.value + (1 - flyer.turn.value) * smooth((u - .7) / (LEVEL - .7));
       const angle = lean + turned * Math.PI / 2;
@@ -373,7 +402,14 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     if (drawn && !take) moving = true;
     // Past either end with the shapes still the hand-off's: one more frame gives them back and releases the keys.
     if (take && (t >= 1 || t <= 0)) moving = true;
+    light();
     return moving;
+  }
+
+  /** The chapter is within reach of the screen, or no longer. */
+  function near(on: boolean) {
+    nearby = on;
+    light();
   }
 
   function clear() {
@@ -399,7 +435,8 @@ export function createHandoff(stage: HTMLElement, fl: HTMLElement, targets: HTML
     ctx?.setTransform(1, 0, 0, 1, 0, 0);
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
     drawn = false;
+    light();
   }
 
-  return { measure, paint, clear, flown: new Set(targets) };
+  return { measure, paint, clear, near, flown: new Set(targets) };
 }

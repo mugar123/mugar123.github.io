@@ -201,6 +201,7 @@ onPage(signal => {
 
   const visibility = new IntersectionObserver(([entry]) => {
     nearby = !!entry?.isIntersecting;
+    handoff.near(nearby);
     if (nearby && motion.matches) arrive();
   }, { rootMargin: '30% 0px' });
   const resize = new ResizeObserver(reset);
