@@ -1,0 +1,97 @@
+---
+import { Image } from 'astro:assets';
+import type { Logo } from '@/data/papertok';
+
+interface Props {
+  items: Logo[];
+  variant: 'universities' | 'sources';
+  label?: string;
+  labelledby?: string;
+}
+const { items, variant, label, labelledby } = Astro.props;
+const rowCount = variant === 'universities' ? 2 : 3;
+const perRow = Math.ceil(items.length / rowCount);
+const rows = Array.from({ length: rowCount }, (_, i) => items.slice(i * perRow, (i + 1) * perRow));
+const logos = import.meta.glob<ImageMetadata>('/public/img/papertok/{sources,universities}/*.png', { eager: true, import: 'default' });
+---
+<div class={`marquee marquee--${variant}`} data-papertok-marquee role="group" aria-label={label} aria-labelledby={labelledby}>
+  {rows.map(row => (
+    <div class="marquee__track">
+      {[false, true].map(copy => (
+        <ul class="marquee__group" aria-hidden={copy || undefined}>
+          {row.map(item => (
+            <li class="logo-pill">
+              <Image src={logos['/public' + item.src]!} width={72} height={72} format="webp" loading="eager" alt="" />
+              {item.name}
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  ))}
+</div>
+
+<style>
+  .marquee {
+    --fade: 2rem;
+    position: relative;
+    display: grid; gap: 0.5rem;
+    container-type: inline-size;
+    overflow: hidden;
+    margin: auto -2rem; padding-block: 1rem 0.5rem;
+  }
+  /* The fades stay on the white card while the rows slide underneath. */
+  .marquee::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, var(--bg), transparent var(--fade), transparent calc(100% - var(--fade)), var(--bg));
+  }
+  .marquee__track { display: flex; width: max-content; margin-left: 2rem; animation: slide 20s linear infinite; }
+  .marquee__group {
+    display: flex; flex: none; min-width: 100cqi; justify-content: space-around;
+    gap: 0.5rem; list-style: none; margin: 0; padding: 0 0.5rem 0 0;
+  }
+  @keyframes slide { to { transform: translateX(-50%); } }
+  :global(.js) .marquee:not(.is-near) .marquee__track { animation-play-state: paused; }
+  @media (hover: hover) and (pointer: fine) {
+    .marquee:hover .marquee__track { animation-play-state: paused; }
+  }
+  .logo-pill {
+    flex: none; display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.375rem 0.875rem 0.375rem 0.375rem;
+    border-radius: 980px; background: var(--bg-alt);
+    font-size: 0.875rem; font-weight: 500; white-space: nowrap;
+  }
+  .logo-pill img { width: 1.5rem; height: 1.5rem; padding: 0.125rem; border-radius: 0.375rem; object-fit: contain; background: #fff; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06); }
+  .marquee--universities { --fade: 3rem; margin: 0; padding: 0; }
+  .marquee--universities .marquee__track { animation-duration: 45s; }
+  .marquee--universities .logo-pill {
+    height: 2.25rem; padding-block: 0; line-height: 1; letter-spacing: 0;
+    color: var(--ink); background: var(--bg); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+  .marquee--universities img { padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  @media (max-width: 620px) {
+    .marquee--sources { margin-inline: -1.5rem; }
+    .marquee__track { margin-left: 1.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee { display: flex; gap: 0; overflow-x: auto; }
+    .marquee::after, .marquee__group[aria-hidden] { display: none; }
+    .marquee__track { animation: none; margin-left: 0; }
+    .marquee__track:first-child { margin-left: var(--gutter); }
+    .marquee__group { min-width: 0; }
+  }
+</style>
+
+<script>
+  import { onPage } from '@/scripts/page';
+
+  onPage(signal => {
+    const strips = document.querySelectorAll('[data-papertok-marquee]');
+    if (!strips.length) return;
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) entry.target.classList.toggle('is-near', entry.isIntersecting);
+    }, { rootMargin: '160px 0px' });
+    strips.forEach(strip => observer.observe(strip));
+    signal.addEventListener('abort', () => observer.disconnect(), { once: true });
+  });
+</script>

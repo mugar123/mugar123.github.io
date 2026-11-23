@@ -1,31 +1,22 @@
 /**
  * In-page navigation (the island's links, the hero's pills): the page travels to the target instead of
- * teleporting, so the reader keeps their place in it. One easing from the site's tokens, the strong
- * ease-in-out for things that move on screen; the duration grows with the distance so a short hop is
- * quick and a long one never drags. The reader owns the scroll: a wheel, a touch or a key stops the
- * trip where it is. Under reduced motion the jump is instant. The browser's own smooth scrolling stays
- * on for everything else.
- *
- * On a touch screen the page scrolls on a thread of its own, at the display's rate; a script that moves
- * it frame by frame lands a frame behind and stutters, and a long trip outruns the painting of the page.
- * There the browser's own smooth scroll makes the trip, and never more than a screen and a half of it:
- * a farther target is first approached by a jump, so the reader still sees the page travel into place
- * without flashing through every section on the way.
+ * teleporting. The browser animates the trip at the display's rate. On touch screens, approach a distant
+ * target first so the final glide covers at most a screen and a half. Reduced motion jumps directly.
  *
  * The home page calls initGoto each time it is shown (scripts/page.ts); its listeners go with the page.
  */
-import { bezier } from './easing';
-
 const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 const touch = matchMedia('(hover: none) and (pointer: coarse)');
 
-const easeInOut = bezier(0.77, 0, 0.175, 1);
-
-let frame = 0;
-const stop = () => { if (frame) { cancelAnimationFrame(frame); frame = 0; } };
+let trip: AbortController | undefined;
+function stop() {
+  if (!trip) return;
+  trip.abort();
+  trip = undefined;
+  scrollTo({ top: scrollY, behavior: 'instant' });
+}
 
 function settle(target: HTMLElement, hash: string) {
-  frame = 0;
   // The entry carries the router's state (the page it is on, where it was scrolled), so Back from
   // another page finds its way here; Back within the page is scripts/page.ts.
   if (hash === '#top') {
@@ -73,16 +64,17 @@ export function goTo(hash: string) {
     settle(target, hash);
     return true;
   }
-  // 450ms for a hop, up to 900ms across the whole page.
-  const duration = Math.min(900, 450 + distance * 0.05);
-  const t0 = performance.now();
-  const step = (now: number) => {
-    const p = Math.min(1, (now - t0) / duration);
-    scrollTo({ top: start + (end - start) * easeInOut(p), behavior: 'instant' });
-    if (p < 1) frame = requestAnimationFrame(step);
-    else settle(target, hash);
+  // Commit focus and history only when a desktop trip arrives. User input can interrupt it.
+  trip = new AbortController();
+  const finish = () => {
+    if (Math.abs(scrollY - end) > 1) return;
+    trip?.abort();
+    trip = undefined;
+    settle(target, hash);
   };
-  frame = requestAnimationFrame(step);
+  addEventListener('scroll', finish, { passive: true, signal: trip.signal });
+  scrollTo({ top: end, behavior: 'smooth' });
+  finish();
   return true;
 }
 

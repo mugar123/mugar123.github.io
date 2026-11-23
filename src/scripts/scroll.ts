@@ -23,24 +23,25 @@ const onScreen = (r: DOMRect, vh: number) => r.bottom >= 0 && r.top <= vh;
 const held = (r: DOMRect, pinned: number) => clamp(-r.top / Math.max(1, r.height - pinned));
 
 export function initScroll(signal: AbortSignal) {
-  root.classList.toggle('reduce', reduce.matches);
+  let reduced = reduce.matches;
+  root.classList.toggle('reduce', reduced);
 
   // Statement: a slide held on screen while its words light up, one by one, as the section scrolls past.
   const statements = [...document.querySelectorAll<HTMLElement>('[data-statement]')].map((section) => {
     const el = section.querySelector<HTMLElement>('[data-words]')!;
-    if (!reduce.matches) el.classList.add('is-armed');
-    return { section, el, pin: section.querySelector<HTMLElement>('.statement__slide')!, words: [...el.querySelectorAll<HTMLElement>('.w')], pinH: 0, lit: -1 };
+    return { section, el, pin: section.querySelector<HTMLElement>('.statement__slide')!, words: [...el.querySelectorAll<HTMLElement>('.w')], pinH: 0, lit: 0 };
   });
 
-  function writeStatements(rects: DOMRect[]) {
+  function writeStatements(rects: (DOMRect | null)[]) {
     statements.forEach((s, i) => {
-      s.el.classList.toggle('is-armed', !reduce.matches);
-      if (reduce.matches) return;
+      const rect = rects[i];
+      if (!rect) return;
       // Nothing is lit when the slide arrives; the last word lights before it leaves.
-      const rect = rects[i]!;
       const lit = Math.round(statementProgress(rect.top, rect.height - s.pinH) * s.words.length);
       if (lit === s.lit) return;
-      s.words.forEach((w, j) => w.classList.toggle('on', j < lit));
+      for (let j = Math.min(s.lit, lit); j < Math.max(s.lit, lit); j++) {
+        s.words[j]!.classList.toggle('on', j < lit);
+      }
       s.lit = lit;
     });
   }
@@ -61,20 +62,19 @@ export function initScroll(signal: AbortSignal) {
   let scanRun: HTMLElement | undefined = scan ?? undefined;
   let scanH = 0;
   let scanned = -1;
-  const cssScan = () => reveal?.getAnimations().find((a) => (a as CSSAnimation).animationName === 'lc-reveal');
+  let scanAnimation: Animation | undefined;
 
   function readScan(vh: number) {
-    if (!scan || !scanRun || reduce.matches) return null;
+    if (!scan || !scanRun || reduced) return null;
     const rect = scanRun.getBoundingClientRect();
     if (scanned !== -1 && !onScreen(rect, vh)) return null;
-    const css = cssScan();
-    if (css) return { s: clamp(Number(css.effect?.getComputedTiming().progress ?? 0)), css: true };
+    if (scanAnimation) return { s: clamp(Number(scanAnimation.effect?.getComputedTiming().progress ?? 0)), css: true };
     return { s: clamp((held(rect, scanH) - 0.18) / 0.62), css: false };
   }
 
   function writeScan(read: { s: number; css: boolean } | null) {
     if (!scan || !sheet || !reveal || !tex || !beam) return;
-    if (reduce.matches) { sheet.classList.add('is-done'); return; } // shown compiled, no scrub
+    if (reduced) { sheet.classList.add('is-done'); return; } // shown compiled, no scrub
     if (!read || read.s === scanned) return;
     const { s, css } = read;
     scanned = s;
@@ -99,9 +99,9 @@ export function initScroll(signal: AbortSignal) {
   }));
   let dividersCss = false;
 
-  function writeDividers(rects: DOMRect[], vh: number) {
+  function writeDividers(rects: (DOMRect | null)[], vh: number) {
     rects.forEach((rect, i) => {
-      if (!onScreen(rect, vh)) return;
+      if (!rect || !onScreen(rect, vh)) return;
       const d = dividers[i]!;
       const hold = held(rect, d.pinH);
       const fill = clamp(hold / 0.7);
@@ -156,16 +156,15 @@ export function initScroll(signal: AbortSignal) {
   }
 
   // The browser's own scroll-driven fill, when it runs one.
-  const cssFill = () => timeline?.fill?.getAnimations().find((a) => (a as CSSAnimation).animationName === 'tl-fill');
+  let fillAnimation: Animation | undefined;
 
   function readTimeline(vh: number) {
-    if (!timeline || reduce.matches) return null;
+    if (!timeline || reduced) return null;
     const { section, dots, now, stage } = timeline;
     const rect = section.getBoundingClientRect();
     if (!onScreen(rect, vh)) return null;
     if (stage) return { p: clamp(-rect.top / (rect.height - vh)), css: false };
-    const css = cssFill();
-    if (css) return { p: clamp(Number(css.effect?.getComputedTiming().progress ?? 0)), css: true };
+    if (fillAnimation) return { p: clamp(Number(fillAnimation.effect?.getComputedTiming().progress ?? 0)), css: true };
     const line = vh * 0.6;
     const first = dots[0]!.dot.getBoundingClientRect();
     const end = now.dot.getBoundingClientRect();
@@ -177,7 +176,7 @@ export function initScroll(signal: AbortSignal) {
   function writeTimeline(read: { p: number; css: boolean } | null) {
     if (!timeline) return;
     const { root, dots, fill, stage } = timeline;
-    if (reduce.matches) {
+    if (reduced) {
       if (timeline.p !== 1) {
         root.style.removeProperty('--p');
         fill?.style.removeProperty('transform');
@@ -197,9 +196,19 @@ export function initScroll(signal: AbortSignal) {
 
   // Heights the progress is measured against, read once per resize rather than every frame.
   function measure() {
+    for (const s of statements) {
+      s.el.classList.toggle('is-armed', !reduced);
+      s.pinH = s.pin.offsetHeight;
+    }
+    scanAnimation = reveal?.getAnimations().find((a) => (a as CSSAnimation).animationName === 'lc-reveal');
+    fillAnimation = timeline?.fill?.getAnimations().find((a) => (a as CSSAnimation).animationName === 'tl-fill');
     dividersCss = !!dividers[0]?.light.getAnimations().some((a) => (a as CSSAnimation).animationName === 'divider-fill');
-    if (!dividersCss && !reduce.matches) {
-      for (const d of dividers) {
+    for (const d of dividers) {
+      if (dividersCss || reduced) {
+        visibility.unobserve(d.section);
+        nearby.delete(d.section);
+      } else {
+        visibility.observe(d.section);
         d.pinH = d.pin.getBoundingClientRect().height;
         d.fill = -1;
       }
@@ -253,16 +262,16 @@ export function initScroll(signal: AbortSignal) {
   let dirty = true;
   function update() {
     queued = 0;
+    const all = dirty;
     if (dirty) { measure(); dirty = false; }
     const vh = innerHeight;
-    // Read...
-    const statementRects = statements.map((s) => {
-      s.pinH = s.pin.offsetHeight;
-      return s.section.getBoundingClientRect();
-    });
-    const scanRead = readScan(vh);
-    const dividerRects = dividersCss || reduce.matches ? [] : dividers.map((d) => d.section.getBoundingClientRect());
-    const tl = readTimeline(vh);
+    const needsRead = (section: HTMLElement) => all || nearby.has(section);
+    const rectFor = ({ section }: { section: HTMLElement }) =>
+      needsRead(section) ? section.getBoundingClientRect() : null;
+    const statementRects = reduced ? [] : statements.map(rectFor);
+    const scanRead = scan && needsRead(scan) ? readScan(vh) : null;
+    const dividerRects = dividersCss || reduced ? [] : dividers.map(rectFor);
+    const tl = timeline && needsRead(timeline.section) ? readTimeline(vh) : null;
     // ...then write.
     writeStatements(statementRects);
     writeScan(scanRead);
@@ -273,17 +282,36 @@ export function initScroll(signal: AbortSignal) {
     if (queued) return;
     queued = requestAnimationFrame(update);
   }
-  addEventListener('scroll', queue, { passive: true, signal });
+  // Wake a little before entry, including when a link jumps straight to another section.
+  const nearby = new Set<Element>();
+  const visibility = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) nearby.add(entry.target);
+      else nearby.delete(entry.target);
+    }
+    onScroll();
+  }, { rootMargin: '300px 0px' });
+  function onScroll() {
+    if (nearby.size && !reduced) queue();
+  }
+  addEventListener('scroll', onScroll, { passive: true, signal });
   function resized() { dirty = true; queue(); }
   addEventListener('resize', resized, { signal });
-  reduce.addEventListener('change', () => {
-    root.classList.toggle('reduce', reduce.matches);
-    if (reduce.matches) [reveal, tex, beam].forEach((el) => { el?.style.removeProperty('transform'); el?.style.removeProperty('opacity'); });
-    if (reduce.matches) dividers.forEach((d) => d.light.style.removeProperty('transform'));
+  reduce.addEventListener('change', (event) => {
+    reduced = event.matches;
+    root.classList.toggle('reduce', reduced);
+    if (reduced) [reveal, tex, beam].forEach((el) => { el?.style.removeProperty('transform'); el?.style.removeProperty('opacity'); });
+    if (reduced) dividers.forEach((d) => d.light.style.removeProperty('transform'));
     if (timeline) timeline.p = -1;
     dirty = true;
     queue();
   }, { signal });
-  signal.addEventListener('abort', () => cancelAnimationFrame(queued));
+  signal.addEventListener('abort', () => {
+    visibility.disconnect();
+    cancelAnimationFrame(queued);
+  });
   update();
+  for (const s of statements) visibility.observe(s.section);
+  if (scan) visibility.observe(scan);
+  if (timeline) visibility.observe(timeline.section);
 }
